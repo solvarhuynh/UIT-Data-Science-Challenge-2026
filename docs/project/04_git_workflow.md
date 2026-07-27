@@ -4,7 +4,7 @@ Tài liệu này là bản rút gọn để cả thành viên và AI có thể d
 
 ## 1. Quy tắc chung
 
-- Không commit thẳng vào `main`.
+- Tuyệt đối không commit thẳng vào `main`.
 - Mỗi người làm trên nhánh riêng: `tv1`, `tv2`, `tv3`, `tv4`, `tv5`.
 - Trước khi tạo PR, luôn sync lại với `main` mới nhất.
 - Commit ngắn, rõ, đúng kiểu: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`.
