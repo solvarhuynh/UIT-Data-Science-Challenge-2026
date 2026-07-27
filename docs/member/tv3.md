@@ -2,34 +2,39 @@
 
 ## 1. Tổng quan vai trò
 
-TV3 phụ trách QA Engine và LLM layer cho hệ thống RAG Pháp luật DSC2026. Trọng tâm là load local LLM `Qwen3` bằng `transformers` hoặc `vLLM`, quản lý prompt versioning trong `prompts/`, sinh câu trả lời có citation chính xác và chống hallucination.
+TV3 phụ trách toàn bộ QA Engine và Local LLM layer cho hệ thống RAG Pháp luật DSC2026. Phạm vi chính nằm trong `src/udsc2026/qa/`, `src/udsc2026/infrastructure/llm/` và `prompts/`.
 
-TV3 cũng phụ trách Sparse Retrieval BM25 và Hybrid Search để kết hợp điểm Dense của TV2 với điểm Sparse. TV3 không làm Web Frontend và không điều phối FastAPI end-to-end.
+Trọng tâm của TV3 là load local LLM Qwen3, thiết kế prompt chống hallucination, quản lý prompt versioning, sinh câu trả lời pháp lý dựa trên context đã được retrieval/rerank và kiểm tra citation Điều/Khoản/Điểm chính xác.
+
+TV3 không phụ trách BM25, Sparse Retrieval, Hybrid Search, Dense Retrieval, VectorDB, Web Frontend hoặc FastAPI orchestration. Context đầu vào của TV3 đến từ TV1/TV5 dưới dạng `list[RetrievalHit]` đã được truy hồi và rerank.
 
 ## 2. Nhiệm vụ kỹ thuật chi tiết
 
 - [ ] Viết `LLMClient` trong `src/udsc2026/infrastructure/llm/` để load Qwen3 từ `models/qwen3-legal` hoặc path cấu hình.
 - [ ] Hỗ trợ inference bằng `transformers`; bổ sung backend `vLLM` khi môi trường GPU cho phép.
+- [ ] Thiết kế config LLM gồm `model_path`, `backend`, `device`, `dtype`, `max_new_tokens`, `temperature`, `top_p`, `repetition_penalty` và timeout nếu cần.
 - [ ] Xây `QAEngine` trong `src/udsc2026/qa/`, nhận question và contexts đã rerank, trả `QAResponse`.
-- [ ] Quản lý prompt trong `prompts/`, tối thiểu có `prompts/system/legal_qa_v1.md` và template RAG riêng cho context/question.
-- [ ] Viết System Prompt ép model chỉ trả lời dựa trên context được cung cấp, trích dẫn chính xác và từ chối khi thiếu căn cứ pháp lý.
-- [ ] Chuẩn hóa citation format, ví dụ `[Bộ luật Lao động 2019, Điều 10, Khoản 1]`, và map citation về metadata gốc.
-- [ ] Viết `CitationParser` để kiểm tra citation trong answer có khớp `RetrievalHit` hay không.
-- [ ] Xây Sparse Retrieval bằng BM25 trong `src/udsc2026/retrieval/sparse/`, tokenization phù hợp tiếng Việt và giữ nguyên số điều/khoản/điểm.
-- [ ] Xây `HybridRetriever` trong `src/udsc2026/retrieval/hybrid/`, nhận dense hits từ TV2 và sparse hits từ BM25, normalize score rồi fusion theo cấu hình.
-- [ ] Hỗ trợ cấu hình trọng số `dense_weight`, `sparse_weight`, `top_k`, `min_score`.
-- [ ] Viết test cho prompt builder, citation parser, BM25 search và hybrid score fusion.
+- [ ] Viết `PromptBuilder` đọc template từ `prompts/`, không hard-code prompt dài trong Python.
+- [ ] Quản lý prompt versioning trong `prompts/`, tối thiểu có `prompts/system/legal_qa_v1.md` và template RAG riêng cho context/question.
+- [ ] Thiết kế System Prompt chống hallucination: chỉ trả lời dựa trên context được cung cấp, không suy diễn ngoài tài liệu, từ chối khi thiếu căn cứ pháp lý và nêu rõ khi context không đủ.
+- [ ] Chuẩn hóa citation format, ví dụ `[Bộ luật Lao động 2019, Điều 10, Khoản 1]`, và map citation về metadata gốc trong `RetrievalHit`.
+- [ ] Viết `CitationParser` trong `src/udsc2026/qa/` để trích xuất Điều/Khoản/Điểm từ câu trả lời của LLM.
+- [ ] Viết logic validate citation: citation trong answer phải khớp với ít nhất một context đã cung cấp, ưu tiên so khớp theo `law_name`, `article`, `clause`, `point`, `chunk_id`.
+- [ ] Trả warning rõ ràng khi citation thiếu, sai format hoặc không map được về chunk gốc.
+- [ ] Viết test cho prompt builder, prompt version loading, LLM client mock, QA engine, citation parser và anti-hallucination behavior.
 
 ## 3. Quy chuẩn Clean Code & API Contract
 
 ### Clean Code bắt buộc
 
-- Áp dụng triệt để DRY, tối ưu số dòng code và không tạo class/interface dư thừa nếu chưa có nhu cầu thật.
-- Dùng type hinting đầy đủ cho mọi input/output; `QAResponse`, citation và prompt metadata phải có schema rõ ràng.
-- Mỗi hàm chỉ làm một trách nhiệm: build prompt, call LLM, parse citation, sparse search hoặc score fusion.
+- Áp dụng DRY, tách rõ `LLMClient`, `PromptBuilder`, `QAEngine`, `CitationParser` và citation validator.
+- Dùng type hinting đầy đủ cho mọi input/output; `QAResponse`, `Citation`, `PromptMetadata`, `LLMConfig` nên dùng Pydantic hoặc schema chung.
+- Mỗi hàm chỉ làm một trách nhiệm: build prompt, render context, call LLM, parse response, extract citation hoặc validate citation.
 - Không hard-code prompt dài trong Python; prompt bắt buộc nằm trong `prompts/` và có version.
-- Không copy-paste logic normalize/fusion; viết helper nhỏ, có test.
-- Không định nghĩa lại `RetrievalHit` hoặc chunk schema của TV4.
+- Không viết BM25, Hybrid Search, Dense Retrieval, VectorDB adapter hoặc reranking trong phạm vi TV3.
+- Không định nghĩa lại `RetrievalHit` hoặc chunk schema của TV4; luôn import từ contract chung.
+- Không để QA Engine tự truy vấn retrieval; retrieval là dependency đầu vào do TV1/TV5 cung cấp.
+- Log/metadata phải đủ để truy vết prompt version, model path/backend, citation warnings và context đã sử dụng.
 
 ### API Contract
 
@@ -47,21 +52,28 @@ def generate_answer(
 ) -> QAResponse: ...
 ```
 
-Sparse search:
+LLM client:
 
 ```python
-def search(query: str, top_k: int) -> list[RetrievalHit]: ...
+def generate(
+    prompt: str,
+    max_new_tokens: int,
+    temperature: float,
+    top_p: float,
+) -> str: ...
 ```
 
-Hybrid search:
+Citation parser:
 
 ```python
-def merge(
-    query: str,
-    dense_hits: list[RetrievalHit],
-    sparse_hits: list[RetrievalHit],
-    top_k: int,
-) -> list[RetrievalHit]: ...
+from udsc2026.contracts.qa import Citation
+
+def parse_citations(answer: str) -> list[Citation]: ...
+
+def validate_citations(
+    citations: list[Citation],
+    contexts: list[RetrievalHit],
+) -> list[Citation]: ...
 ```
 
 Output QA cần có:
@@ -70,18 +82,20 @@ Output QA cần có:
 answer, citations, used_prompt_version, retrieval_hits, confidence, warnings
 ```
 
-Hybrid hit cần giữ:
+Citation cần có:
 
 ```text
-chunk_id, dense_score, sparse_score, hybrid_score, metadata
+law_name, article, clause, point, chunk_id, source, is_verified, warning
 ```
 
 ## 4. Tiêu chuẩn nghiệm thu (Definition of Done)
 
 - [ ] Qwen3 load được từ local model path bằng `transformers` hoặc `vLLM`.
 - [ ] Prompt có version, lưu trong `prompts/` và version được ghi vào response metadata.
+- [ ] `QAEngine` nhận context từ retrieval/reranking và không tự thực hiện BM25/Hybrid/Dense search.
 - [ ] Câu trả lời chỉ dùng context được cung cấp và có citation đúng khi đủ căn cứ.
-- [ ] Khi context thiếu hoặc retrieval score thấp, model từ chối trả lời theo quy tắc.
-- [ ] BM25 chạy độc lập và có test với query chứa tên luật, số điều, số khoản.
-- [ ] Hybrid Search normalize score trước khi fusion và giữ metadata citation cho TV5 rerank.
-- [ ] Citation parser phát hiện được citation thiếu, sai hoặc không map được về chunk gốc.
+- [ ] Khi context thiếu hoặc retrieval score thấp, model từ chối trả lời theo quy tắc chống hallucination.
+- [ ] `CitationParser` trích xuất được citation Điều/Khoản/Điểm từ câu trả lời của LLM.
+- [ ] Citation validator phát hiện được citation thiếu, sai format hoặc không map được về chunk gốc.
+- [ ] Unit test bao phủ prompt builder, citation parser, citation validation và QA engine với LLM mock.
+- [ ] Không còn bất kỳ nhiệm vụ BM25, Sparse Retrieval hoặc Hybrid Search trong file giao việc của TV3.
