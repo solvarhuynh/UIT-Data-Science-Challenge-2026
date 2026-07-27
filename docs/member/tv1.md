@@ -1,31 +1,46 @@
-# TV1 - Integration & Orchestration
+# TV1 - FastAPI Core, Orchestrator, Caching & Observability
 
 ## 1. Tổng quan vai trò
 
-TV1 là người lắp ráp và tối ưu hóa luồng xử lý end-to-end của hệ thống RAG. Vai trò này không chỉ quản lý API mà tập trung vào việc kết nối các module lõi (Retrieval, QA) thành một pipeline hoàn chỉnh, đo lường và tối ưu hiệu năng (latency, bottlenecks). TV1 cũng chịu trách nhiệm xây dựng các cơ chế hỗ trợ như Caching và Logging để cải thiện trải nghiệm người dùng và tạo vòng lặp dữ liệu (data flywheel).
+TV1 phụ trách lớp FastAPI Core và điều phối end-to-end của hệ thống RAG Pháp luật DSC2026. Trọng tâm là gom các module Dense Retrieval của TV2, Hybrid/QA của TV3, dữ liệu từ TV4 và Reranker/Evaluation của TV5 thành một pipeline ổn định, đo được latency, cache được kết quả và log được lỗi chất lượng.
+
+TV1 là người giữ API contract chung, đảm bảo backend chạy được từ request của frontend đến response cuối cùng mà không để logic nghiệp vụ rơi vào router.
 
 ## 2. Nhiệm vụ kỹ thuật chi tiết
 
-- [ ] **Orchestration**: Trong `api/routes/query.py`, gọi tuần tự các hàm core logic từ `retrieval` (TV2) và `qa` (TV3) để xử lý một request từ đầu đến cuối, dựa trên contract chung `RetrievalHit` import từ `src/udsc2026/contracts/retrieval.py`.
-- [ ] **Performance Tuning**: Tích hợp middleware hoặc decorator để đo lường latency của từng bước (retrieval, reranking, LLM generation) và xác định điểm nghẽn.
-- [ ] **Caching**: Xây dựng cơ chế cache (ví dụ: dùng Redis) để lưu và trả về ngay lập tức các cặp câu hỏi-câu trả lời đã xử lý. Key cache có thể là hash của câu hỏi.
-- [ ] **Logging for Feedback**:
-    - Ghi nhận (log) các câu hỏi có điểm retrieval thấp từ TV2/TV5.
-    - Ghi nhận các câu trả lời mà người dùng đánh giá không hài lòng (nếu frontend hỗ trợ).
-    - Cung cấp log này cho TV5 để phân tích và cải thiện model/dữ liệu.
-- [ ] **API Management**: Tiếp tục duy trì xương sống FastAPI: dependency injection, router, streaming (SSE), và review các PR liên quan đến `contracts/` và `api/`.
+- [ ] Duy trì FastAPI app, router, dependency injection, config loading và error handling trong `src/udsc2026/api/`.
+- [ ] Xây endpoint `/query` non-stream, nhận `QueryRequest`, gọi retrieval, rerank, QA và trả `QueryResponse` thống nhất.
+- [ ] Xây endpoint streaming SSE cho frontend TV4 dùng khi cần hiển thị câu trả lời đang sinh dần.
+- [ ] Viết `RAGOrchestrator` điều phối luồng: Dense TV2 -> Sparse/Hybrid TV3 -> Rerank TV5 -> QA TV3 -> Response.
+- [ ] Tích hợp cache theo hash của `question`, `filters`, `top_k` và `prompt_version`; ưu tiên Redis, có fallback in-memory cho dev.
+- [ ] Ghi latency từng bước: retrieval, sparse, hybrid, rerank, generation, total.
+- [ ] Ghi log request, error, low-score retrieval và feedback người dùng để TV5 dùng cho evaluation.
+- [ ] Review bắt buộc các PR chạm vào `api/`, `contracts/`, `configs/` hoặc thay đổi pipeline chung.
 
-## 3. API Contract & Dữ liệu giao tiếp
+## 3. Quy chuẩn Code & API Contract
 
-- **Input**: Nhận `QueryRequest` từ client.
-- **Internal Call (to TV2)**: `retriever.retrieve(query: str, top_k: int) -> list[RetrievalHit]`, với `RetrievalHit` import từ `src/udsc2026/contracts/retrieval.py`.
-- **Internal Call (to TV3)**: `qa_engine.generate(query: str, contexts: list[RetrievalHit]) -> QAResponse`, dùng cùng `RetrievalHit` từ contract chung.
-- **Output**: Trả về `QueryResponse` (cho non-stream) hoặc các `ServerSentEvent` (cho stream), bao gồm câu trả lời, citations, và thông tin debug (latency).
+### Clean Code Standard
+
+- Code ngắn gọn, rõ trách nhiệm; mỗi hàm chỉ xử lý một việc chính.
+- Dùng Pydantic cho request/response schema; dùng type hints đầy đủ cho service và orchestrator.
+- Không viết boilerplate, dead code, debug print hoặc logic trùng lặp giữa route và service.
+- Không copy-paste code xử lý response/cache/log; tách helper khi lặp lại thật sự cần thiết.
+- Router chỉ nhận request, validate và gọi service; business logic nằm trong orchestrator/service.
+
+### API Contract
+
+- Input chính: `QueryRequest` gồm `question`, `top_k`, `filters`, `stream`, `debug` nếu cần.
+- Internal retrieval: `retrieve(query: str, top_k: int, filters: dict | None = None) -> list[RetrievalHit]`.
+- Internal rerank: `rerank(query: str, candidates: list[RetrievalHit], top_n: int) -> list[RetrievalHit]`.
+- Internal QA: `generate_answer(question: str, contexts: list[RetrievalHit]) -> QAResponse`.
+- Output chính: `QueryResponse` gồm `answer`, `citations`, `retrieval_hits`, `latency_ms`, `cache_hit`, `warnings`.
+- Chỉ dùng schema chung trong `src/udsc2026/contracts/`; không tạo contract riêng trong `api/`.
 
 ## 4. Tiêu chuẩn nghiệm thu (Definition of Done)
 
-- [ ] API endpoint `/query` hoạt động E2E, gọi đúng logic của TV2 và TV3.
-- [ ] Latency của mỗi request được ghi nhận và hiển thị trong response (hoặc log).
-- [ ] Một câu hỏi được hỏi 2 lần liên tiếp, lần thứ 2 phải có cache hit và tốc độ phản hồi < 50ms.
-- [ ] Các truy vấn có điểm retrieval dưới ngưỡng được ghi vào file log riêng (`logs/low_score_queries.log`).
-- [ ] Code tuân thủ nguyên tắc tách biệt: API route chỉ làm nhiệm vụ điều phối, không chứa logic business.
+- [ ] `/query` chạy được end-to-end với mock hoặc module thật của TV2, TV3, TV5.
+- [ ] Response có answer, citations, latency và trạng thái cache rõ ràng.
+- [ ] Lần hỏi thứ hai với cùng request có cache hit và latency giảm rõ.
+- [ ] SSE endpoint stream được token/event cho frontend TV4.
+- [ ] Log ghi được request lỗi, low-score query và timing từng bước.
+- [ ] API route không chứa logic retrieval, rerank, prompt hoặc parsing citation.
