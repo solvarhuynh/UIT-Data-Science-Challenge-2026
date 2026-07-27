@@ -1,0 +1,5 @@
+# Shared RAG defaults. Environment-specific files override these values.
+chunk_size: 512
+top_k: 10
+similarity_threshold: 0.5
+
