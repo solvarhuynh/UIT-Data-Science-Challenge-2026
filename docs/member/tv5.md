@@ -7,10 +7,10 @@ TV5 chịu trách nhiệm tối ưu lớp xếp hạng cuối và đóng gói h�
 ## 2. Nhiệm vụ kỹ thuật chi tiết
 
 - [ ] Viết `RerankerClient` trong `src/udsc2026/infrastructure/reranker/`, load model từ local hoặc cấu hình trong `configs/`.
-- [ ] Viết `CrossEncoderReranker` trong `src/udsc2026/retrieval/reranking/`, nhận query và candidates từ TV3 Hybrid Search.
+- [ ] Viết `CrossEncoderReranker` trong `src/udsc2026/retrieval/reranking/`, nhận query và candidates `RetrievalHit` từ TV3 Hybrid Search bằng cách import schema chung từ `src/udsc2026/contracts/retrieval.py`.
 - [ ] Hỗ trợ batch scoring để giảm latency, có tham số `batch_size`, `top_n`, `device`.
-- [ ] Bảo toàn toàn bộ metadata citation khi rerank, không tạo object mới làm mất `chunk_id` hoặc `article`.
-- [ ] Viết benchmark trong `src/udsc2026/evaluation/` để đo MRR, Recall@K, latency trước và sau rerank.
+- [ ] Bảo toàn toàn bộ metadata citation khi rerank trên cùng schema `RetrievalHit`, không định nghĩa lại schema hoặc tạo object mới làm mất `chunk_id` hoặc `article`.
+- [ ] Viết benchmark trong `src/udsc2026/evaluation/` để đo MRR, Recall@K, latency trước và sau rerank, sử dụng `RetrievalHit` từ contract chung cho evaluation input/output.
 - [ ] Viết script trong `scripts/` để chạy test set, gọi pipeline end-to-end và xuất kết quả.
 - [ ] Tạo Dockerfile multi-stage cho backend/frontend nếu cần, không copy `models/` hoặc `data/vector_store/` lớn vào image.
 - [ ] Viết `docker-compose.yml` để chạy backend, frontend và VectorDB local theo biến môi trường.
@@ -20,10 +20,12 @@ TV5 chịu trách nhiệm tối ưu lớp xếp hạng cuối và đóng gói h�
 Reranker nhận:
 
 ```python
+from udsc2026.contracts.retrieval import RetrievalHit
+
 rerank(query: str, candidates: list[RetrievalHit], top_n: int) -> list[RetrievalHit]
 ```
 
-Mỗi candidate cần có:
+`RetrievalHit` là Pydantic Schema duy nhất tại `src/udsc2026/contracts/retrieval.py`; Reranker, Evaluation và Logging của TV5 không định nghĩa lại schema. Mỗi candidate cần có:
 
 ```text
 chunk_id, text, dense_score, sparse_score, hybrid_score, metadata
