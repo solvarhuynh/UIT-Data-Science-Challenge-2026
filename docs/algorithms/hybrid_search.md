@@ -88,12 +88,14 @@ hybrid_score = 0.55 * 0.86 + 0.45 * 0.72 + 0.05 = 0.847
 ## Interface đề xuất
 
 ```python
+from udsc2026.contracts.retrieval import RetrievalHit
+
 class HybridRetriever:
     def search(self, query: str, top_k: int, filters: dict | None = None) -> list[RetrievalHit]:
         ...
 ```
 
-`RetrievalHit` cần giữ đủ metadata để QA sinh citation:
+`RetrievalHit` phải được import từ `src/udsc2026/contracts/retrieval.py`; Hybrid Search không tự định nghĩa schema riêng. Contract chung cần giữ đủ metadata để QA sinh citation và để TV5 rerank:
 
 ```text
 chunk_id, doc_id, law_name, article, clause, text, dense_score, sparse_score, hybrid_score

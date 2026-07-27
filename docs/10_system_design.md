@@ -54,7 +54,7 @@ sequenceDiagram
     R->>B: Embed + sparse search + vector search
     B-->>R: Candidate chunks + scores
     R->>R: Hybrid fusion + reranking
-    R-->>A: RetrievalResult với context và metadata
+    R-->>A: list[RetrievalHit] + query_metadata
     A->>Q: QARequest(question, context)
     Q->>Q: Build prompt + citation constraints
     Q-->>A: Token stream + citations
@@ -81,7 +81,7 @@ Với mỗi query:
 3. BM25 tìm các kết quả khớp thuật ngữ pháp lý.
 4. Hybrid fusion kết hợp sparse score và dense score.
 5. Rerank, lọc theo threshold và giới hạn `top_k`.
-6. Trả về `RetrievalResult` gồm `chunk_id`, `text`, `score`, `source`, `article`, `clause`.
+6. Trả về danh sách `RetrievalHit` dùng chung từ `src/udsc2026/contracts/retrieval.py`, gồm `chunk_id`, `text`, `score`, `source`, `article`, `clause` và metadata cần cho QA/rerank.
 
 Retrieval không sinh câu trả lời và không phụ thuộc Qwen3. Điều này cho phép benchmark LegalIR độc lập.
 
@@ -96,18 +96,19 @@ Retrieval không sinh câu trả lời và không phụ thuộc Qwen3. Điều n
 7. Sinh citation từ metadata chunk được sử dụng.
 8. Trả về JSON cuối cùng gồm `answer`, `citations`, `retrieval_metadata`.
 
-QA không tự truy cập database. Mọi context phải đi qua `RetrievalResult`, giúp tách biệt trách nhiệm và dễ kiểm thử.
+QA không tự truy cập database. Mọi context phải đi qua `RetrievalHit` từ contract chung, giúp tách biệt trách nhiệm và dễ kiểm thử.
 
 ## 6. Contracts chính
 
 ```text
 RetrieveRequest  = question, top_k, filters?
-RetrievalResult  = chunks[], query_metadata
+RetrievalResult  = chunks: list[RetrievalHit], query_metadata
+RetrievalHit     = chunk_id, doc_id, text, score?, source?, law_name?, article?, clause?, metadata, dense_score?, sparse_score?, hybrid_score?, rerank_score?, final_score?, rank?
 QARequest        = question, context[], prompt_version
 QAResponse       = answer, citations[], usage, latency
 ```
 
-Các schema đặt tại `src/udsc2026/contracts/`. Thay đổi schema phải được review vì đây là biên giao tiếp giữa Retrieval, QA và API.
+`RetrievalHit` được định nghĩa duy nhất tại `src/udsc2026/contracts/retrieval.py` và mọi module Dense Retrieval, BM25, Hybrid Search, QA, Reranker, Evaluation, Logging phải import schema này thay vì tự tạo model riêng. Các schema còn lại đặt tại `src/udsc2026/contracts/`. Thay đổi schema phải được review vì đây là biên giao tiếp giữa Retrieval, QA và API.
 
 ## 7. Local Model Layout
 

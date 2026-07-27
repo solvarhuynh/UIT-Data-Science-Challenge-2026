@@ -16,7 +16,7 @@ udsc2026/
 │   ├── member/               # Phân công chi tiết cho TV1-TV5
 │   └── models/               # Embedding và LLM optimization
 ├── experiments/
-│   ├── tv1/                  # Thử nghiệm backend/metrics
+│   ├── tv1/                  # Thử nghiệm backend/metrics/integration
 │   ├── tv2/                  # Thử nghiệm dense retrieval/frontend
 │   ├── tv3/                  # Thử nghiệm QA/prompt/BM25/hybrid
 │   ├── tv4/                  # Thử nghiệm ETL/chunking/UI citation
@@ -44,7 +44,7 @@ udsc2026/
 
 | Thành viên | Trọng tâm | Bổ sung | File giao việc |
 | :--- | :--- | :--- | :--- |
-| **TV1 - Leader** | FastAPI Backend Core, DI, router, CORS, SSE, Git workflow, PR review | Metrics MRR, Recall@K, ROUGE, BLEU | `docs/member/tv1.md` |
+| **TV1 - Integration** | E2E Pipeline Orchestration, Performance Tuning, Caching, Logging | Metrics (MRR, Recall@K), PR Review | `docs/member/tv1.md` |
 | **TV2 - Retrival & Frontend** | Dense Retrieval bằng BKAI Bi-encoder, Qdrant/FAISS VectorDB | React base, TailwindCSS, search box, chat frame | `docs/member/tv2_nghia.md` |
 | **TV3 - QA & LLM** | Qwen3 local, prompt system, citation, anti-hallucination | BM25 và Hybrid Search | `docs/member/tv3.md` |
 | **TV4 - Data & UI** | ETL, regex legal structure parsing, chunking metadata | Markdown rendering, Citation Viewer, responsive UI | `docs/member/tv4.md` |
@@ -52,7 +52,7 @@ udsc2026/
 
 ## Ranh giới làm việc
 
-- `contracts/` là vùng giao tiếp chung. Mọi thay đổi schema phải được báo trước trong PR.
+- `contracts/` là vùng giao tiếp chung. `RetrievalHit` chỉ được định nghĩa tại `src/udsc2026/contracts/retrieval.py`; mọi module retrieval, QA, rerank, evaluation và logging phải import từ đây thay vì tự tạo schema riêng.
 - `infrastructure/` chỉ chứa adapter tới model, VectorDB hoặc storage; không đặt logic nghiệp vụ trực tiếp ở đây.
 - `experiments/tvX/` là nơi thử nghiệm cá nhân. Code production chỉ được đưa vào `src/udsc2026/`.
 - `data/` và `models/` không commit dữ liệu lớn hoặc model weights. Chỉ commit `.gitkeep`, metadata nhỏ và hướng dẫn tái tạo.
