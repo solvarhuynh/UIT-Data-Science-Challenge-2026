@@ -1,7 +1,6 @@
-# UDSC2026 - LegalIR & LegalQA
+# HCMUTE-SHIPCODE - UDSC2026
 
-Hệ thống RAG pháp luật Việt Nam cho DSC2026, xử lý dữ liệu pháp luật, truy hồi dense/sparse/hybrid, reranking, sinh câu trả lời bằng LLM local, citation chính xác, benchmark và đóng gói submission.
-
+ **LegalIR & LegalQA**: Hệ thống RAG pháp luật Việt Nam cho DSC2026, xử lý dữ liệu pháp luật, truy hồi dense/sparse/hybrid, reranking, sinh câu trả lời bằng LLM local, citation chính xác, benchmark và đóng gói submission.
 
 ## Introduction
 
