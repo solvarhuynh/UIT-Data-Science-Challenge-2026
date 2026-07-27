@@ -1,35 +1,53 @@
-# TV4 - Data ETL, Legal Structure Parsing, UI/UX Advanced
+# TV4 - Data & UI: ETL Pipeline, Legal Chunking, Citation Viewer
 
-## Mục tiêu & Phạm vi công việc
+## 1. Tổng quan vai trò
 
-- [ ] Xây Data ETL Pipeline từ dữ liệu thô của ban tổ chức sang dữ liệu chuẩn.
-- [ ] Bóc tách cấu trúc pháp luật: văn bản, chương, mục, điều, khoản, điểm.
-- [ ] Làm sạch encoding, khoảng trắng, header/footer và noise trong văn bản.
-- [ ] Sinh chunk có metadata đầy đủ để retrieval và citation dùng được.
-- [ ] Phát triển UI/UX nâng cao: hiển thị citation, markdown rendering, trạng thái streaming.
+TV4 phụ trách chất lượng dữ liệu đầu vào, tức nền móng của toàn bộ hệ thống RAG. Nếu chunk sai ranh giới Điều/Khoản hoặc mất metadata, TV2 khó index đúng, TV3 không thể citation chính xác và TV5 không đánh giá được. Trọng tâm là xây Data ETL Pipeline cho file text pháp luật thô từ ban tổ chức, dùng regex và rule-based parser để bóc tách cấu trúc `Luật -> Chương -> Điều -> Khoản -> Điểm`. Phần bổ sung là nâng cấp UI/UX React, đặc biệt render Markdown, Citation Viewer và responsive layout.
 
-## Thư mục mã nguồn phụ trách
+## 2. Nhiệm vụ kỹ thuật chi tiết
 
-- [ ] `src/dsc2026_legal/ingestion/readers/`
-- [ ] `src/dsc2026_legal/ingestion/cleaners/`
-- [ ] `src/dsc2026_legal/ingestion/legal_structure/`
-- [ ] `src/dsc2026_legal/ingestion/chunking/`
-- [ ] `frontend/`
-- [ ] `data/raw/`
-- [ ] `data/processed/`
+- [ ] Viết reader trong `src/udsc2026/ingestion/readers/` để đọc `.txt`, `.json`, `.jsonl` hoặc format BTC cung cấp.
+- [ ] Viết cleaner trong `src/udsc2026/ingestion/cleaners/` để chuẩn hóa Unicode, khoảng trắng, xuống dòng, header/footer và noise văn bản phổ biến.
+- [ ] Viết parser trong `src/udsc2026/ingestion/legal_structure/` nhận diện tên luật, chương, mục, điều, khoản, điểm bằng regex có test case.
+- [ ] Viết chunker trong `src/udsc2026/ingestion/chunking/`, ưu tiên không cắt ngang điều/khoản; nếu đoạn quá dài thì chia theo câu và giữ metadata cha.
+- [ ] Xuất `data/processed/chunks/*.jsonl` để TV2 index, mỗi dòng là một chunk hoàn chỉnh.
+- [ ] Tạo report validation trong `data/processed/metadata/`, gồm số document, số chunk, chunk rỗng, chunk quá dài và metadata thiếu.
+- [ ] Nâng cấp frontend: component render Markdown answer, component `CitationViewer` hiển thị nguồn luật, điều/khoản và đoạn trích.
+- [ ] Làm responsive cho màn hình laptop và mobile, tránh UI bị vỡ khi citation dài.
 
-## API/Interface đầu ra cần bàn giao
+## 3. API Contract & Dữ liệu giao tiếp
 
-- [ ] `DocumentReader.read(path: str) -> RawLegalDocument`.
-- [ ] `LegalTextCleaner.clean(text: str) -> str`.
-- [ ] `LegalStructureParser.parse(document: RawLegalDocument) -> StructuredLegalDocument`.
-- [ ] `Chunker.chunk(document: StructuredLegalDocument) -> list[LegalChunk]`.
-- [ ] UI component `CitationList` hiển thị nguồn, điều, khoản và đoạn trích liên quan.
+ETL output cho TV2/TV3/TV5:
 
-## Checklist nghiệm thu công việc
+```json
+{
+  "chunk_id": "doc001_article_10_clause_1",
+  "doc_id": "doc001",
+  "text": "Nội dung điều khoản...",
+  "metadata": {
+    "law_name": "Bộ luật Lao động 2019",
+    "chapter": "Chương II",
+    "article": "Điều 10",
+    "clause": "Khoản 1",
+    "point": null,
+    "source": "data/raw/btc/..."
+  }
+}
+```
 
-- [ ] Pipeline đọc được dữ liệu mẫu trong `data/raw/`.
-- [ ] Chunk có `chunk_id`, `doc_id`, `law_name`, `article`, `clause`, `text`.
-- [ ] Không mất dấu tiếng Việt sau bước làm sạch.
-- [ ] File processed có thể dùng trực tiếp cho TV2 index và TV3 citation.
-- [ ] UI render được markdown answer và danh sách citation rõ ràng.
+UI Citation Viewer nhận:
+
+```text
+citations: list[Citation]
+```
+
+Trong đó `Citation` cần có `chunk_id`, `law_name`, `article`, `clause`, `quote`.
+
+## 4. Tiêu chuẩn nghiệm thu (Definition of Done)
+
+- [ ] ETL chạy được từ `data/raw/` sang `data/processed/chunks/`.
+- [ ] Regex parser có test cho ít nhất Luật, Chương, Điều, Khoản, Điểm.
+- [ ] Chunk không rỗng, không mất dấu tiếng Việt và có metadata citation.
+- [ ] TV2 có thể index output JSONL mà không cần sửa tay.
+- [ ] Citation Viewer render đúng đoạn trích và không làm vỡ layout.
+- [ ] Có validation report để phát hiện dữ liệu lỗi trước khi build index.

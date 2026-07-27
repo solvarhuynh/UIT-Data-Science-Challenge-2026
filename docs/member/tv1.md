@@ -1,33 +1,48 @@
-# TV1 - Backend Core, System Architecture, PR Review
+# TV1 - Leader: FastAPI Backend Core & Evaluation Metrics
 
-## Mục tiêu & Phạm vi công việc
+## 1. Tổng quan vai trò
 
-- [ ] Thiết kế và duy trì kiến trúc tổng thể của hệ thống RAG LegalIR & LegalQA.
-- [ ] Xây dựng FastAPI Backend Core, đảm bảo API trả JSON/SSE độc lập với React frontend.
-- [ ] Chuẩn hóa dependency injection cho retriever, QA engine, config và logging.
-- [ ] Định nghĩa nguyên tắc review PR, coding convention và checklist merge.
-- [ ] Bổ sung module metrics cơ bản: MRR, Accuracy, ROUGE.
+TV1 chịu trách nhiệm làm xương sống kỹ thuật của toàn hệ thống DSC2026 LegalIR & LegalQA. Trọng tâm là xây dựng FastAPI Backend Core đủ sạch để các nhóm retrieval, QA, ingestion, reranking và frontend có thể tích hợp song song mà không giẫm lên nhau. Vai trò Leader không chỉ là viết API, mà còn là người giữ chuẩn kiến trúc: quản lý dependency injection, thống nhất Pydantic contracts, thiết lập router, CORS, lifecycle load model, streaming response qua SSE và review PR trước khi merge vào `main`. Phần bổ sung của TV1 là xây module metrics cơ bản để cả nhóm đo chất lượng theo cùng một cách.
 
-## Thư mục mã nguồn phụ trách
+## 2. Nhiệm vụ kỹ thuật chi tiết
 
-- [ ] `src/dsc2026_legal/api/`
-- [ ] `src/dsc2026_legal/contracts/`
-- [ ] `src/dsc2026_legal/evaluation/metrics.py`
-- [ ] `configs/`
-- [ ] `docs/10_system_design.md`
+- [ ] Tạo entrypoint `src/udsc2026/api/app.py` với `FastAPI()`, lifespan startup/shutdown và health check.
+- [ ] Tổ chức router trong `src/udsc2026/api/routes/`, tối thiểu gồm `health.py`, `query.py`, `stream.py`.
+- [ ] Cấu hình CORS cho React frontend ở `http://localhost:5173`, có biến cấu hình trong `configs/`.
+- [ ] Thiết kế dependency injection để route không khởi tạo trực tiếp retriever hoặc LLM. Service được lấy qua `app.state` hoặc provider function như `get_retriever()`, `get_qa_engine()`.
+- [ ] Viết SSE endpoint cho LLM streaming, trả event theo format `token`, `citation`, `final`, `error`.
+- [ ] Chuẩn hóa error handling: lỗi thiếu model trả `503`, request sai trả `422`, lỗi pipeline trả JSON có `warnings`.
+- [ ] Quản lý Git workflow: mỗi thành viên làm branch riêng, PR phải mô tả thay đổi contract, config và test đã chạy.
+- [ ] Viết metrics trong `src/udsc2026/evaluation/metrics.py`: `mrr()`, `recall_at_k()`, `rouge_l()`, `bleu_score()`.
 
-## API/Interface đầu ra cần bàn giao
+## 3. API Contract & Dữ liệu giao tiếp
 
-- [ ] `GET /health`: kiểm tra backend và trạng thái model/vector store.
-- [ ] `POST /api/v1/query`: nhận câu hỏi, trả answer, citations, retrieval metadata.
-- [ ] `GET /api/v1/query/stream`: streaming token/event cho React.
-- [ ] Pydantic schemas: `QueryRequest`, `QueryResponse`, `Citation`, `RetrievalHit`.
-- [ ] Hàm metrics: `mean_reciprocal_rank()`, `accuracy_at_k()`, `rouge_score()`.
+Input chính từ frontend:
 
-## Checklist nghiệm thu công việc
+```python
+QueryRequest(question: str, top_k: int = 5, filters: dict | None = None, stream: bool = False)
+```
 
-- [ ] Backend chạy được bằng `uvicorn dsc2026_legal.api.app:app --reload`.
-- [ ] API không import trực tiếp code UI hoặc notebook thử nghiệm.
-- [ ] Response schema ổn định để TV2, TV3, TV4, TV5 tích hợp.
-- [ ] Có unit test cho health check, query contract và metrics.
-- [ ] Mọi PR chạm vào contract/API đều được review trước khi merge.
+Output chuẩn:
+
+```python
+QueryResponse(answer: str, citations: list[Citation], retrieval_hits: list[RetrievalHit], latency_ms: float, warnings: list[str])
+```
+
+Streaming output:
+
+```json
+{"type": "token", "content": "..."}
+{"type": "final", "answer": "...", "citations": []}
+```
+
+Metrics nhận prediction/reference hoặc ranking list và trả float hoặc dict metric để TV5 dùng batch evaluation.
+
+## 4. Tiêu chuẩn nghiệm thu (Definition of Done)
+
+- [ ] `uvicorn udsc2026.api.app:app --reload` chạy được ở cổng `8000`.
+- [ ] API route không import code từ `experiments/` hoặc frontend.
+- [ ] CORS hoạt động với React dev server.
+- [ ] SSE stream được ít nhất token giả lập và final response.
+- [ ] Metrics có unit test cho case đúng, sai, rỗng và nhiều đáp án đúng.
+- [ ] PR của các thành viên thay đổi schema phải được TV1 review trước khi merge.

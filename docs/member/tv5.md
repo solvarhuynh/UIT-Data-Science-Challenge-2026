@@ -1,33 +1,59 @@
-# TV5 - Reranking, Docker, Submission
+# TV5 - Rerank & DevOps: Cross-Encoder, Docker, CodaLab Submission
 
-## Mục tiêu & Phạm vi công việc
+## 1. Tổng quan vai trò
 
-- [ ] Dựng module Reranking bằng Cross-Encoder để lọc lại top kết quả truy xuất.
-- [ ] Chuẩn hóa interface nhận candidate từ hybrid retrieval và trả danh sách đã xếp lại.
-- [ ] Tối ưu latency reranking theo batch size, top-n và device config.
-- [ ] Đóng gói Docker cho backend, frontend và dịch vụ phụ trợ nếu cần.
-- [ ] Thiết lập luồng xuất file submission cho CodaLab.
+TV5 chịu trách nhiệm tối ưu lớp xếp hạng cuối và đóng gói hệ thống để chạy ổn định. Trọng tâm là Reranking Pipeline: nhận top-K kết quả từ Hybrid Search, dùng Cross-Encoder hoặc reranker tương đương để chấm lại từng cặp `(query, document)` và đưa document liên quan nhất lên đầu. Đây là lớp giúp cải thiện đáng kể precision cho LegalIR và chất lượng context cho LegalQA. Phần bổ sung là DevOps: Docker multi-stage, `docker-compose.yml`, script chạy benchmark và sinh `submission.csv` chuẩn CodaLab.
 
-## Thư mục mã nguồn phụ trách
+## 2. Nhiệm vụ kỹ thuật chi tiết
 
-- [ ] `src/dsc2026_legal/retrieval/reranking/`
-- [ ] `src/dsc2026_legal/infrastructure/reranker/`
-- [ ] `src/dsc2026_legal/evaluation/`
-- [ ] `scripts/`
-- [ ] `docker/`
+- [ ] Viết `RerankerClient` trong `src/udsc2026/infrastructure/reranker/`, load model từ local hoặc cấu hình trong `configs/`.
+- [ ] Viết `CrossEncoderReranker` trong `src/udsc2026/retrieval/reranking/`, nhận query và candidates từ TV3 Hybrid Search.
+- [ ] Hỗ trợ batch scoring để giảm latency, có tham số `batch_size`, `top_n`, `device`.
+- [ ] Bảo toàn toàn bộ metadata citation khi rerank, không tạo object mới làm mất `chunk_id` hoặc `article`.
+- [ ] Viết benchmark trong `src/udsc2026/evaluation/` để đo MRR, Recall@K, latency trước và sau rerank.
+- [ ] Viết script trong `scripts/` để chạy test set, gọi pipeline end-to-end và xuất kết quả.
+- [ ] Tạo Dockerfile multi-stage cho backend/frontend nếu cần, không copy `models/` hoặc `data/vector_store/` lớn vào image.
+- [ ] Viết `docker-compose.yml` để chạy backend, frontend và VectorDB local theo biến môi trường.
 
-## API/Interface đầu ra cần bàn giao
+## 3. API Contract & Dữ liệu giao tiếp
 
-- [ ] `Reranker.rerank(query: str, candidates: list[RetrievalHit], top_n: int) -> list[RetrievalHit]`.
-- [ ] `SubmissionWriter.write(results: list[QAResponse], output_path: str) -> None`.
-- [ ] Docker command/script để build và chạy backend.
-- [ ] Docker command/script để build và chạy frontend.
-- [ ] Batch evaluation script nhận input test set và sinh output submission.
+Reranker nhận:
 
-## Checklist nghiệm thu công việc
+```python
+rerank(query: str, candidates: list[RetrievalHit], top_n: int) -> list[RetrievalHit]
+```
 
-- [ ] Reranking giữ nguyên metadata cần cho citation.
-- [ ] Có benchmark latency cho top-20 và top-50 candidates.
-- [ ] Docker build không copy model weights vào image.
-- [ ] Submission file đúng schema CodaLab yêu cầu.
-- [ ] Có script chạy end-to-end từ dữ liệu test đến file submission.
+Mỗi candidate cần có:
+
+```text
+chunk_id, text, dense_score, sparse_score, hybrid_score, metadata
+```
+
+Output cần bổ sung:
+
+```text
+rerank_score, final_score, rank
+```
+
+Submission writer nhận:
+
+```python
+write_submission(results: list[QAResponse], output_path: str) -> None
+```
+
+File đầu ra:
+
+```text
+submission.csv
+```
+
+Schema cụ thể theo CodaLab sẽ được cố định trong `configs/evaluation/` hoặc tài liệu cuộc thi.
+
+## 4. Tiêu chuẩn nghiệm thu (Definition of Done)
+
+- [ ] Reranker chạy được với top-K từ Hybrid Search.
+- [ ] Metadata citation được giữ nguyên sau rerank.
+- [ ] Có benchmark so sánh trước/sau rerank bằng MRR và Recall@K.
+- [ ] Docker build thành công và image không chứa model weights lớn.
+- [ ] `docker-compose.yml` chạy được backend, frontend và VectorDB.
+- [ ] Script evaluation sinh được `submission.csv` từ test set mẫu.
