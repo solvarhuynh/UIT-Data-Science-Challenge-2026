@@ -1,8 +1,7 @@
 # UDSC2026 - LegalIR & LegalQA
 
-Hệ thống RAG pháp luật Việt Nam cho DSC2026, tập trung vào backend: xử lý dữ liệu pháp luật, truy hồi dense/sparse/hybrid, reranking, sinh câu trả lời bằng LLM local, citation chính xác, benchmark và đóng gói submission.
+Hệ thống RAG pháp luật Việt Nam cho DSC2026, xử lý dữ liệu pháp luật, truy hồi dense/sparse/hybrid, reranking, sinh câu trả lời bằng LLM local, citation chính xác, benchmark và đóng gói submission.
 
-Mảng Web Frontend nằm trong `frontend/` và do nhân sự riêng phụ trách. Nhóm TV1-TV5 tập trung vào kiến trúc xử lý dữ liệu, truy hồi và mô hình AI.
 
 ## Introduction
 
