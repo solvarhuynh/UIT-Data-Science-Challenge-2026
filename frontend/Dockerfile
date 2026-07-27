@@ -1,21 +1,11 @@
-FROM python:3.10.12-slim-bullseye
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
 
-RUN pip install --upgrade pip
-
-WORKDIR /usr/src/app/
-
-# set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-
-COPY . /usr/src/app/
-COPY entrypoint.sh /usr/src/app/
-COPY ./requirements.txt /usr/src/app/
-
-# install dependencies
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
-RUN chmod +x /usr/src/app/entrypoint.sh
-
-# run entrypoint.sh
-ENTRYPOINT ["/usr/src/app/entrypoint.sh"]
+FROM node:20-alpine AS dev
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+EXPOSE 5173
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
