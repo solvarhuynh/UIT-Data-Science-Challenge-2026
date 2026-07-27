@@ -100,20 +100,20 @@ udsc2026/
 ```text
 D:\udsc2026-worktrees
 ├── dsc2026-main
-├── dsc2026-tv1-orchestration
-├── dsc2026-tv2-dense-retrieval
-├── dsc2026-tv3-qa-hybrid
-├── dsc2026-tv4-data-benchmark
-└── dsc2026-tv5-rerank-mlops
+├── dsc2026-tv1
+├── dsc2026-tv2
+├── dsc2026-tv3
+├── dsc2026-tv4
+└── dsc2026-tv5
 ```
 
 Branch tương ứng:
 
-- `feature/tv1-orchestration`
-- `feature/tv2-dense-retrieval`
-- `feature/tv3-qa-hybrid`
-- `feature/tv4-data-benchmark`
-- `feature/tv5-rerank-mlops`
+- `feature/tv1`
+- `feature/tv2`
+- `feature/tv3`
+- `feature/tv4`
+- `feature/tv5`
 
 ## Nguyên tắc merge
 
