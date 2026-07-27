@@ -1,6 +1,6 @@
-# DSC2026 — LegalIR & LegalQA
+# UDSC2026 — LegalIR & LegalQA
 
-Hệ thống RAG pháp luật Việt Nam xây dựng trên core `Vietnamese-Legal-Chatbot-RAG-System`, với React ở frontend và FastAPI ở backend. Hệ thống hỗ trợ tìm kiếm điều luật, hỏi–đáp có ngữ cảnh, streaming và citation.
+Hệ thống RAG pháp luật Việt Nam, với React ở frontend và FastAPI ở backend. Hệ thống hỗ trợ tìm kiếm điều luật, hỏi–đáp có ngữ cảnh, streaming và citation.
 
 ## Introduction
 
