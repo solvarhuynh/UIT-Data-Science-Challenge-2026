@@ -2,15 +2,9 @@
 Simple API tests that don't require external dependencies
 """
 
-import os
-import sys
 from unittest.mock import Mock, patch
 
 import pytest
-
-# Add backend src to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend", "src"))
-
 
 @pytest.mark.unit
 class TestAPISimple:
@@ -45,16 +39,16 @@ class TestAPISimple:
         # Mock an API response
         mock_response = {
             "answer": "Test legal answer",
-            "sources": ["Test Law - Article 1"],
+            "citations": ["Test Law - Article 1"],
             "confidence": 0.95,
             "session_id": "test-123",
         }
 
         # Validate response structure
         assert "answer" in mock_response
-        assert "sources" in mock_response
+        assert "citations" in mock_response
         assert "confidence" in mock_response
-        assert isinstance(mock_response["sources"], list)
+        assert isinstance(mock_response["citations"], list)
         assert len(mock_response["answer"]) > 0
         assert 0 <= mock_response["confidence"] <= 1
 

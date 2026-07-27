@@ -52,11 +52,10 @@ def create_temp_json_file(data: List[Dict[str, Any]]) -> str:
 
 
 def assert_valid_response_format(response: Dict[str, Any]):
-    """Assert that response has valid format"""
     assert "answer" in response
-    assert "sources" in response
+    assert "citations" in response
     assert isinstance(response["answer"], str)
-    assert isinstance(response["sources"], list)
+    assert isinstance(response["citations"], list)
     assert len(response["answer"]) > 0
 
 
@@ -78,7 +77,5 @@ def test_create_test_qa_data():
 
 
 def test_assert_valid_response_format():
-    """Test the response format validator"""
-    valid_response = {"answer": "Test answer", "sources": ["Source 1", "Source 2"]}
-    # Should not raise an exception
+    valid_response = {"answer": "Test answer", "citations": ["Source 1", "Source 2"]}
     assert_valid_response_format(valid_response)

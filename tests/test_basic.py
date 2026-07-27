@@ -57,11 +57,11 @@ def test_environment_variables():
 
 def test_string_operations():
     """Test string operations"""
-    text = "Vietnamese Legal Chatbot"
+    text = "UDSC2026 Legal RAG"
 
-    assert "Vietnamese" in text
-    assert text.lower() == "vietnamese legal chatbot"
-    assert text.replace("Vietnamese", "English") == "English Legal Chatbot"
+    assert "UDSC2026" in text
+    assert text.lower() == "udsc2026 legal rag"
+    assert text.replace("UDSC2026", "DSC2026") == "DSC2026 Legal RAG"
 
 
 @pytest.mark.parametrize(
