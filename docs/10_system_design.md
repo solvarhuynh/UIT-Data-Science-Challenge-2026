@@ -107,7 +107,7 @@ QARequest        = question, context[], prompt_version
 QAResponse       = answer, citations[], usage, latency
 ```
 
-Các schema đặt tại `src/dsc2026_legal/contracts/`. Thay đổi schema phải được review vì đây là biên giao tiếp giữa Retrieval, QA và API.
+Các schema đặt tại `src/udsc2026/contracts/`. Thay đổi schema phải được review vì đây là biên giao tiếp giữa Retrieval, QA và API.
 
 ## 7. Local Model Layout
 
@@ -157,4 +157,3 @@ api            chỉ orchestration, validation và transport
 ```
 
 Các ranh giới này giúp nhóm phát triển song song, benchmark riêng LegalIR/LegalQA và thay đổi model mà không phá vỡ API.
-
