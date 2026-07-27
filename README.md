@@ -111,7 +111,7 @@ Mỗi thành viên dùng một Git Worktree/branch riêng, thử nghiệm trong 
 
 ## Documents
 
-- [System Design](docs/10_system_design.md)
+- [System Design](docs/project/10_system_design.md)
 - [TV1 Work Plan](docs/member/tv1.md)
 - [TV2 Work Plan](docs/member/tv2.md)
 - [TV3 Work Plan](docs/member/tv3.md)
