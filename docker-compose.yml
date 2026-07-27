@@ -1,0 +1,31 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: udsc2026-backend
+    command: uvicorn udsc2026.api.app:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    environment:
+      UDSC2026_ENV: development
+      MODEL_EMBEDDER_PATH: /app/models/bkai-bi-encoder
+      MODEL_LLM_PATH: /app/models/qwen3-legal
+    volumes:
+      - ./configs:/app/configs:ro
+      - ./data:/app/data
+      - ./models:/app/models:ro
+      - ./prompts:/app/prompts:ro
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: udsc2026-frontend
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_BASE_URL: http://localhost:8000
+    depends_on:
+      - backend

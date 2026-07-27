@@ -9,7 +9,7 @@ Hai mô hình local được sử dụng:
 - Embedder: `bkai-foundation-models/vietnamese-bi-encoder` cho dense retrieval tiếng Việt.
 - LLM: `thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2` cho sinh câu trả lời pháp lý.
 
-Không yêu cầu OpenAI API hoặc dịch vụ LLM bên ngoài.
+Không yêu cầu dịch vụ LLM bên ngoài.
 
 ## Competition Tasks
 
@@ -63,7 +63,7 @@ python .\download_models.py
 Backend chạy tại cổng `8000`:
 
 ```powershell
-uvicorn dsc2026_legal.api.app:app --reload
+uvicorn udsc2026.api.app:app --reload
 ```
 
 ### Bước 3: Khởi chạy Frontend React
@@ -85,12 +85,12 @@ cd experiments\tvX
 python .\scripts\<ten_script_thu_nghiem>.py
 ```
 
-Thay `tvX` bằng `tv1`, `tv2`, `tv3`, `tv4` hoặc `tv5`. Logic thử nghiệm chỉ được đưa vào `src/dsc2026_legal/` sau khi đã ổn định và có interface rõ ràng.
+Thay `tvX` bằng `tv1`, `tv2`, `tv3`, `tv4` hoặc `tv5`. Logic thử nghiệm chỉ được đưa vào `src/udsc2026/` sau khi đã ổn định và có interface rõ ràng.
 
 ## Repository Structure
 
 ```text
-src/dsc2026_legal/
+src/udsc2026/
 ├── api/             # FastAPI routes, streaming response
 ├── contracts/       # Pydantic request/response schemas
 ├── ingestion/       # Đọc, làm sạch, cấu trúc và chunking dữ liệu luật
@@ -118,7 +118,7 @@ Mỗi thành viên dùng một Git Worktree/branch riêng, thử nghiệm trong 
 - [TV4 Work Plan](docs/member/tv4.md)
 - [TV5 Work Plan](docs/member/tv5.md)
 - [Prompt Registry](prompts/README.md)
-- [Test Documentation](docs/test.md)
+- [Test Cases Reference](tests/test_cases_reference.md)
 
 ## Experiments
 

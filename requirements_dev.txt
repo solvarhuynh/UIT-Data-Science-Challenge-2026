@@ -9,10 +9,8 @@ pytest-benchmark==4.0.0
 httpx==0.27.2
 fastapi==0.112.2
 
-# Minimal dependencies for testing (avoid installation issues)
-redis==5.0.7
-# qdrant-client==1.10.1  # Comment out if causing issues
-sqlalchemy==2.0.32
+# Local RAG dependencies for integration tests
+# qdrant-client==1.10.1  # Enable when vector DB integration tests are added
 
 # Performance monitoring
 psutil==6.0.0
@@ -36,7 +34,6 @@ build==1.2.2.post1
 # Type hints support
 types-requests==2.32.0.20241016
 types-PyYAML==6.0.12.20240808
-types-redis==4.6.0.20241004
 
 # Load testing
 locust==2.31.8
