@@ -126,7 +126,7 @@ Notebook và script thử nghiệm được cô lập tại `experiments/tv1/` �
 
 ## Team
 
-- TV1: FastAPI Backend Core, System Architecture, PR Review; bổ sung metrics MRR, Accuracy, ROUGE.
+- TV1: Integration & Orchestration, E2E Pipeline, Caching, Logging, Performance Tuning.
 - TV2: Dense Retrieval với BKAI Bi-encoder và VectorDB; bổ sung React basic UI.
 - TV3: Local Qwen3, prompt system, citation và chống hallucination; bổ sung BM25 + Hybrid Search.
 - TV4: Data ETL, legal structure parsing và chunking; bổ sung UI/UX citation + markdown.
@@ -139,4 +139,3 @@ Notebook và script thử nghiệm được cô lập tại `experiments/tv1/` �
 3. Tích hợp Qwen3 local với streaming và citation.
 4. Đánh giá LegalIR/LegalQA và tối ưu latency.
 5. Đóng gói Docker, kiểm thử end-to-end và chuẩn bị submission.
-
