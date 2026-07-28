@@ -26,6 +26,10 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# The Python template rule above must not hide the frontend runtime modules.
+!frontend/giao dien/src/lib/
+!frontend/giao dien/src/lib/**
+
 # PyInstaller
 *.manifest
 *.spec
