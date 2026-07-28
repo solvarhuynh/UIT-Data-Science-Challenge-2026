@@ -89,6 +89,7 @@ ipython_config.py
 
 # Competition rules file
 UIT_DSC2026.md
+docs/member/tv3_execution_plan.md
 
 # pipenv
 #Pipfile.lock
