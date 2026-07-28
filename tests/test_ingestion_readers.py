@@ -34,7 +34,7 @@ def test_read_json_uses_source_id_and_keeps_source_text(tmp_path):
 
     assert document.doc_id == "law_2026"
     assert document.title == "Luat mau"
-    assert document.raw_text == raw_text
+    assert document.raw_text == path.read_bytes().decode("utf-8")
     assert document.metadata["source_document_id"] == "LAW-2026"
 
 
