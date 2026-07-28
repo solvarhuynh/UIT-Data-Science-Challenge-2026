@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { ArrowUpRight, BookOpenText, Scale } from "lucide-react";
+import { ArrowUpRight, Scale } from "lucide-react";
 import { BrandLogo, VietnamFlag } from "./BrandLogo";
 import { SUGGESTED_PROMPTS } from "@/lib/legal/mock-data";
 
@@ -23,11 +23,15 @@ export function WelcomeState({ onPick }: WelcomeStateProps) {
           <VietnamFlag className="welcome-vietnam-flag" animated />
           <div
             className="vietnam-legal-mark"
-            aria-label="Biểu trưng sách luật và cán cân công lý Việt Nam"
+            aria-label="Biểu trưng cán cân công lý và hoa sen Việt Nam"
             role="img"
           >
             <Scale className="vietnam-legal-scale" aria-hidden />
-            <BookOpenText className="vietnam-legal-book" aria-hidden />
+            <span className="vietnam-legal-lotus" aria-hidden>
+              <i className="vietnam-lotus-petal vietnam-lotus-petal-left" />
+              <i className="vietnam-lotus-petal vietnam-lotus-petal-center" />
+              <i className="vietnam-lotus-petal vietnam-lotus-petal-right" />
+            </span>
           </div>
         </div>
         <div className="viet-divider mt-4" aria-hidden>
