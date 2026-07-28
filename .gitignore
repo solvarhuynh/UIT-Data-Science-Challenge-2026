@@ -26,6 +26,10 @@ share/python-wheels/
 *.egg
 MANIFEST
 
+# The Python template rule above must not hide the frontend runtime modules.
+!frontend/giao dien/src/lib/
+!frontend/giao dien/src/lib/**
+
 # PyInstaller
 *.manifest
 *.spec
@@ -81,7 +85,10 @@ profile_default/
 ipython_config.py
 
 # pyenv
-# .python-version
+.python-version
+
+# Competition rules file
+UIT_DSC2026.md
 
 # pipenv
 #Pipfile.lock

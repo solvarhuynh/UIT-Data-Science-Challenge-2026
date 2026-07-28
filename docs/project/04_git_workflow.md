@@ -21,14 +21,6 @@ git checkout -b feat/tvX-ten-viec
 git status
 git add .
 git commit -m "feat(scope): short message"
-
-# trước khi tạo PR
-git checkout main
-git pull origin main
-git checkout feat/tvX-ten-viec
-git merge main
-
-# nếu không lỗi thì push
 git push origin feat/tvX-ten-viec
 ```
 
