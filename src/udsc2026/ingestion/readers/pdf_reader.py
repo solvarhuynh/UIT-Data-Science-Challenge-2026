@@ -37,7 +37,9 @@ def read_pdf(file_path: str) -> RawDocument:
 
         pdf_metadata = dict(pdf.metadata or {})
 
-    raw_text = "\n\n".join(page_texts)
+    # The form-feed delimiter is retained for the cleaner to identify repeated
+    # headers and footers by page, then removed before structure parsing.
+    raw_text = "\n\f\n".join(page_texts)
     metadata: Dict[str, Any] = {
         "file_name": path.name,
         "file_size_bytes": path.stat().st_size,
