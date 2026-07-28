@@ -131,7 +131,7 @@ export const ConversationHistory = memo(function ConversationHistory({
       aria-label="Lịch sử trò chuyện"
       aria-hidden={collapsed}
       className={cn(
-        "sidebar-history-panel w-[271px] space-y-4 px-2 pb-2",
+        "sidebar-history-panel w-full min-w-0 space-y-4 px-2 pb-2",
         collapsed && "sidebar-expanded-hidden",
       )}
     >
@@ -288,12 +288,12 @@ export function Sidebar(props: SidebarProps) {
               aria-label={inDrawer ? "Đóng menu điều hướng" : "Thu gọn thanh bên"}
               aria-expanded={inDrawer ? undefined : !collapsed}
               aria-controls={sidebarId}
-              className="ml-2 inline-flex size-7 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-[color,background-color,transform] duration-150 hover:bg-sidebar-accent hover:text-foreground active:scale-95 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+              className="sidebar-collapse-control ml-auto inline-flex size-9 shrink-0 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar focus-visible:outline-none"
             >
               {inDrawer ? (
-                <X className="size-3.5" aria-hidden />
+                <X className="size-4" strokeWidth={1.9} aria-hidden />
               ) : (
-                <PanelLeftClose className="size-3.5" aria-hidden />
+                <PanelLeftClose className="size-4" strokeWidth={1.9} aria-hidden />
               )}
             </button>
           </>
@@ -368,7 +368,7 @@ export function Sidebar(props: SidebarProps) {
 
       <div
         className={cn(
-          "scroll-slim min-h-0 flex-1 pt-3",
+          "scroll-slim min-h-0 min-w-0 flex-1 overflow-x-hidden pt-3",
           collapsed ? "overflow-hidden" : "overflow-y-auto",
         )}
       >
