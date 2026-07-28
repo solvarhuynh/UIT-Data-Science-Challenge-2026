@@ -15,6 +15,9 @@ from udsc2026.ingestion.readers._helpers import (
 from udsc2026.ingestion.readers.models import RawDocument
 
 
+CONTENT_FIELDS = ("raw_text", "content", "text", "body", "document_text")
+
+
 def _decode_json(raw_bytes: bytes, file_path: str) -> str:
     """Decode a JSON source according to the UTF encodings allowed by JSON."""
     for encoding in ("utf-8-sig", "utf-16", "utf-32"):
@@ -66,6 +69,12 @@ def _raw_document_from_json_record(
         metadata["source_line"] = source_line
     if source_id is not None:
         metadata["source_document_id"] = source_id
+    content = get_first_field(mapping, CONTENT_FIELDS)
+    if content is not None:
+        raw_text = str(content)
+        metadata["content_field"] = next(
+            field for field in CONTENT_FIELDS if mapping and mapping.get(field) is not None
+        )
 
     return RawDocument(
         doc_id=make_doc_id(str(path), source_id),
