@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { ArrowUpRight, BookOpenText, Scale } from "lucide-react";
+import { ArrowUpRight, Scale } from "lucide-react";
 import { BrandLogo, VietnamFlag } from "./BrandLogo";
 import { SUGGESTED_PROMPTS } from "@/lib/legal/mock-data";
 
@@ -20,14 +20,18 @@ export function WelcomeState({ onPick }: WelcomeStateProps) {
           <div className="logo-archive-inner">
             <BrandLogo size={96} subtle className="welcome-logo" />
           </div>
-          <VietnamFlag className="welcome-vietnam-flag" />
+          <VietnamFlag className="welcome-vietnam-flag" animated />
           <div
             className="vietnam-legal-mark"
-            aria-label="Biểu trưng sách luật và cán cân công lý Việt Nam"
+            aria-label="Biểu trưng cán cân công lý và hoa sen Việt Nam"
             role="img"
           >
             <Scale className="vietnam-legal-scale" aria-hidden />
-            <BookOpenText className="vietnam-legal-book" aria-hidden />
+            <span className="vietnam-legal-lotus" aria-hidden>
+              <i className="vietnam-lotus-petal vietnam-lotus-petal-left" />
+              <i className="vietnam-lotus-petal vietnam-lotus-petal-center" />
+              <i className="vietnam-lotus-petal vietnam-lotus-petal-right" />
+            </span>
           </div>
         </div>
         <div className="viet-divider mt-4" aria-hidden>
@@ -43,9 +47,8 @@ export function WelcomeState({ onPick }: WelcomeStateProps) {
       <h2 className="welcome-title mt-3.5 font-serif text-[28px] leading-tight font-semibold tracking-[-0.02em] text-foreground sm:text-[36px]">
         Tra cứu pháp luật Việt Nam
       </h2>
-      <p className="welcome-description mx-auto mt-2.5 max-w-[540px] text-[14px] leading-relaxed text-muted-foreground">
-        Tôn trọng lẽ phải, bảo vệ quyền lợi — tìm đúng văn bản, đối chiếu điều khoản và kiểm tra
-        từng căn cứ.
+      <p className="welcome-description mx-auto mt-2.5 max-w-full whitespace-nowrap text-[14px] leading-6 font-medium tracking-[0.01em] text-muted-foreground sm:text-[15px]">
+        Chuẩn điều luật – Trọn niềm tin
       </p>
 
       <div className="welcome-provenance" aria-label="Phạm vi văn bản">

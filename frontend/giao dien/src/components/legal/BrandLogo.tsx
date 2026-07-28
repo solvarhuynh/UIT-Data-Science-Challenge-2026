@@ -30,18 +30,34 @@ export function BrandLogo({ size = 34, className, subtle = false }: BrandLogoPro
 interface VietnamFlagProps {
   className?: string;
   decorative?: boolean;
+  animated?: boolean;
 }
 
 /** Compact, code-native rendering of the Vietnamese national flag. */
-export function VietnamFlag({ className, decorative = false }: VietnamFlagProps) {
+export function VietnamFlag({ className, decorative = false, animated = false }: VietnamFlagProps) {
   return (
     <span
-      className={cn("vietnam-flag", className)}
+      className={cn("vietnam-flag", animated && "vietnam-flag-animated", className)}
       role={decorative ? undefined : "img"}
       aria-label={decorative ? undefined : "Cờ Việt Nam"}
       aria-hidden={decorative || undefined}
     >
-      <span className="vietnam-flag-star" aria-hidden />
+      <span className="vietnam-flag-cloth" aria-hidden>
+        <span className="vietnam-flag-surface">
+          <span className="vietnam-flag-star" />
+        </span>
+      </span>
+      {animated && (
+        <img
+          src="/vietnam-flag-waving.gif"
+          alt=""
+          width={720}
+          height={478}
+          className="vietnam-flag-motion"
+          aria-hidden
+          draggable={false}
+        />
+      )}
     </span>
   );
 }
