@@ -818,45 +818,104 @@
 
 .vietnam-legal-mark {
   position: absolute;
-  right: -1.55rem;
-  bottom: -0.55rem;
+  right: -1.15rem;
+  bottom: -0.35rem;
   display: grid;
-  width: 3.4rem;
-  height: 3.4rem;
+  width: 2.8rem;
+  height: 2.8rem;
   place-items: center;
   overflow: hidden;
-  border: 2px solid oklch(0.81 0.14 82);
-  border-radius: 0.6rem;
-  color: oklch(0.91 0.13 89);
-  background: linear-gradient(145deg, oklch(0.34 0.07 263), oklch(0.2 0.045 263));
+  border: 1px solid color-mix(in oklab, var(--brand) 76%, #b87520);
+  border-radius: 50%;
+  color: color-mix(in oklab, var(--flag) 84%, #67151a);
+  background:
+    radial-gradient(circle at 34% 22%, rgb(255 255 255 / 0.96), transparent 38%),
+    linear-gradient(145deg, #fffdf6 0%, #faefda 62%, #efd5a4 100%);
   box-shadow:
-    0 0 0 3px var(--background),
-    0 8px 18px -10px color-mix(in oklab, var(--ink) 82%, transparent);
+    0 0 0 3px color-mix(in oklab, var(--background) 94%, transparent),
+    0 7px 16px -12px color-mix(in oklab, var(--ink) 58%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 0.9);
+}
+
+.vietnam-legal-mark::before {
+  position: absolute;
+  inset: 2px;
+  content: "";
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from -4deg,
+    color-mix(in oklab, var(--brand) 48%, transparent) 0 2deg,
+    transparent 2deg 18deg
+  );
+  opacity: 0.55;
+  -webkit-mask: radial-gradient(circle, transparent 0 70%, #000 72% 100%);
+  mask: radial-gradient(circle, transparent 0 70%, #000 72% 100%);
+  pointer-events: none;
 }
 
 .vietnam-legal-mark::after {
   position: absolute;
-  inset: 3px;
+  inset: 0.34rem;
   content: "";
-  border: 1px solid color-mix(in oklab, var(--brand) 72%, transparent);
-  border-radius: inherit;
+  border: 1px solid color-mix(in oklab, var(--brand) 58%, #c68a2b);
+  border-radius: 50%;
+  opacity: 0.72;
   pointer-events: none;
 }
 
 .vietnam-legal-scale {
   position: absolute;
-  top: 0.45rem;
-  width: 1.45rem;
-  height: 1.45rem;
-  stroke-width: 1.65;
+  z-index: 2;
+  top: 15%;
+  width: 55%;
+  height: 55%;
+  stroke-width: 1.75;
+  filter: drop-shadow(0 1px 0 rgb(255 255 255 / 0.72));
 }
 
-.vietnam-legal-book {
+.vietnam-legal-lotus {
   position: absolute;
-  bottom: 0.3rem;
-  width: 1.15rem;
-  height: 1.15rem;
-  stroke-width: 1.75;
+  z-index: 3;
+  bottom: 10%;
+  left: 50%;
+  width: 52%;
+  height: 23%;
+  transform: translateX(-50%);
+}
+
+.vietnam-lotus-petal {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  display: block;
+  width: 40%;
+  height: 78%;
+  border: 1px solid color-mix(in oklab, var(--brand) 74%, #b76e17);
+  border-radius: 78% 18% 72% 22%;
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, #fff7dc 78%, white),
+    color-mix(in oklab, var(--brand) 22%, #f1d190)
+  );
+  transform-origin: 50% 100%;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7);
+}
+
+.vietnam-lotus-petal-left {
+  transform: translateX(-96%) rotate(-31deg);
+}
+
+.vietnam-lotus-petal-center {
+  z-index: 2;
+  bottom: 5%;
+  width: 34%;
+  height: 100%;
+  border-radius: 74% 74% 48% 48%;
+  transform: translateX(-50%);
+}
+
+.vietnam-lotus-petal-right {
+  transform: translateX(-4%) rotate(31deg) scaleX(-1);
 }
 
 .welcome-provenance {
@@ -938,6 +997,13 @@
     opacity: 0.055;
   }
 
+  .vietnam-legal-mark {
+    right: -0.9rem;
+    bottom: -0.28rem;
+    width: 2.45rem;
+    height: 2.45rem;
+  }
+
   .welcome-vietnam-flag {
     top: -0.5rem;
     left: -1.15rem;
@@ -963,28 +1029,16 @@
   }
 
   .vietnam-legal-mark {
-    right: -1.15rem;
-    bottom: -0.4rem;
-    width: 2.7rem;
-    height: 2.7rem;
+    right: -0.85rem;
+    bottom: -0.25rem;
+    width: 2.35rem;
+    height: 2.35rem;
   }
 
   .welcome-vietnam-flag {
     top: -0.4rem;
     left: -1rem;
     width: 2.65rem;
-  }
-
-  .vietnam-legal-scale {
-    top: 0.35rem;
-    width: 1.1rem;
-    height: 1.1rem;
-  }
-
-  .vietnam-legal-book {
-    bottom: 0.25rem;
-    width: 0.85rem;
-    height: 0.85rem;
   }
 
   .welcome-kicker {
@@ -1046,28 +1100,16 @@
   }
 
   .vietnam-legal-mark {
-    right: -0.9rem;
-    bottom: -0.3rem;
-    width: 2.25rem;
-    height: 2.25rem;
+    right: -0.68rem;
+    bottom: -0.2rem;
+    width: 1.95rem;
+    height: 1.95rem;
   }
 
   .welcome-vietnam-flag {
     top: -0.3rem;
     left: -0.8rem;
     width: 2.2rem;
-  }
-
-  .vietnam-legal-scale {
-    top: 0.28rem;
-    width: 0.9rem;
-    height: 0.9rem;
-  }
-
-  .vietnam-legal-book {
-    bottom: 0.2rem;
-    width: 0.72rem;
-    height: 0.72rem;
   }
 
   .viet-divider {
