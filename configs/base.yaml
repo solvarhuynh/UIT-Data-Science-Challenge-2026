@@ -3,3 +3,18 @@ chunk_size: 512
 top_k: 10
 similarity_threshold: 0.5
 
+embedding:
+  embedder_model_path: "./models/bkai-bi-encoder"
+
+vector_db:
+  type: "faiss"
+  qdrant_url: "http://localhost:6333"
+  collection_name: "legal_chunks"
+  faiss_index_path: "./data/vector_store/faiss"
+
+hybrid:
+  dense_weight: 0.5
+  sparse_weight: 0.5
+  candidate_k: 50
+  min_score: 0.0
+  top_k: 10
