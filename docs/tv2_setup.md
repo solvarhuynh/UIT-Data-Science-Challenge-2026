@@ -40,7 +40,7 @@ pytest tests/ -v --tb=short
 
 ## 2. Lộ trình prompt và verify
 
-| Prompt | Phạm vi | Verify sau khi hoàn tất |
+| Tasks | Phạm vi | Verify sau khi hoàn tất |
 |---|---|---|
 | 0 | `LegalChunk` contract | `python -c "from udsc2026.contracts import LegalChunk, RetrievalHit; print('ok')"` |
 | 1 | `EmbeddingClient` BKAI local | `python -c "from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient; print('ok')"` |
@@ -69,6 +69,36 @@ tại còn fail.
 
 TV2 cung cấp các API `search(query, top_k, filters=None)` cho dense, sparse và hybrid.
 TV1 có thể gọi hybrid để lấy context; TV5 nhận `list[RetrievalHit]` để rerank.
+
+## Tóm tắt vị trí file
+
+```
+udsc2026/
+├── pyproject.toml              # ĐÃ SỬA: thêm [build-system] + [project]
+├── requirements_dev.txt        # SẼ ĐƯỢC AGENT BỔ SUNG dần theo bảng trên (Task 1/2/4/7)
+├── .venv/                      # môi trường ảo, KHÔNG commit vào git
+├── configs/
+│   ├── base.yaml                # SẼ CÓ THÊM section embedding/vector_db/sparse/hybrid
+│   └── development.yaml
+├── data/
+│   ├── processed/chunks/        # sample_dev.jsonl do Task 6 tạo (dev only, xoá khi TV4 có data thật)
+│   └── vector_store/            # output của Task 6: faiss/, bm25/ (qdrant chạy ngoài Docker)
+├── scripts/
+│   └── index_chunks.py          # Task 6
+├── src/udsc2026/
+│   ├── contracts/                 # Task 0: chunk.py (LegalChunk) + retrieval.py (RetrievalHit, có sẵn)
+│   ├── infrastructure/
+│   │   ├── config.py              # Task 7
+│   │   ├── embedding/             # Task 1
+│   │   └── vector_db/             # Task 2
+│   └── retrieval/
+│       ├── dense/                 # Task 3
+│       ├── sparse/                # Task 4
+│       └── hybrid/                # Task 5
+├── tests/retrieval/               # Task 8
+└── docs/
+    └── tv2_setup.md               # chính là file bạn đang đọc
+```
 
 ## 4. Quy tắc tích hợp
 
