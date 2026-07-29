@@ -85,7 +85,11 @@ profile_default/
 ipython_config.py
 
 # pyenv
-# .python-version
+.python-version
+
+# Competition rules file
+UIT_DSC2026.md
+docs/member/tv3_execution_plan.md
 
 # pipenv
 #Pipfile.lock
