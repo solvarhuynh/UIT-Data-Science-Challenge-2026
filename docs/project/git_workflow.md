@@ -29,6 +29,8 @@ Tài liệu này là bản rút gọn để cả thành viên và AI có thể d
     git checkout tvX
     git merge main
 
+    - Nếu có conflict: Sửa -> Commit 
+
 - 4. Lấy lại code dở ra làm tiếp
 
     git stash pop
