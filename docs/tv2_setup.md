@@ -72,33 +72,33 @@ TV1 có thể gọi hybrid để lấy context; TV5 nhận `list[RetrievalHit]` 
 
 ## Tóm tắt vị trí file
 
-```
+# Cấu trúc các file tv2 đã làm việc
+
 udsc2026/
 ├── pyproject.toml              # ĐÃ SỬA: thêm [build-system] + [project]
-├── requirements_dev.txt        # SẼ ĐƯỢC AGENT BỔ SUNG dần theo bảng trên (Task 1/2/4/7)
+├── requirements_dev.txt        # SẼ ĐƯỢC AGENT BỔ SUNG dần theo bảng trên (Prompt 1/2/4/7)
 ├── .venv/                      # môi trường ảo, KHÔNG commit vào git
 ├── configs/
 │   ├── base.yaml                # SẼ CÓ THÊM section embedding/vector_db/sparse/hybrid
 │   └── development.yaml
 ├── data/
-│   ├── processed/chunks/        # sample_dev.jsonl do Task 6 tạo (dev only, xoá khi TV4 có data thật)
-│   └── vector_store/            # output của Task 6: faiss/, bm25/ (qdrant chạy ngoài Docker)
+│   ├── processed/chunks/        # sample_dev.jsonl do Prompt 6 tạo (dev only, xoá khi TV4 có data thật)
+│   └── vector_store/            # output của Prompt 6: faiss/, bm25/ (qdrant chạy ngoài Docker)
 ├── scripts/
-│   └── index_chunks.py          # Task 6
+│   └── index_chunks.py          # Prompt 6
 ├── src/udsc2026/
-│   ├── contracts/                 # Task 0: chunk.py (LegalChunk) + retrieval.py (RetrievalHit, có sẵn)
+│   ├── contracts/                 # Prompt 0: chunk.py (LegalChunk) + retrieval.py (RetrievalHit, có sẵn)
 │   ├── infrastructure/
-│   │   ├── config.py              # Task 7
-│   │   ├── embedding/             # Task 1
-│   │   └── vector_db/             # Task 2
+│   │   ├── config.py              # Prompt 7
+│   │   ├── embedding/             # Prompt 1
+│   │   └── vector_db/             # Prompt 2
 │   └── retrieval/
-│       ├── dense/                 # Task 3
-│       ├── sparse/                # Task 4
-│       └── hybrid/                # Task 5
-├── tests/retrieval/               # Task 8
-└── docs/
+│       ├── dense/                 # Prompt 3
+│       ├── sparse/                # Prompt 4
+│       └── hybrid/                # Prompt 5
+├── tests/retrieval/               # Prompt 8
+└── docs
     └── tv2_setup.md               # chính là file bạn đang đọc
-```
 
 ## 4. Quy tắc tích hợp
 
