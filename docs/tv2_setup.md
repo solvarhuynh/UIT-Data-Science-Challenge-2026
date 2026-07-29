@@ -95,9 +95,7 @@ udsc2026/
 │       ├── sparse/                # Prompt 4
 │       └── hybrid/                # Prompt 5
 ├── tests/retrieval/               # Prompt 8
-└── docs/member/
-    ├── tv2.md                     # đặc tả gốc (đã có sẵn)
-    ├── tv2_prompts.md             # 10 prompt Prompt 0-9
+└── docs
     └── tv2_setup.md               # chính là file bạn đang đọc
 
 ## 4. Quy tắc tích hợp
