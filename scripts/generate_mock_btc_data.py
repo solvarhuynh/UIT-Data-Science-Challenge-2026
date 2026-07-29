@@ -18,10 +18,10 @@ def clean_directory(directory_path: Path):
 
 def generate_mock_data(output_dir: Path = None):
     base_dir = output_dir if output_dir else DEFAULT_OUTPUT_DIR
-    print(f"🧹 Đang dọn dẹp: {base_dir}...")
+    print(f"Đang dọn dẹp: {base_dir}...")
     clean_directory(base_dir)
 
-    print("📝 Đang tạo dữ liệu...")
+    print("Đang tạo dữ liệu...")
     
     # 1. FILE TXT
     file1 = base_dir / "mock_btc_law.txt"
