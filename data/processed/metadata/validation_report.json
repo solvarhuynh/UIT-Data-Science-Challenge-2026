@@ -1,0 +1,22 @@
+{
+  "document_count": 4,
+  "article_count": 8,
+  "chunk_count": 20,
+  "parent_count": 8,
+  "manual_review_document_count": 0,
+  "empty_chunk_count": 0,
+  "oversized_chunk_count": 0,
+  "missing_metadata_count": 0,
+  "unicode_error_count": 0,
+  "duplicate_chunk_id_count": 0,
+  "orphan_chunk_count": 0,
+  "invalid_json_record_count": 0,
+  "empty_chunk_ids": [],
+  "oversized_chunk_ids": [],
+  "missing_metadata_chunk_ids": [],
+  "unicode_error_chunk_ids": [],
+  "duplicate_chunk_ids": [],
+  "orphan_chunk_ids": [],
+  "invalid_json_chunk_ids": [],
+  "manual_review_documents": []
+}

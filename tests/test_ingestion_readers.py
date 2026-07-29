@@ -38,6 +38,26 @@ def test_read_json_uses_source_id_and_keeps_source_text(tmp_path):
     assert document.metadata["source_document_id"] == "LAW-2026"
 
 
+def test_read_json_uses_explicit_content_as_legal_text(tmp_path):
+    path = tmp_path / "luat_content.json"
+    path.write_text(
+        json.dumps(
+            {
+                "id": "LAW-CONTENT",
+                "title": "Luật mẫu",
+                "content": "Điều 1. Nội dung pháp luật.",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    document = extract_raw_document(str(path))
+
+    assert document.raw_text == "Điều 1. Nội dung pháp luật."
+    assert document.metadata["content_field"] == "content"
+
+
 def test_read_jsonl_reports_record_count(tmp_path):
     path = tmp_path / "records.jsonl"
     path.write_text('{"id": "one"}\n{"id": "two"}\n', encoding="utf-8")

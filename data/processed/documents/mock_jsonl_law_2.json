@@ -1,0 +1,32 @@
+{
+  "doc_id": "mock_jsonl_law_2",
+  "source_path": "data\\raw\\btc\\mock\\mock_btc_laws.jsonl",
+  "title": "Bộ luật Lao động giả lập 2026 (JSONL 2)",
+  "cleaned_text": "BỘ LUẬT LAO ĐỘNG GIẢ LẬP 2026\nChương I. QUY ĐỊNH CHUNG\nMục 1. Phạm vi áp dụng\nĐiều 11. Phạm vi điều chỉnh\n1. Bộ luật Lao động (sau đây gọi là BLLĐ) quy định quan hệ lao động.\na) Người lao động được bảo vệ quyền và lợi ích hợp pháp.\nb) Người sử dụng lao động có trách nhiệm tuân thủ BLLĐ.\nĐiều 2. Nguyên tắc áp dụng\n1. Việc hòa giải và uý quyền được thực hiện theo quy định của pháp luật.\na) Hồ sơ phải được lưu trữ đầy đủ.",
+  "file_format": "json",
+  "metadata": {
+    "file_name": "mock_btc_laws.jsonl",
+    "file_size_bytes": 1397,
+    "json_type": "dict",
+    "source_extension": ".jsonl",
+    "source_line": 2,
+    "source_document_id": "mock-jsonl-law-2",
+    "content_field": "content",
+    "cleaning": {
+      "unicode_normalization": "NFC",
+      "removed_line_count": 1,
+      "page_delimiter": "form_feed"
+    }
+  },
+  "abbreviations": {
+    "BLLĐ": "ĐỊNH CHUNG\nMục 1. Phạm vi áp dụng\nĐiều 11. Phạm vi điều chỉnh\n1. Bộ luật Lao động",
+    "BLDS": "Bộ luật Dân sự",
+    "BLHS": "Bộ luật Hình sự",
+    "NĐ-CP": "Nghị định của Chính phủ",
+    "TT-BTC": "Thông tư của Bộ Tài chính",
+    "QĐ": "Quyết định"
+  },
+  "removed_lines": [
+    "DỰ THẢO"
+  ]
+}
