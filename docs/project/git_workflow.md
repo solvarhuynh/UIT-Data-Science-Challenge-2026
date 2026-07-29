@@ -40,5 +40,8 @@ Tài liệu này là bản rút gọn để cả thành viên và AI có thể d
 
     git add <tên các file đã làm việc trong nhóm đó>
     git commit -m "feat(scope): short message"
+
+- sau khi đã add + commit nhiểu nhóm cv:
+
     git push origin tvX
 ```
