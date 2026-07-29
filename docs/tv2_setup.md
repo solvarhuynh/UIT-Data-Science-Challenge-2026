@@ -40,7 +40,7 @@ pytest tests/ -v --tb=short
 
 ## 2. Lộ trình prompt và verify
 
-| Prompt | Phạm vi | Verify sau khi hoàn tất |
+| Tasks | Phạm vi | Verify sau khi hoàn tất |
 |---|---|---|
 | 0 | `LegalChunk` contract | `python -c "from udsc2026.contracts import LegalChunk, RetrievalHit; print('ok')"` |
 | 1 | `EmbeddingClient` BKAI local | `python -c "from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient; print('ok')"` |
@@ -69,6 +69,8 @@ tại còn fail.
 
 TV2 cung cấp các API `search(query, top_k, filters=None)` cho dense, sparse và hybrid.
 TV1 có thể gọi hybrid để lấy context; TV5 nhận `list[RetrievalHit]` để rerank.
+
+## Tóm tắt vị trí file
 
 # Cấu trúc các file tv2 đã làm việc
 
