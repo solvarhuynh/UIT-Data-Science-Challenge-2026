@@ -68,9 +68,7 @@ def test_parser_uses_document_title_and_accepts_labeled_lower_levels():
 
 
 def test_parser_does_not_make_preamble_lists_into_legal_clauses():
-    parsed = parse_legal_structure(
-        "1. Danh sách ở phần mở đầu\na) Một ý mở đầu"
-    )
+    parsed = parse_legal_structure("1. Danh sách ở phần mở đầu\na) Một ý mở đầu")
 
     assert parsed.entries == []
     assert parsed.articles == []

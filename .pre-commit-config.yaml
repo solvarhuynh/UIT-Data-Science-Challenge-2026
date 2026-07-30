@@ -1,44 +1,13 @@
 repos:
-  # Code formatting
-  - repo: https://github.com/psf/black
-    rev: 24.8.0
+  # Use the project .venv instead of isolated Poetry hook builds. The latter
+  # can fail to decode non-ASCII Windows user paths.
+  - repo: local
     hooks:
-      - id: black
-        language_version: python3
-        args: [--line-length=88]
-        exclude: ^(migrations/|__pycache__/)
-
-  # Import sorting
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        args: [--profile=black, --line-length=88]
-        exclude: ^(migrations/|__pycache__/)
-
-  # Linting
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.1.1
-    hooks:
-      - id: flake8
-        args: [--max-line-length=88, --extend-ignore=E203,W503,F401]
-        exclude: ^(migrations/|__pycache__/)
-
-  # Security checks
-  - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.9
-    hooks:
-      - id: bandit
-        args: [-r, backend/src, -f, json, -o, bandit-report.json]
-        exclude: ^(tests/|migrations/|__pycache__/)
-
-  # Type checking
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.2
-    hooks:
-      - id: mypy
-        additional_dependencies: [types-requests, types-PyYAML]
-        exclude: ^(tests/|migrations/|__pycache__/)
+      - id: project-quality
+        name: project quality gate
+        entry: python scripts/quality_gate.py
+        language: system
+        pass_filenames: false
 
   # General code quality
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -53,11 +22,3 @@ repos:
       - id: check-merge-conflict
       - id: debug-statements
       - id: check-docstring-first
-
-  # Documentation
-  - repo: https://github.com/pycqa/pydocstyle
-    rev: 6.3.0
-    hooks:
-      - id: pydocstyle
-        args: [--convention=google]
-        exclude: ^(tests/|migrations/|__pycache__/)

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Tuple
 
 from udsc2026.contracts import LegalChunk, LegalParent
+from udsc2026.ingestion.chunking.models import ChunkingResult
 from udsc2026.ingestion.cleaners.abbreviations import expanded_terms_in_text
 from udsc2026.ingestion.cleaners.models import CleanDocument
 from udsc2026.ingestion.legal_structure import parse_legal_document
@@ -14,8 +15,6 @@ from udsc2026.ingestion.legal_structure.models import (
     LegalStructureDocument,
     Point,
 )
-from udsc2026.ingestion.chunking.models import ChunkingResult
-
 
 _SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?;])\s+")
 _ID_UNSAFE = re.compile(r"[^a-z0-9]+")
@@ -224,12 +223,20 @@ def _article_units(
         return
     for clause in article.clauses:
         if not clause.points or _has_direct_content(clause):
-            yield clause.content, clause, None, "{0}_clause_{1}".format(
-                parent_id, _safe_id(clause.identifier)
+            yield (
+                clause.content,
+                clause,
+                None,
+                "{0}_clause_{1}".format(parent_id, _safe_id(clause.identifier)),
             )
         for point in clause.points:
-            yield point.text, clause, point, "{0}_clause_{1}_point_{2}".format(
-                parent_id, _safe_id(clause.identifier), _safe_id(point.identifier)
+            yield (
+                point.text,
+                clause,
+                point,
+                "{0}_clause_{1}_point_{2}".format(
+                    parent_id, _safe_id(clause.identifier), _safe_id(point.identifier)
+                ),
             )
 
 
@@ -355,9 +362,7 @@ def _iter_articles(
         for article in chapter.articles:
             yield article, _ArticleContext(chapter_label, None)
         for section in chapter.sections:
-            context = _ArticleContext(
-                chapter_label, _label("Mục", section.identifier)
-            )
+            context = _ArticleContext(chapter_label, _label("Mục", section.identifier))
             for article in section.articles:
                 yield article, context
 

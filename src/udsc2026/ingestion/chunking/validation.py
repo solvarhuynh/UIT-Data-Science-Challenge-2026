@@ -3,11 +3,12 @@
 import json
 import unicodedata
 from collections import Counter
-from typing import Iterable, List
+from typing import Iterable
+
+from pydantic import BaseModel
 
 from udsc2026.ingestion.chunking.chunker import token_len
 from udsc2026.ingestion.chunking.models import ChunkingResult, ValidationReport
-
 
 _REQUIRED_METADATA = ("law_name", "article", "source")
 
@@ -19,9 +20,7 @@ def validate_chunking_results(
     result_list = list(results)
     chunks = [chunk for result in result_list for chunk in result.chunks]
     parent_by_id = {
-        parent.parent_id
-        for result in result_list
-        for parent in result.parents
+        parent.parent_id for result in result_list for parent in result.parents
     }
     chunk_ids = [chunk.chunk_id for chunk in chunks]
     duplicate_ids = sorted(
@@ -76,7 +75,7 @@ def validate_chunking_results(
     )
 
 
-def _is_json_serializable(record: object) -> bool:
+def _is_json_serializable(record: BaseModel) -> bool:
     """Check the exact Pydantic payload shape written as one JSONL line."""
     try:
         json.loads(json.dumps(record.model_dump(), ensure_ascii=False))

@@ -4,7 +4,10 @@ import re
 
 from pyvi import ViTokenizer
 
-_PROTECTED = re.compile(r"\b(?:Điều|Khoản|Điểm)\s+\d+[a-zđ]?\b", re.IGNORECASE)
+_PROTECTED = re.compile(
+    r"\b(?:(?:Điều|Khoản)\s+\d+[a-zđ]?|Điểm\s+[a-zđ])\b",
+    re.IGNORECASE,
+)
 
 
 def tokenize_vi(text: str) -> list[str]:
@@ -19,7 +22,7 @@ def tokenize_vi(text: str) -> list[str]:
     tokens: list[str] = []
     cursor = 0
     for match in _PROTECTED.finditer(text):
-        tokens.extend(_tokenize_part(text[cursor:match.start()]))
+        tokens.extend(_tokenize_part(text[cursor : match.start()]))
         tokens.append(match.group(0))
         cursor = match.end()
     tokens.extend(_tokenize_part(text[cursor:]))

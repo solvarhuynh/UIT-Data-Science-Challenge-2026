@@ -1,12 +1,64 @@
 """Local LLM client wrapping the Qwen3 checkpoint via transformers or vLLM."""
 
 import logging
+import queue
+import threading
 import time
-from typing import Generator, Optional
+from collections.abc import Callable
+from typing import Any, Generator, Optional, TypeVar, cast
 
 from udsc2026.infrastructure.llm.config import LLMConfig
 
 logger = logging.getLogger(__name__)
+ResultT = TypeVar("ResultT")
+
+
+def _run_with_timeout(
+    operation: Callable[[], ResultT],
+    timeout_seconds: float | None,
+    *,
+    on_complete: Callable[[], None] | None = None,
+) -> ResultT:
+    """Run a blocking call with a bounded wait and completion notification."""
+
+    if timeout_seconds is None:
+        try:
+            return operation()
+        finally:
+            if on_complete is not None:
+                on_complete()
+
+    outcomes: queue.Queue[tuple[bool, object]] = queue.Queue(maxsize=1)
+
+    def run() -> None:
+        try:
+            outcome: tuple[bool, object] = (True, operation())
+        except BaseException as exc:
+            outcome = (False, exc)
+        finally:
+            if on_complete is not None:
+                on_complete()
+        outcomes.put(outcome)
+
+    worker = threading.Thread(target=run, daemon=True, name="llm-generation")
+    try:
+        worker.start()
+    except BaseException:
+        if on_complete is not None:
+            on_complete()
+        raise
+    try:
+        succeeded, outcome = outcomes.get(timeout=timeout_seconds)
+    except queue.Empty as exc:
+        raise TimeoutError(
+            f"LLM generation exceeded {timeout_seconds:g} seconds"
+        ) from exc
+    if succeeded:
+        return cast(ResultT, outcome)
+    if isinstance(outcome, BaseException):
+        raise outcome
+    raise RuntimeError("LLM generation returned an invalid worker outcome")
+
 
 # ---------------------------------------------------------------------------
 # Type stubs – transformers / torch are optional at import time so that unit
@@ -49,8 +101,10 @@ class LLMClient:
                 configured path.
         """
         self._config = config
-        self._model = None
-        self._tokenizer = None
+        self._model: Any | None = None
+        self._tokenizer: Any | None = None
+        self._vllm_engine: Any | None = None
+        self._generation_lock = threading.Lock()
         self._load_model()
 
     # ------------------------------------------------------------------
@@ -64,7 +118,7 @@ class LLMClient:
         else:
             self._load_vllm()
 
-    def _resolve_dtype(self):  # type: ignore[return]
+    def _resolve_dtype(self) -> Any:
         """Resolve string dtype to the corresponding torch dtype object."""
         if not _TRANSFORMERS_AVAILABLE:
             return None
@@ -92,7 +146,7 @@ class LLMClient:
             "Loading tokenizer from '%s'…",
             model_path,
         )
-        self._tokenizer = AutoTokenizer.from_pretrained(  # type: ignore[assignment]
+        tokenizer = AutoTokenizer.from_pretrained(
             model_path,
             trust_remote_code=True,
         )
@@ -103,19 +157,21 @@ class LLMClient:
             self._config.dtype,
             device,
         )
-        self._model = AutoModelForCausalLM.from_pretrained(  # type: ignore[assignment]
+        model = AutoModelForCausalLM.from_pretrained(
             model_path,
             torch_dtype=dtype,
             device_map=device,
             trust_remote_code=True,
         )
-        self._model.eval()
+        model.eval()
+        self._tokenizer = tokenizer
+        self._model = model
         logger.info("Model loaded successfully.")
 
     def _load_vllm(self) -> None:
         """Load model using the vLLM backend for high-throughput serving."""
         try:
-            from vllm import LLM  # type: ignore[import]
+            from vllm import LLM
 
             self._vllm_engine = LLM(
                 model=self._config.model_path,
@@ -128,6 +184,24 @@ class LLMClient:
                 "The 'vllm' package is required for the 'vllm' backend.  "
                 "Install it with: pip install vllm"
             ) from exc
+
+    def _require_model(self) -> Any:
+        """Return the loaded transformers model or fail with a clear error."""
+        if self._model is None:
+            raise RuntimeError("The transformers model is not loaded")
+        return self._model
+
+    def _require_tokenizer(self) -> Any:
+        """Return the loaded tokenizer or fail with a clear error."""
+        if self._tokenizer is None:
+            raise RuntimeError("The transformers tokenizer is not loaded")
+        return self._tokenizer
+
+    def _require_vllm_engine(self) -> Any:
+        """Return the loaded vLLM engine or fail with a clear error."""
+        if self._vllm_engine is None:
+            raise RuntimeError("The vLLM engine is not loaded")
+        return self._vllm_engine
 
     # ------------------------------------------------------------------
     # Public API
@@ -146,9 +220,21 @@ class LLMClient:
         Raises:
             RuntimeError: When generation fails or times out.
         """
-        if self._config.backend == "transformers":
-            return self._generate_transformers(prompt)
-        return self._generate_vllm(prompt)
+        if not self._generation_lock.acquire(blocking=False):
+            raise RuntimeError(
+                "LLM client is still processing an earlier generation request"
+            )
+
+        def operation() -> str:
+            if self._config.backend == "transformers":
+                return self._generate_transformers(prompt)
+            return self._generate_vllm(prompt)
+
+        return _run_with_timeout(
+            operation,
+            self._config.timeout_seconds,
+            on_complete=self._generation_lock.release,
+        )
 
     def generate_stream(self, prompt: str) -> Generator[str, None, None]:
         """Stream generated tokens one-by-one for SSE support.
@@ -167,57 +253,158 @@ class LLMClient:
         if not _TRANSFORMERS_AVAILABLE:  # pragma: no cover
             yield self.generate(prompt)
             return
+        if not self._generation_lock.acquire(blocking=False):
+            raise RuntimeError(
+                "LLM client is still processing an earlier generation request"
+            )
 
-        inputs = self._tokenizer(prompt, return_tensors="pt")  # type: ignore[misc]
-        inputs = {k: v.to(self._config.device) for k, v in inputs.items()}
+        try:
+            tokenizer = self._require_tokenizer()
+            model = self._require_model()
+            inputs = tokenizer(prompt, return_tensors="pt")
+            inputs = {k: v.to(self._config.device) for k, v in inputs.items()}
 
-        streamer = TextIteratorStreamer(
-            self._tokenizer,  # type: ignore[arg-type]
-            skip_prompt=True,
-            skip_special_tokens=True,
+            poll_timeout = min(self._config.timeout_seconds or 0.5, 0.5)
+            streamer = TextIteratorStreamer(
+                tokenizer,
+                skip_prompt=True,
+                skip_special_tokens=True,
+                timeout=poll_timeout,
+            )
+            generation_kwargs = {
+                **inputs,
+                "streamer": streamer,
+                "max_new_tokens": self._config.max_new_tokens,
+                "temperature": self._config.temperature,
+                "top_p": self._config.top_p,
+                "repetition_penalty": self._config.repetition_penalty,
+                "do_sample": self._config.temperature > 0,
+            }
+            generation_kwargs.update(self._deadline_stopping_criteria())
+        except BaseException:
+            self._generation_lock.release()
+            raise
+        generation_errors: queue.Queue[BaseException] = queue.Queue(maxsize=1)
+        generation_done = threading.Event()
+        consumer_done = threading.Event()
+        release_guard = threading.Lock()
+        lock_released = False
+        timeout_seconds = self._config.timeout_seconds
+        deadline = (
+            time.monotonic() + timeout_seconds if timeout_seconds is not None else None
         )
 
-        import threading
+        def release_when_finished() -> None:
+            nonlocal lock_released
+            if not generation_done.is_set() or not consumer_done.is_set():
+                return
+            with release_guard:
+                if not lock_released:
+                    lock_released = True
+                    self._generation_lock.release()
 
-        generation_kwargs = {
-            **inputs,
-            "streamer": streamer,
-            "max_new_tokens": self._config.max_new_tokens,
-            "temperature": self._config.temperature,
-            "top_p": self._config.top_p,
-            "repetition_penalty": self._config.repetition_penalty,
-            "do_sample": self._config.temperature > 0,
-        }
+        def generate_tokens() -> None:
+            try:
+                model.generate(**generation_kwargs)
+            except BaseException as exc:
+                generation_errors.put(exc)
+                streamer.end()
+            finally:
+                generation_done.set()
+                release_when_finished()
+
         thread = threading.Thread(
-            target=self._model.generate,  # type: ignore[union-attr]
-            kwargs=generation_kwargs,
+            target=generate_tokens,
+            daemon=True,
+            name="llm-stream-generation",
         )
-        thread.start()
-        for token_text in streamer:
-            yield token_text
+        try:
+            thread.start()
+        except BaseException:
+            self._generation_lock.release()
+            raise
+        try:
+            iterator = iter(streamer)
+            while True:
+                try:
+                    token_text = next(iterator)
+                except StopIteration:
+                    break
+                except queue.Empty as exc:
+                    if not generation_errors.empty():
+                        raise RuntimeError("LLM streaming generation failed") from (
+                            generation_errors.get_nowait()
+                        )
+                    if deadline is not None and time.monotonic() >= deadline:
+                        if timeout_seconds is None:
+                            raise RuntimeError(
+                                "LLM streaming deadline exists without a timeout"
+                            ) from exc
+                        raise TimeoutError(
+                            "LLM streaming generation exceeded "
+                            f"{timeout_seconds:g} seconds"
+                        ) from exc
+                    continue
+                yield cast(str, token_text)
+        finally:
+            consumer_done.set()
+            release_when_finished()
+        if not generation_errors.empty():
+            raise RuntimeError("LLM streaming generation failed") from (
+                generation_errors.get_nowait()
+            )
+
+    def _deadline_stopping_criteria(self) -> dict[str, Any]:
+        """Build a transformers deadline criterion when a timeout is configured."""
+
+        timeout_seconds = self._config.timeout_seconds
+        if timeout_seconds is None or not _TRANSFORMERS_AVAILABLE:
+            return {}
+        from transformers import StoppingCriteria, StoppingCriteriaList
+
+        deadline = time.monotonic() + timeout_seconds
+
+        class DeadlineStoppingCriteria(StoppingCriteria):
+            def __call__(
+                self,
+                input_ids: Any,
+                scores: Any,
+                **kwargs: Any,
+            ) -> bool:
+                del input_ids, scores, kwargs
+                return time.monotonic() >= deadline
+
+        return {"stopping_criteria": StoppingCriteriaList([DeadlineStoppingCriteria()])}
 
     def _generate_transformers(self, prompt: str) -> str:
         """Run synchronous generation via the transformers backend."""
-        inputs = self._tokenizer(prompt, return_tensors="pt")  # type: ignore[misc]
+        tokenizer = self._require_tokenizer()
+        model = self._require_model()
+        inputs = tokenizer(prompt, return_tensors="pt")
         inputs = {k: v.to(self._config.device) for k, v in inputs.items()}
 
         start = time.monotonic()
-        with torch.no_grad():  # type: ignore[union-attr]
-            output_ids = self._model.generate(  # type: ignore[union-attr]
-                **inputs,
-                max_new_tokens=self._config.max_new_tokens,
-                temperature=self._config.temperature,
-                top_p=self._config.top_p,
-                repetition_penalty=self._config.repetition_penalty,
-                do_sample=self._config.temperature > 0,
-                pad_token_id=self._tokenizer.eos_token_id,  # type: ignore[union-attr]
-            )
+
+        def generate_ids() -> Any:
+            with torch.no_grad():
+                return model.generate(
+                    **inputs,
+                    max_new_tokens=self._config.max_new_tokens,
+                    temperature=self._config.temperature,
+                    top_p=self._config.top_p,
+                    repetition_penalty=self._config.repetition_penalty,
+                    do_sample=self._config.temperature > 0,
+                    pad_token_id=tokenizer.eos_token_id,
+                    **self._deadline_stopping_criteria(),
+                )
+
+        output_ids = generate_ids()
         elapsed = time.monotonic() - start
 
         # Trim the prompt tokens from the output
         input_length = inputs["input_ids"].shape[1]
         generated_ids = output_ids[0][input_length:]
-        decoded: str = self._tokenizer.decode(  # type: ignore[union-attr]
+        decoded: str = tokenizer.decode(
             generated_ids,
             skip_special_tokens=True,
         )
@@ -226,7 +413,7 @@ class LLMClient:
 
     def _generate_vllm(self, prompt: str) -> str:
         """Run generation via the vLLM engine."""
-        from vllm import SamplingParams  # type: ignore[import]
+        from vllm import SamplingParams
 
         params = SamplingParams(
             max_tokens=self._config.max_new_tokens,
@@ -234,8 +421,8 @@ class LLMClient:
             top_p=self._config.top_p,
             repetition_penalty=self._config.repetition_penalty,
         )
-        outputs = self._vllm_engine.generate([prompt], params)
-        return outputs[0].outputs[0].text.strip()
+        outputs = self._require_vllm_engine().generate([prompt], params)
+        return cast(str, outputs[0].outputs[0].text).strip()
 
     @property
     def config(self) -> LLMConfig:

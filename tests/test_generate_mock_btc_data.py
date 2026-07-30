@@ -1,7 +1,10 @@
 """Tests for the synthetic BTC corpus generator script."""
 
 import importlib.util
+import os
 from pathlib import Path
+
+import pytest
 
 from udsc2026.ingestion.readers import extract_raw_documents
 
@@ -30,3 +33,23 @@ def test_mock_generator_creates_reader_compatible_corpus(tmp_path):
     assert any("DỰ THẢO" in document.raw_text for document in documents)
     assert any("(sau đây gọi là BLLĐ)" in document.raw_text for document in documents)
     assert any("a) Người lao động" in document.raw_text for document in documents)
+
+
+def test_mock_generator_does_not_follow_preexisting_hard_link(tmp_path: Path) -> None:
+    generator = _load_generator_module()
+    output_dir = tmp_path / "mock"
+    output_dir.mkdir()
+    victim = tmp_path / "victim.txt"
+    original = "must remain unchanged"
+    victim.write_text(original, encoding="utf-8")
+    linked_output = output_dir / "mock_btc_law.txt"
+    try:
+        os.link(victim, linked_output)
+    except OSError:
+        pytest.skip("hard links are unavailable on this platform")
+
+    generator.generate_mock_data(output_dir)
+
+    assert victim.read_text(encoding="utf-8") == original
+    assert linked_output.read_text(encoding="utf-8") == generator._BASE_TEXT
+    assert not linked_output.samefile(victim)

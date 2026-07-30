@@ -8,10 +8,10 @@ Toàn bộ công cụ đã được cấu hình sẵn trong `pyproject.toml` và
 
 | Công cụ | Vai trò | Cấu hình |
 | :--- | :--- | :--- |
-| **Black** | Format code tự động, không tranh cãi về style | `line-length = 88`, target Python 3.8-3.11 (`pyproject.toml`) |
-| **isort** | Sắp xếp import theo profile Black | `profile = "black"`, `line_length = 88` |
-| **Ruff / flake8** | Lint, phát hiện lỗi tiềm ẩn, unused import | `max-line-length = 88` |
-| **mypy** | Kiểm tra type static | `python_version = "3.9"`, `check_untyped_defs = true` |
+| **Ruff format** | Format code tự động, không tranh cãi về style | `line-length = 88`, target Python 3.10+ |
+| **Ruff isort** | Sắp xếp import | Nhóm standard library → third-party → local |
+| **Ruff lint** | Phát hiện lỗi tiềm ẩn, unused import | `line-length = 88` |
+| **mypy** | Kiểm tra type static | Strict config trong `pyproject.toml`, Python 3.10+ |
 | **bandit** | Quét lỗ hổng bảo mật cơ bản | Bỏ qua `tests/`, `migrations/` |
 | **pydocstyle** | Kiểm tra chuẩn docstring | `convention = google` |
 
@@ -21,23 +21,27 @@ Toàn bộ công cụ đã được cấu hình sẵn trong `pyproject.toml` và
 pre-commit run --all-files
 ```
 
-Hook này tự động chạy Black, isort, flake8, bandit, mypy, pydocstyle và các kiểm tra chung (trailing whitespace, check-yaml, check-merge-conflict...). **PR sẽ bị từ chối nếu pre-commit không pass.**
+Hook này chạy quality gate của dự án bằng `.venv` cùng các kiểm tra chung
+(trailing whitespace, check-yaml, check-merge-conflict...). Cách này giữ Ruff,
+Mypy, Bandit và pydocstyle đúng phiên bản của dự án, đồng thời tránh hook Poetry
+cô lập bị lỗi mã hóa đường dẫn trên Windows. **PR sẽ bị từ chối nếu pre-commit
+và local CI không pass.**
 
 Có thể chạy riêng từng công cụ khi debug:
 
 ```bash
-black --line-length=88 src/ tests/
-isort --profile=black --line-length=88 src/ tests/
-flake8 --max-line-length=88 --extend-ignore=E203,W503,F401 src/
-mypy src/
+python -m ruff format src tests scripts
+python -m ruff check src tests scripts
+python -m mypy src --no-warn-unused-configs
+python -m pydocstyle src
 ```
 
-## 2. Code Style (Black + Ruff/flake8)
+## 2. Code Style (Ruff)
 
-- **Bắt buộc chạy Black** trước mỗi commit; không format code thủ công khác với output của Black.
-- Độ dài dòng tối đa: **88 ký tự** (chuẩn Black), không tự ý nới rộng.
-- Import được sắp xếp bởi isort theo 3 nhóm: standard library → third-party → local (`udsc2026.*`), cách nhau bằng dòng trống.
-- Không để import thừa, biến không dùng, hoặc code chết (dead code) — flake8 sẽ chặn ở CI.
+- **Bắt buộc chạy Ruff format** trước mỗi commit; không format code thủ công khác với output của Ruff.
+- Độ dài dòng tối đa: **88 ký tự**, không tự ý nới rộng.
+- Import được Ruff sắp xếp theo 3 nhóm: standard library → third-party → local (`udsc2026.*`), cách nhau bằng dòng trống.
+- Không để import thừa, biến không dùng, hoặc code chết (dead code) — Ruff sẽ chặn ở CI.
 - Đặt tên:
   - Module, package, biến, hàm: `snake_case` (`dense_retriever.py`, `search_query`).
   - Class: `PascalCase` (`DenseRetriever`, `RetrievalHit`, `QAEngine`).
@@ -76,7 +80,7 @@ def search(query: str, top_k: int, filters: Optional[dict] = None) -> list[Retri
 ```
 
 - mypy chạy ở mức `check_untyped_defs = true`; hàm thiếu type hint vẫn được kiểm tra phần thân, nên viết type hint đầy đủ ngay từ đầu để tránh lỗi CI muộn.
-- Không dùng `# type: ignore` để né lỗi mypy trừ khi thực sự cần thiết (ví dụ thư viện thiếu stub như `qdrant_client`, `torch`, `transformers` đã được whitelist trong `pyproject.toml`); nếu dùng phải kèm comment giải thích lý do.
+- Không dùng `# type: ignore` để né lỗi mypy trừ khi thực sự cần thiết (ví dụ thư viện thiếu stub như `qdrant_client`, `sentence_transformers`, `transformers` đã được khai báo chính xác trong `pyproject.toml`); nếu dùng phải kèm comment giải thích lý do.
 
 ## 4. Docstring chuẩn (Google style)
 

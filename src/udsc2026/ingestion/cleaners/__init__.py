@@ -2,11 +2,11 @@
 
 from udsc2026.ingestion.cleaners.abbreviations import (
     build_abbreviation_dictionary,
-    extract_abbreviations,
     expanded_terms_in_text,
+    extract_abbreviations,
 )
-from udsc2026.ingestion.cleaners.document_cleaner import clean_document, clean_text
 from udsc2026.ingestion.cleaners.dispatch import clean_raw_documents
+from udsc2026.ingestion.cleaners.document_cleaner import clean_document, clean_text
 from udsc2026.ingestion.cleaners.models import CleanDocument
 
 __all__ = [

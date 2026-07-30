@@ -1,6 +1,8 @@
 """Prompt builder: reads versioned Markdown templates and renders full prompts."""
 
 import logging
+import os
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -8,9 +10,9 @@ from udsc2026.contracts.retrieval import RetrievalHit
 
 logger = logging.getLogger(__name__)
 
-# Root of the prompts directory relative to the package root.
-# TV3 owns all files under this tree.
-_PROMPTS_ROOT = Path(__file__).resolve().parents[3] / "prompts"
+_PROMPTS_PATH_ENV = "UDSC2026_PROMPTS_PATH"
+_TEMPLATE_NAME_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}")
+_TEMPLATE_SUBFOLDERS = frozenset({"system", "rag_templates"})
 
 # Sentinel returned by ``_build_context_block`` when context is empty.
 _EMPTY_CONTEXT_SENTINEL = "[Không có văn bản pháp luật nào được truy hồi]"
@@ -40,7 +42,8 @@ class PromptBuilder:
             prompts_root: Override for the default ``prompts/`` directory.
                 Useful in tests that supply a temporary directory.
         """
-        self._root = prompts_root or _PROMPTS_ROOT
+        configured_root = os.getenv(_PROMPTS_PATH_ENV, "prompts")
+        self._root = prompts_root or Path(configured_root)
         self._cache: dict[str, str] = {}
 
     # ------------------------------------------------------------------
@@ -95,7 +98,7 @@ class PromptBuilder:
         Returns:
             The same version string – extended in future to include a hash.
         """
-        return prompt_version
+        return _validate_template_name(prompt_version)
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -113,14 +116,23 @@ class PromptBuilder:
 
         Raises:
             FileNotFoundError: When the template file does not exist.
+            ValueError: When the template name is unsafe or escapes its folder.
         """
-        cache_key = f"{subfolder}/{name}"
+        if subfolder not in _TEMPLATE_SUBFOLDERS:
+            raise ValueError(f"Unsupported prompt template folder: {subfolder}")
+        validated_name = _validate_template_name(name)
+        cache_key = f"{subfolder}/{validated_name}"
         if cache_key not in self._cache:
-            path = self._root / subfolder / f"{name}.md"
-            if not path.exists():
+            template_root = (self._root / subfolder).resolve()
+            path = (template_root / f"{validated_name}.md").resolve()
+            try:
+                path.relative_to(template_root)
+            except ValueError as exc:
+                raise ValueError("Prompt template path escapes its folder") from exc
+            if not path.is_file():
                 raise FileNotFoundError(
                     f"Prompt template not found: '{path}'.  "
-                    f"Create '{name}.md' under 'prompts/{subfolder}/'."
+                    f"Create '{validated_name}.md' under 'prompts/{subfolder}/'."
                 )
             self._cache[cache_key] = path.read_text(encoding="utf-8").strip()
             logger.debug("Loaded prompt template '%s'.", cache_key)
@@ -130,6 +142,17 @@ class PromptBuilder:
 # ---------------------------------------------------------------------------
 # Module-level helper (no class state required)
 # ---------------------------------------------------------------------------
+
+
+def _validate_template_name(name: str) -> str:
+    """Return an allowlisted file stem with no path syntax."""
+
+    if not isinstance(name, str) or _TEMPLATE_NAME_PATTERN.fullmatch(name) is None:
+        raise ValueError(
+            "prompt template name must contain only ASCII letters, digits, "
+            "underscores, or hyphens (maximum 64 characters)"
+        )
+    return name
 
 
 def _build_context_block(contexts: list[RetrievalHit]) -> str:
@@ -150,10 +173,13 @@ def _build_context_block(contexts: list[RetrievalHit]) -> str:
 
     lines: list[str] = []
     for rank, hit in enumerate(contexts, start=1):
+        raw_point = hit.metadata.get("point")
+        point = raw_point if isinstance(raw_point, str) else None
         meta_parts = [
             f"law_name={hit.law_name or 'N/A'}",
             f"article={hit.article or 'N/A'}",
             f"clause={hit.clause or 'N/A'}",
+            f"point={point or 'N/A'}",
             f"chunk_id={hit.chunk_id}",
         ]
         meta = " | ".join(meta_parts)

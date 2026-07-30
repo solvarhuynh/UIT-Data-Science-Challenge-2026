@@ -8,7 +8,6 @@ from typing import Dict, Mapping, Optional
 
 from udsc2026.ingestion.cleaners.patterns import ABBREVIATION_DEFINITION
 
-
 DEFAULT_ABBREVIATIONS_PATH = (
     Path(__file__).resolve().parents[1] / "legal_structure" / "abbreviations.json"
 )

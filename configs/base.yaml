@@ -6,6 +6,22 @@ similarity_threshold: 0.5
 
 embedding:
   embedder_model_path: "./models/bkai-bi-encoder"
+  device: "cpu"
+  batch_size: 32
+  max_length: 256
+  normalize_embeddings: true
+
+llm:
+  model_path: "./models/qwen3-legal"
+  backend: "transformers"
+  device: "cpu"
+  dtype: "float32"
+  max_new_tokens: 1024
+  temperature: 0.1
+  top_p: 0.9
+  repetition_penalty: 1.05
+  stream: false
+  timeout_seconds: 60.0
 
 vector_db:
   type: "faiss"
@@ -19,3 +35,13 @@ hybrid:
   candidate_k: 50
   min_score: 0.0
   top_k: 10
+  bm25_index_path: "./data/vector_store/bm25/index.json"
+
+reranker:
+  enabled: true
+  model_name_or_path: "./models/reranker"
+  device: "cpu"
+  batch_size: 16
+  max_length: 512
+  top_n: 10
+  local_files_only: true

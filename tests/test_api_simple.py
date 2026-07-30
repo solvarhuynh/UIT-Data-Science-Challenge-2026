@@ -2,9 +2,11 @@
 Simple API tests that don't require external dependencies
 """
 
-from unittest.mock import Mock, patch
+import importlib
+from unittest.mock import patch
 
 import pytest
+
 
 @pytest.mark.unit
 class TestAPISimple:
@@ -12,14 +14,8 @@ class TestAPISimple:
 
     def test_import_check(self):
         """Test that we can import basic modules"""
-        try:
-            import json
-            import os
-            import sys
-
-            assert True
-        except ImportError:
-            pytest.fail("Basic imports failed")
+        for module_name in ("json", "os", "sys"):
+            assert importlib.import_module(module_name) is not None
 
     @patch("builtins.open")
     def test_file_operations(self, mock_open):

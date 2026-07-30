@@ -183,6 +183,8 @@ __marimo__/
 /models/
 data/raw/
 data/vector_store/
+artifacts/
+outputs/
 
 # Ignore documentation files
 cam_nang.md

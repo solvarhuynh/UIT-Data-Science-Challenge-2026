@@ -6,14 +6,14 @@ rollback trước khi chuyển sang bước tiếp theo.
 
 ## 1. Chuẩn bị môi trường
 
-Từ thư mục gốc repository:
+Từ thư mục gốc repository, dùng Python 3.10-3.12 (chưa hỗ trợ Python 3.13+):
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -e .
-pip install -r requirements_dev.txt
+python -m pip install --upgrade pip -c requirements_runtime.txt
+python -m pip install -c requirements_runtime.txt -e .
+python -m pip install -c requirements_runtime.txt -r requirements_dev.txt
 ```
 
 Không commit `.venv/`. Nếu chưa dùng editable install, đặt tạm package path:
@@ -25,10 +25,10 @@ $env:PYTHONPATH = "$PWD\src"
 Dependency cài theo nhu cầu:
 
 ```powershell
-pip install sentence-transformers torch --index-url https://download.pytorch.org/whl/cpu
-pip install qdrant-client faiss-cpu
-pip install rank-bm25 pyvi
-pip install pyyaml
+python -m pip install -c requirements_runtime.txt sentence-transformers torch --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -c requirements_runtime.txt qdrant-client faiss-cpu
+python -m pip install -c requirements_runtime.txt rank-bm25 pyvi
+python -m pip install -c requirements_runtime.txt pyyaml
 ```
 
 Kiểm tra nền tảng:
@@ -50,7 +50,7 @@ pytest tests/ -v --tb=short
 | 5 | `HybridRetriever` + fusion | `python -c "from udsc2026.retrieval.hybrid import fuse_scores; print(fuse_scores([], []))"` |
 | 6 | Indexing script | Chạy script index với JSONL TV4 và kiểm tra `data/vector_store/`. |
 | 7 | Hợp nhất config | Kiểm tra đủ `embedding`, `vector_db`, `sparse`, `hybrid`. |
-| 8 | Unit tests | `pytest tests/retrieval/ -v` phải pass 100%. |
+| 8 | Unit tests | `python -m pytest tests/unit/test_retrieval -v` phải pass 100%. |
 | 9 | Đối chiếu DoD | Sửa mọi mục FAIL trước khi bàn giao. |
 
 Sau mỗi verify pass, commit đúng nhóm prompt. Không chạy prompt sau nếu verify bước hiện
@@ -96,7 +96,7 @@ udsc2026/
 │       ├── dense/                 # Prompt 3
 │       ├── sparse/                # Prompt 4
 │       └── hybrid/                # Prompt 5
-├── tests/retrieval/               # Prompt 8
+├── tests/unit/test_retrieval/     # Prompt 8
 └── docs
     └── tv2_setup.md               # chính là file bạn đang đọc
 
@@ -114,7 +114,7 @@ frontend vào TV2.
 ```powershell
 python scripts/index_chunks.py --vector-db-type faiss --chunks-dir data/processed/chunks
 python -c "from udsc2026.retrieval.hybrid import search; print(search('Điều 10 Bộ luật Lao động quy định gì?', 5))"
-pytest tests/retrieval/ -v
+python -m pytest tests/unit/test_retrieval -v
 ```
 
 ## 6. Git workflow

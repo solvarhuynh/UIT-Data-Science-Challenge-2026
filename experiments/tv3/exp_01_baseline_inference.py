@@ -12,9 +12,6 @@ import logging
 import sys
 from pathlib import Path
 
-# Allow importing src/udsc2026 from the experiments directory.
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
-
 from udsc2026.contracts.retrieval import RetrievalHit
 from udsc2026.infrastructure.llm.client import LLMClient
 from udsc2026.infrastructure.llm.config import LLMConfig

@@ -5,7 +5,6 @@ import unicodedata
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Optional
 
-
 DOCUMENT_ID_FIELDS = ("doc_id", "document_id", "id", "code")
 TITLE_FIELDS = ("title", "document_title", "law_name", "name")
 DATE_FIELDS = ("issue_date", "issued_date", "publication_date", "date")

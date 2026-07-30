@@ -47,18 +47,19 @@ flowchart LR
 
 ### Prerequisites
 
-- Python 3.10+
+- Python 3.10-3.12 (chưa hỗ trợ Python 3.13+)
 - Git
 - Docker nếu chạy VectorDB/Redis bằng compose
-- Node.js 18+ chỉ cần khi làm việc với `frontend/`
+- Node.js `^20.19.0` hoặc `>=22.12.0` chỉ cần khi làm việc với `frontend/`
 
 ### Bước 1: Khởi tạo môi trường và tải models
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -e .
-pip install huggingface_hub
+python -m pip install -c requirements_runtime.txt -r requirements_dev.txt
+python -m pip install -c requirements_runtime.txt -e ".[llm,rerank,retrieval]"
+python -m pip install -c requirements_runtime.txt huggingface_hub
 python .\download_models.py
 ```
 
@@ -68,6 +69,9 @@ python .\download_models.py
 models/bkai-bi-encoder/
 models/qwen3-legal/
 ```
+
+Checkpoint Cross-Encoder được cấu hình riêng qua
+`RERANKER_MODEL_PATH`; runtime mặc định không tự tải model.
 
 ### Bước 2: Chạy backend FastAPI
 
@@ -169,10 +173,10 @@ udsc2026/
 
 ## Documents
 
-- [Repository Structure](docs/khung_repo.md)
 - [System Design](docs/project/10_system_design.md)
 - [API Contract](docs/project/api_contract.md)
-- [Git Workflow](docs/project/04_git_workflow.md)
+- [Git Workflow](docs/project/git_workflow.md)
+- [TV5 Setup & Evaluation](docs/tv5_setup.md)
 - [TV1 Work Plan](docs/member/tv1.md)
 - [TV2 Work Plan](docs/member/tv2.md)
 - [TV3 Work Plan](docs/member/tv3.md)

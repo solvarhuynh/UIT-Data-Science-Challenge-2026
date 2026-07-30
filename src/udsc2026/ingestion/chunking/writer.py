@@ -5,11 +5,12 @@ from collections import Counter
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple, Union
 
-from udsc2026.ingestion.cleaners.models import CleanDocument
+from pydantic import BaseModel
+
 from udsc2026.ingestion.chunking.chunker import chunk_clean_document
 from udsc2026.ingestion.chunking.models import ChunkingResult, ValidationReport
 from udsc2026.ingestion.chunking.validation import validate_chunking_results
-
+from udsc2026.ingestion.cleaners.models import CleanDocument
 
 DEFAULT_CHUNKS_DIR = Path("data/processed/chunks")
 DEFAULT_PARENTS_DIR = Path("data/processed/parents")
@@ -52,7 +53,7 @@ def write_chunking_outputs(
     return results, report
 
 
-def _write_jsonl(path: Path, records: Iterable[object]) -> None:
+def _write_jsonl(path: Path, records: Iterable[BaseModel]) -> None:
     lines = [
         json.dumps(record.model_dump(), ensure_ascii=False, separators=(",", ":"))
         for record in records

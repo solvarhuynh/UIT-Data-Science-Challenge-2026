@@ -1,94 +1,51 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Updated test runner script that only runs working tests
-# Usage: ./scripts/run_working_tests.sh [test_type]
+set -euo pipefail
 
-set -e
+cd "$(dirname "$0")/.."
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+test_type="${1:-working}"
+if [[ -x ".venv/bin/python" ]]; then
+    project_python=".venv/bin/python"
+elif [[ -x ".venv/Scripts/python.exe" ]]; then
+    project_python=".venv/Scripts/python.exe"
+else
+    project_python="python"
+fi
 
-print_status() {
-    echo -e "${GREEN}[INFO]${NC} $1"
-}
+case "$test_type" in
+    working)
+        echo "[INFO] Running the complete test suite"
+        "$project_python" -m pytest -q -rs
+        ;;
+    coverage)
+        echo "[INFO] Running the complete suite with source coverage"
+        "$project_python" -m pytest \
+            --cov=src/udsc2026 \
+            --cov-report=term \
+            --cov-report=html:htmlcov \
+            --cov-report=xml \
+            --cov-fail-under=70 \
+            -q
+        ;;
+    unit)
+        echo "[INFO] Running unit tests"
+        "$project_python" -m pytest tests/unit -q -rs
+        ;;
+    quick)
+        echo "[INFO] Running fast contract/API sanity tests"
+        "$project_python" -m pytest \
+            tests/test_basic.py \
+            tests/test_api_simple.py \
+            tests/test_utils.py \
+            -x \
+            --tb=line
+        ;;
+    *)
+        echo "[ERROR] Unknown test type: $test_type" >&2
+        echo "[INFO] Available types: working, coverage, unit, quick" >&2
+        exit 2
+        ;;
+esac
 
-print_warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-# Working test files (ones that don't require complex dependencies)
-WORKING_TESTS="tests/test_basic.py tests/test_api_simple.py tests/test_utils.py tests/test_backend_utils.py tests/test_brain.py"
-
-# Run working tests only
-run_working_tests() {
-    print_status "Running working tests (basic functionality)..."
-    pytest $WORKING_TESTS -v \
-        --tb=short \
-        --cov=tests \
-        --cov-report=term-missing
-}
-
-# Run working tests with coverage
-run_working_tests_with_coverage() {
-    print_status "Running working tests with coverage..."
-    pytest $WORKING_TESTS -v \
-        --tb=short \
-        --cov=tests \
-        --cov-report=html:htmlcov \
-        --cov-report=term-missing \
-        --cov-report=xml
-}
-
-# Run unit tests specifically
-run_unit_tests() {
-    print_status "Running unit tests..."
-    pytest $WORKING_TESTS -v \
-        -m "unit" \
-        --tb=short
-}
-
-# Quick check
-run_quick_check() {
-    print_status "Running quick test check..."
-    pytest $WORKING_TESTS -x --tb=line
-}
-
-# Main function
-main() {
-    local test_type=${1:-"working"}
-
-    print_status "Vietnamese Legal Chatbot Test Runner (Working Tests Only)"
-    print_status "Test type: $test_type"
-
-    case $test_type in
-        "working")
-            run_working_tests
-            ;;
-        "coverage")
-            run_working_tests_with_coverage
-            ;;
-        "unit")
-            run_unit_tests
-            ;;
-        "quick")
-            run_quick_check
-            ;;
-        *)
-            print_error "Unknown test type: $test_type"
-            print_status "Available types: working, coverage, unit, quick"
-            exit 1
-            ;;
-    esac
-
-    print_status "Test execution completed!"
-}
-
-# Run main function with all arguments
-main "$@"
+echo "[INFO] Test execution completed"
