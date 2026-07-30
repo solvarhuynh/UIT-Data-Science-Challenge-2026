@@ -1,4 +1,4 @@
-"""Deterministic, model-independent evaluation utilities for LegalIR/LegalQA."""
+"""Evaluation, reporting, submission, and synthetic benchmark utilities."""
 
 from udsc2026.evaluation.evaluator import (
     compare_reports,
@@ -33,6 +33,12 @@ from udsc2026.evaluation.submission import (
     SubmissionSchema,
     write_submission,
 )
+from udsc2026.evaluation.synthetic_generator import (
+    SyntheticQA,
+    generate_synthetic_benchmark,
+    load_legal_chunks,
+    write_synthetic_benchmark,
+)
 
 __all__ = [
     "BenchmarkSample",
@@ -42,11 +48,14 @@ __all__ = [
     "SubmissionColumn",
     "SubmissionRow",
     "SubmissionSchema",
+    "SyntheticQA",
     "aggregate_latencies",
     "compare_reports",
     "evaluate_predictions",
     "evaluate_retrieval",
+    "generate_synthetic_benchmark",
     "load_benchmark",
+    "load_legal_chunks",
     "load_predictions",
     "load_qa_responses",
     "mean_recall_at_k",
@@ -55,8 +64,9 @@ __all__ = [
     "recall_at_k",
     "reciprocal_rank",
     "rouge_l_score",
+    "validate_rerank_candidate_pools",
     "write_report",
     "write_report_bundle",
     "write_submission",
-    "validate_rerank_candidate_pools",
+    "write_synthetic_benchmark",
 ]

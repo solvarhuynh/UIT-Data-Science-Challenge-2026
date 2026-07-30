@@ -250,11 +250,14 @@ def _check_evaluation(_: Path, __: str) -> str:
         "SubmissionColumn",
         "SubmissionRow",
         "SubmissionSchema",
+        "SyntheticQA",
         "aggregate_latencies",
         "compare_reports",
         "evaluate_predictions",
         "evaluate_retrieval",
+        "generate_synthetic_benchmark",
         "load_benchmark",
+        "load_legal_chunks",
         "load_predictions",
         "load_qa_responses",
         "mean_recall_at_k",
@@ -267,6 +270,7 @@ def _check_evaluation(_: Path, __: str) -> str:
         "write_report",
         "write_report_bundle",
         "write_submission",
+        "write_synthetic_benchmark",
     }
     declared_exports = set(getattr(module, "__all__", ()))
     missing = sorted(

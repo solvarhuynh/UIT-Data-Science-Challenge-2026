@@ -1,8 +1,7 @@
-"""Generate a tiny, deterministic legal corpus for local ingestion tests.
+"""Sinh corpus BTC giả lập an toàn để chạy thử ETL.
 
-The generated documents are intentionally synthetic.  They exercise Vietnamese
-Unicode, common legal headings, clauses, points, JSON, and JSONL without
-pretending to be an official competition dataset.
+Corpus chỉ phục vụ phát triển, không phải dữ liệu BTC thật. Đường dẫn mặc định
+được neo theo repository nên lệnh hoạt động ổn định ở mọi thư mục hiện hành.
 """
 
 from __future__ import annotations
@@ -14,6 +13,9 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+DEFAULT_OUTPUT_DIR = REPOSITORY_ROOT / "data" / "raw" / "btc" / "mock"
+
 _BASE_TEXT = """DỰ THẢO
 BỘ LUẬT LAO ĐỘNG GIẢ LẬP 2026
 Chương I. QUY ĐỊNH CHUNG
@@ -23,23 +25,32 @@ Mục 1. Phạm vi áp dụng
 a) Người lao động được bảo vệ quyền và lợi ích hợp pháp.
 b) Người sử dụng lao động có trách nhiệm tuân thủ BLLĐ.
 Điều 2. Nguyên tắc áp dụng
-1. Việc hòa giải và uỷ quyền được thực hiện theo quy định của pháp luật.
+1. Việc hoà giải và uý quyền được thực hiện theo quy định của pháp luật.
 a) Hồ sơ phải được lưu trữ đầy đủ.
 """
 
 
+def legal_text() -> str:
+    """Return one legal sample containing the supported ETL edge cases."""
+
+    return _BASE_TEXT
+
+
 def _json_document(document_id: str, title: str, content: str) -> dict[str, Any]:
     """Build one reader-compatible JSON record."""
+
     return {
+        "id": document_id,
         "document_id": document_id,
         "title": title,
         "content": content,
+        "effective_date": "2026-01-01",
         "metadata": {"dataset": "synthetic-development-only"},
     }
 
 
-def _atomic_write_text(path: Path, content: str) -> None:
-    """Replace one output atomically without following a pre-existing hard link."""
+def _validate_output_target(path: Path) -> None:
+    """Reject output targets that cannot be replaced as regular files."""
 
     if path.is_symlink():
         raise ValueError(f"mock output target must not be a symbolic link: {path}")
@@ -48,6 +59,11 @@ def _atomic_write_text(path: Path, content: str) -> None:
     if path.exists() and not path.is_file():
         raise ValueError(f"mock output target must be a regular file: {path}")
 
+
+def _atomic_write_text(path: Path, content: str) -> None:
+    """Replace one text output atomically without following an existing link."""
+
+    _validate_output_target(path)
     descriptor, temporary_name = tempfile.mkstemp(
         prefix=f".{path.name}.",
         suffix=".tmp",
@@ -72,77 +88,126 @@ def _atomic_write_text(path: Path, content: str) -> None:
         raise
 
 
-def generate_mock_data(output_dir: str | Path) -> list[Path]:
-    """Write TXT, JSON, and two-record JSONL examples into ``output_dir``.
+def _write_text(path: Path, text: str) -> Path:
+    """Write a UTF-8 text document atomically."""
 
-    Returns:
-        Paths of the three physical files written.  The JSONL file contains two
-        logical documents, so ingestion produces four documents in total.
-    """
-    destination = Path(output_dir)
-    destination.mkdir(parents=True, exist_ok=True)
+    _atomic_write_text(path, text)
+    return path
 
-    txt_path = destination / "mock_btc_law.txt"
-    json_path = destination / "mock_btc_law.json"
-    jsonl_path = destination / "mock_btc_laws.jsonl"
 
-    _atomic_write_text(txt_path, _BASE_TEXT)
-    _atomic_write_text(
-        json_path,
-        json.dumps(
-            _json_document(
-                "mock-json-law",
-                "Bộ luật Lao động giả lập 2026 (JSON)",
-                _BASE_TEXT,
-            ),
-            ensure_ascii=False,
-            indent=2,
-        )
-        + "\n",
-    )
+def _write_json(path: Path, value: object) -> Path:
+    """Write one indented JSON document atomically."""
 
-    jsonl_records = [
+    content = json.dumps(value, ensure_ascii=False, indent=2) + "\n"
+    _atomic_write_text(path, content)
+    return path
+
+
+def _write_jsonl(path: Path, text: str) -> Path:
+    """Write two reader-compatible JSONL documents atomically."""
+
+    records = [
         _json_document(
             "mock-jsonl-law-1",
             "Bộ luật Lao động giả lập 2026 (JSONL 1)",
-            _BASE_TEXT,
+            text,
         ),
         _json_document(
             "mock-jsonl-law-2",
             "Bộ luật Lao động giả lập 2026 (JSONL 2)",
-            _BASE_TEXT.replace("Điều 1.", "Điều 11.", 1),
+            text.replace("Điều 1.", "Điều 11.", 1),
         ),
     ]
-    _atomic_write_text(
-        jsonl_path,
-        "".join(
-            json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n"
-            for record in jsonl_records
-        ),
+    content = "".join(
+        json.dumps(record, ensure_ascii=False, separators=(",", ":")) + "\n"
+        for record in records
     )
+    _atomic_write_text(path, content)
+    return path
 
-    return [txt_path, json_path, jsonl_path]
+
+def _write_docx_if_available(path: Path, text: str) -> Path | None:
+    """Write an optional DOCX atomically when python-docx is installed."""
+
+    try:
+        from docx import Document
+    except ImportError:
+        return None
+
+    _validate_output_target(path)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.stem}.",
+        suffix=".docx",
+        dir=str(path.parent),
+    )
+    os.close(descriptor)
+    try:
+        document = Document()
+        for line in text.splitlines():
+            document.add_paragraph(line)
+        document.save(temporary_name)
+        os.replace(temporary_name, path)
+    except BaseException:
+        try:
+            os.unlink(temporary_name)
+        except OSError:
+            pass
+        raise
+    return path
+
+
+def generate_mock_data(output_dir: str | Path | None = None) -> list[Path]:
+    """Create TXT, JSON, JSONL and, when available, DOCX mock files.
+
+    Only four known mock filenames are replaced. Unrelated files in the target
+    directory are preserved, preventing accidental deletion of real BTC data.
+    """
+
+    target = Path(output_dir) if output_dir is not None else DEFAULT_OUTPUT_DIR
+    target = target.resolve()
+    target.mkdir(parents=True, exist_ok=True)
+    text = legal_text()
+
+    written = [
+        _write_text(target / "mock_btc_law.txt", text),
+        _write_json(
+            target / "mock_btc_law.json",
+            _json_document(
+                "mock-json-law",
+                "Bộ luật Lao động giả lập 2026 (JSON)",
+                text,
+            ),
+        ),
+        _write_jsonl(target / "mock_btc_laws.jsonl", text),
+    ]
+    docx_path = _write_docx_if_available(target / "mock_btc_law_docx.docx", text)
+    if docx_path is not None:
+        written.append(docx_path)
+    return written
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Generate a development-only mock legal corpus."
-    )
+    """Parse command-line arguments."""
+
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("data/raw/btc/mock"),
-        help="Destination directory (default: data/raw/btc/mock).",
+        default=None,
+        help="Thư mục ghi mock corpus (mặc định: data/raw/btc/mock).",
     )
     return parser.parse_args()
 
 
 def main() -> int:
-    """Generate the corpus from command-line arguments."""
+    """Generate the development corpus from command-line arguments."""
+
     args = _parse_args()
     written = generate_mock_data(args.output_dir)
+    print(f"Đã tạo {len(written)} file corpus giả lập:")
     for path in written:
-        print(path)
+        print(f"- {path.resolve()}")
+    print("Có thể chạy ETL với raw_directory='data/raw/btc'.")
     return 0
 
 
