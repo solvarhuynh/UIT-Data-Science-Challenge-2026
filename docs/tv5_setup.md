@@ -1,5 +1,9 @@
 # TV5 — Reranking, Evaluation và MLOps
 
+Xem danh sách task đã hoàn thành, các file đã can thiệp, kết quả kiểm thử và
+phạm vi bàn giao tại
+[`docs/tv5_baocaotiendo.md`](tv5_baocaotiendo.md).
+
 Tài liệu này mô tả cách chạy phần TV5 khi ban tổ chức chưa phát hành dataset
 chính thức. Fixture trong `tests/fixtures/tv5/` chỉ dùng để phát triển và kiểm
 thử; không phải dữ liệu cuộc thi và không được dùng để công bố điểm chính thức.
