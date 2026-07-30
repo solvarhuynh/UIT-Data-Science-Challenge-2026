@@ -1,20 +1,19 @@
 # TV5 — Báo cáo tiến độ Reranking, Evaluation và MLOps
 
-> Thành viên phụ trách: TV5
+> Thành viên phụ trách: Nguyên Khang
 > Ngày cập nhật: 31/07/2026
 > Phạm vi: Reranking, Evaluation Benchmark, Submission adapter, MLOps và
 > quality gates
 
 ## 1. Tổng quan kết quả
 
-TV5 đã hoàn thành phần nền tảng để nhận candidate từ Hybrid Search, tái xếp
+Tui đã hoàn thành phần nền tảng để nhận candidate từ Hybrid Search, tái xếp
 hạng bằng Cross-Encoder, bảo toàn căn cứ pháp luật, đánh giá kết quả trước/sau
 rerank và đóng gói hệ thống để có thể kiểm tra lặp lại.
 
 Do ban tổ chức chưa cung cấp dataset, checkpoint và schema submission chính
 thức, các phần phụ thuộc dữ liệu thật được thiết kế theo contract và kiểm thử
-bằng fixture deterministic. Báo cáo này không dùng kết quả fixture để tuyên bố
-điểm thi chính thức.
+bằng fixture deterministic
 
 | Hạng mục | Trạng thái | Kết quả |
 | --- | --- | --- |
