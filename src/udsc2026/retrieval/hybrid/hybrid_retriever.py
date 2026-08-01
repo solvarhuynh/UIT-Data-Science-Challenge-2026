@@ -1,20 +1,20 @@
 """Hybrid retrieval orchestration for dense and sparse retrievers."""
 
 from functools import lru_cache
-from pathlib import Path
+import logging
+import time
 from typing import Any
-
-import yaml
-
 from udsc2026.contracts.retrieval import RetrievalHit
+from udsc2026.infrastructure.config import load_config
 from udsc2026.retrieval.dense.dense_retriever import DenseRetriever
 from udsc2026.retrieval.hybrid.score_fusion import fuse_scores
 from udsc2026.retrieval.sparse.bm25_retriever import BM25Retriever
 
+LOGGER = logging.getLogger(__name__)
+
 
 def _config() -> dict[str, Any]:
-    with Path("configs/base.yaml").open("r", encoding="utf-8") as config_file:
-        return yaml.safe_load(config_file) or {}
+    return load_config()
 
 
 class HybridRetriever:
@@ -35,10 +35,13 @@ class HybridRetriever:
                filters: dict[str, str | int | list[str]] | None = None) -> list[RetrievalHit]:
         if top_k <= 0:
             raise ValueError("top_k must be greater than zero")
+        started = time.perf_counter()
         dense_hits = self.dense_retriever.search(query, self.candidate_k, filters)
         sparse_hits = self.sparse_retriever.search(query, self.candidate_k, filters)
         fused = fuse_scores(dense_hits, sparse_hits, self.dense_weight, self.sparse_weight)
-        return [hit for hit in fused if (hit.final_score or 0.0) >= self.min_score][:top_k]
+        result = [hit for hit in fused if (hit.final_score or 0.0) >= self.min_score][:top_k]
+        LOGGER.info("hybrid search latency_ms=%.2f", (time.perf_counter() - started) * 1000)
+        return result
 
 
 @lru_cache(maxsize=1)
@@ -48,9 +51,15 @@ def _default_retriever() -> HybridRetriever:
     from udsc2026.infrastructure.vector_db.factory import get_vector_db_adapter
 
     embedding = config.get("embedding", {})
-    client = EmbeddingClient(embedding["embedder_model_path"])
+    client = EmbeddingClient(
+        model_path=embedding["model_path"],
+        device=embedding.get("device", "cpu"),
+        batch_size=embedding.get("batch_size", 32),
+        max_length=embedding.get("max_length", 256),
+        normalize_embeddings=embedding.get("normalize_embeddings", True),
+    )
     dense = DenseRetriever(client, get_vector_db_adapter(config))
-    sparse = BM25Retriever()
+    sparse = BM25Retriever(config.get("sparse", {}).get("bm25_index_path"))
     sparse.load()
     return HybridRetriever(dense, sparse)
 

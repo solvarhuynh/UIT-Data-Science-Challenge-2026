@@ -24,6 +24,10 @@ def payload_to_hit(payload: dict[str, Any], score: float) -> RetrievalHit:
     """Convert a stored payload to the common retrieval result contract."""
     metadata = dict(payload.get("metadata", {}))
     for field in (
+        "law_name",
+        "article",
+        "clause",
+        "source",
         "chapter",
         "section",
         "effective_date",

@@ -1,6 +1,8 @@
 """Standalone BM25 sparse retriever for legal document chunks."""
 
 import pickle
+import logging
+import time
 from pathlib import Path
 from typing import Any
 
@@ -8,7 +10,10 @@ from rank_bm25 import BM25Okapi
 
 from udsc2026.contracts import LegalChunk
 from udsc2026.contracts.retrieval import RetrievalHit
+from udsc2026.infrastructure.config import load_config
 from udsc2026.retrieval.sparse.tokenizer import tokenize_vi
+
+LOGGER = logging.getLogger(__name__)
 
 
 class BM25Retriever:
@@ -52,6 +57,7 @@ class BM25Retriever:
             raise ValueError("top_k must be greater than zero")
         if self._bm25 is None:
             raise ValueError("index has not been built or loaded")
+        started = time.perf_counter()
         query_tokens = tokenize_vi(query)
         scores = self._bm25.get_scores(query_tokens)
         eligible = [
@@ -60,7 +66,9 @@ class BM25Retriever:
             if _matches(self._chunks[index], filters)
         ]
         eligible.sort(key=lambda item: item[1], reverse=True)
-        return [_to_hit(self._chunks[index], score) for index, score in eligible[:top_k]]
+        result = [_to_hit(self._chunks[index], score) for index, score in eligible[:top_k]]
+        LOGGER.info("sparse search latency_ms=%.2f", (time.perf_counter() - started) * 1000)
+        return result
 
 
 def _matches(chunk: LegalChunk, filters: dict[str, str | int | list[str]] | None) -> bool:
@@ -96,6 +104,8 @@ def search(query: str, top_k: int,
     """Search the lazily loaded default BM25 index."""
     global _default_retriever
     if _default_retriever is None:
-        _default_retriever = BM25Retriever()
+        config = load_config()
+        index_path = config.get("sparse", {}).get("bm25_index_path")
+        _default_retriever = BM25Retriever(index_path)
         _default_retriever.load()
     return _default_retriever.search(query, top_k, filters)
