@@ -1,5 +1,8 @@
 """Standalone BM25 sparse retriever for legal document chunks."""
 
+import pickle
+import logging
+import time
 import json
 import os
 import tempfile
@@ -11,7 +14,10 @@ from rank_bm25 import BM25Okapi
 
 from udsc2026.contracts import LegalChunk
 from udsc2026.contracts.retrieval import RetrievalHit
+from udsc2026.infrastructure.config import load_config
 from udsc2026.retrieval.sparse.tokenizer import tokenize_vi
+
+LOGGER = logging.getLogger(__name__)
 
 _INDEX_SCHEMA_VERSION = 1
 _INDEX_FILE_MODE = 0o644
@@ -29,7 +35,6 @@ def _tokenize_for_bm25(text: str) -> list[str]:
         if normalized and any(character.isalnum() for character in normalized):
             normalized_tokens.append(normalized)
     return normalized_tokens
-
 
 class BM25Retriever:
     """Build, persist, and search a Vietnamese BM25 index over legal chunks."""
@@ -178,6 +183,7 @@ class BM25Retriever:
             raise ValueError("top_k must be a positive integer")
         if self._bm25 is None:
             raise ValueError("index has not been built or loaded")
+        started = time.perf_counter()
         query_tokens = _tokenize_for_bm25(query)
         if not query_tokens:
             return []
@@ -192,6 +198,7 @@ class BM25Retriever:
         if not eligible:
             return []
         eligible.sort(key=lambda item: item[1], reverse=True)
+        LOGGER.info("sparse search latency_ms=%.2f", (time.perf_counter() - started) * 1000)
         return [
             _to_hit(self._chunks[index], score) for index, score in eligible[:top_k]
         ]
@@ -201,7 +208,6 @@ class BM25Retriever:
         """Return how many chunks are represented by the current index."""
 
         return len(self._chunks) if self._bm25 is not None else 0
-
 
 def _matches(
     chunk: LegalChunk, filters: dict[str, str | int | list[str]] | None
@@ -247,6 +253,8 @@ def search(
     """Search the lazily loaded default BM25 index."""
     global _default_retriever
     if _default_retriever is None:
-        _default_retriever = BM25Retriever()
+        config = load_config()
+        index_path = config.get("sparse", {}).get("bm25_index_path")
+        _default_retriever = BM25Retriever(index_path)
         _default_retriever.load()
     return _default_retriever.search(query, top_k, filters)

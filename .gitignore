@@ -186,5 +186,10 @@ data/vector_store/
 artifacts/
 outputs/
 
+# Local TV2 verification artifacts
+.pytest_tmp*/
+data/processed/metadata/index_errors.json
+
 # Ignore documentation files
 cam_nang.md
+PROJECT_STATUS.md

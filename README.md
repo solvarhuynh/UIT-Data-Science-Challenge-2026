@@ -45,58 +45,89 @@ flowchart LR
 
 ## Hướng dẫn khởi chạy
 
-### Prerequisites
+### Chạy toàn bộ project
 
-- Python 3.10-3.12 (chưa hỗ trợ Python 3.13+)
-- Git
-- Docker nếu chạy VectorDB/Redis bằng compose
-- Node.js `^20.19.0` hoặc `>=22.12.0` chỉ cần khi làm việc với `frontend/`
+Yêu cầu: Python 3.10–3.12, Docker và Node.js nếu chạy frontend.
 
-### Bước 1: Khởi tạo môi trường và tải models
+Cài thư viện trước khi khởi chạy:
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -c requirements_runtime.txt -r requirements_dev.txt
-python -m pip install -c requirements_runtime.txt -e ".[llm,rerank,retrieval]"
-python -m pip install -c requirements_runtime.txt huggingface_hub
-python .\download_models.py
+python -m pip install --upgrade pip
+python -m pip install -r requirements_runtime.txt
+python -m pip install -r requirements_dev.txt
+python -m pip install -e ".[llm,rerank,retrieval]"
+$env:PYTHONPATH = "$PWD\src"
 ```
 
-`download_models.py` tải hai model local vào:
+Tải model local và khởi chạy service:
+
+```powershell
+python download_models.py
+docker compose up -d
+```
+
+Index dữ liệu và chạy toàn bộ test:
+
+```powershell
+python scripts/index_chunks.py --chunks-dir data/processed/chunks --vector-db-type faiss
+python -m pytest -v --basetemp .pytest_tmp -p no:cacheprovider
+```
+
+Chạy backend:
+
+```powershell
+uvicorn udsc2026.api.app:app --reload
+```
+
+Chạy frontend ở terminal khác:
+
+```powershell
+cd "frontend/giao dien"
+npm install
+npm run dev
+```
+
+Model được tải vào:
 
 ```text
 models/bkai-bi-encoder/
 models/qwen3-legal/
 ```
 
-Checkpoint Cross-Encoder được cấu hình riêng qua
-`RERANKER_MODEL_PATH`; runtime mặc định không tự tải model.
+### Chạy theo từng thành viên
 
-### Bước 2: Chạy backend FastAPI
+Không phải thành viên nào cũng cần cài cả hai requirements:
 
-```powershell
-uvicorn udsc2026.api.app:app --reload
-```
+| Đối tượng | Dependency nên cài | Mục đích |
+|---|---|---|
+| TV1/backend/API | `requirements_runtime.txt` | Chạy FastAPI, orchestration và service runtime. |
+| TV2/retrieval | `requirements_dev.txt` | Runtime retrieval, BKAI, FAISS/Qdrant, BM25 và unit test. |
+| TV3/QA-LLM | `requirements_dev.txt` | LLM local, prompt, citation và test QA. |
+| TV4/ingestion | `requirements_dev.txt` | Reader PDF/DOCX/JSON, cleaning, chunking và test ingestion. |
+| TV5/reranking/evaluation | `requirements_dev.txt` | Reranker, metrics, benchmark, submission và test. |
+| Frontend/Web UI | Không cần Python requirements | Cài Node.js rồi chạy `npm install` trong `frontend/giao dien/`. |
+| Docker/production | `requirements_runtime.txt` | Dependency tối thiểu để chạy ứng dụng thật. |
 
-Backend mặc định chạy tại `http://127.0.0.1:8000`.
-
-### Bước 3: Chạy stack phụ trợ nếu cần
-
-```powershell
-docker compose up -d
-```
-
-Stack local có thể gồm VectorDB, Redis cache và backend tùy cấu hình trong `docker-compose.yml`.
-
-### Bước 4: Chạy thử nghiệm theo thành viên
+`requirements_dev.txt` bao gồm các dependency runtime cần thiết và thêm pytest, lint,
+type-check, benchmark cùng công cụ phát triển. Với backend production hoặc Docker chỉ
+cần `requirements_runtime.txt`. Trên Windows/FAISS, các file đã pin NumPy 1.26.4 để
+tương thích với `faiss-cpu==1.8.0`.
 
 ```powershell
-cd experiments\tvX
-python .\scripts\<ten_script_thu_nghiem>.py
-```
+# Ví dụ test TV2
+python -m pytest tests/retrieval/ -v --basetemp .pytest_tmp -p no:cacheprovider
 
-Thay `tvX` bằng `tv1`, `tv2`, `tv3`, `tv4` hoặc `tv5`. Logic thử nghiệm chỉ đưa vào `src/udsc2026/` sau khi interface đã rõ và có test.
+# Ví dụ test TV3
+python -m pytest tests/unit/test_qa -v
+
+# Ví dụ test TV4
+python -m pytest tests/test_ingestion_chunking.py tests/test_ingestion_cleaners.py -v
+
+# Ví dụ test TV5
+python -m pytest tests/unit/test_reranking tests/unit/test_evaluation -v
+```
 
 ## Repository Structure
 
@@ -169,7 +200,7 @@ udsc2026/
 | TV2 - Nghĩa | Full Retrieval Specialist | `src/udsc2026/retrieval/dense/`, `sparse/`, `hybrid/`, BKAI bi-encoder, Qdrant/FAISS, BM25 tiếng Việt, Hybrid Fusion | `list[RetrievalHit]` đã normalize score, giữ metadata citation và sẵn sàng cho reranking |
 | TV3 - Quân | QA & LLM Specialist | `src/udsc2026/qa/`, `src/udsc2026/infrastructure/llm/`, `prompts/`, Qwen3, prompt versioning, citation parser, anti-hallucination | `QAResponse` có answer, citation đã validate, prompt version, confidence và warnings |
 | TV4 - Trung Khang | Data & Benchmark Specialist | Legal ETL, parser cấu trúc luật, Unicode cleanup, Parent-Child Chunking, synthetic benchmark Q&A | Chunk/document JSONL sạch, metadata đầy đủ, benchmark dataset |
-| TV5 - Nguyên Khang | Reranking, Evaluation & MLOps Specialist | Cross-Encoder reranking, metrics MRR/Recall@K/ROUGE-L, Docker multi-stage, submission writer | Kết quả rerank, báo cáo evaluation, Docker runtime và `submission.csv` |
+| TV5 - Nguyên Khang | Reranking, Evaluation, MLOps Specialist & Web UI/UX | Cross-Encoder reranking, metrics MRR/Recall@K/ROUGE-L, Docker multi-stage, submission writer, frontend Web UI/UX | Kết quả rerank, báo cáo evaluation, Docker runtime, `submission.csv` và giao diện frontend |
 
 ## Documents
 

@@ -5,8 +5,8 @@ top_k: 10
 similarity_threshold: 0.5
 
 embedding:
-  embedder_model_path: "./models/bkai-bi-encoder"
-  device: "cpu"
+  model_path: ./models/bkai-bi-encoder
+  device: cpu
   batch_size: 32
   max_length: 256
   normalize_embeddings: true
@@ -24,10 +24,13 @@ llm:
   timeout_seconds: 60.0
 
 vector_db:
-  type: "faiss"
-  qdrant_url: "http://localhost:6333"
-  collection_name: "legal_chunks"
-  faiss_index_path: "./data/vector_store/faiss"
+  type: qdrant
+  qdrant_url: http://localhost:6333
+  collection_name: legal_chunks
+  faiss_index_path: data/vector_store/faiss/legal_chunks
+
+sparse:
+  bm25_index_path: data/vector_store/bm25/legal_chunks.pkl
 
 hybrid:
   dense_weight: 0.5
@@ -35,7 +38,7 @@ hybrid:
   candidate_k: 50
   min_score: 0.0
   top_k: 10
-  bm25_index_path: "./data/vector_store/bm25/index.json"
+  bm25_index_path: data/vector_store/bm25/legal_chunks.pkl
 
 reranker:
   enabled: true

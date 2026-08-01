@@ -43,6 +43,7 @@ _EMBEDDING_ENVIRONMENT_FIELDS = (
     "EMBEDDING_MAX_LENGTH",
     "EMBEDDING_NORMALIZE_EMBEDDINGS",
 )
+_EMBEDDING_MODEL_ENVIRONMENT_FIELDS = ("MODEL_EMBEDDER_PATH",)
 _LLM_ENVIRONMENT_FIELDS = (
     "MODEL_LLM_PATH",
     "LLM_BACKEND",
@@ -55,6 +56,7 @@ _LLM_ENVIRONMENT_FIELDS = (
     "LLM_STREAM",
     "LLM_TIMEOUT_SECONDS",
 )
+_LLM_MODEL_ENVIRONMENT_FIELDS = ("MODEL_LLM_PATH",)
 
 
 def _package_version() -> str:
@@ -323,7 +325,13 @@ def _readiness_checks() -> dict[str, bool]:
         except (OSError, TypeError, ValueError):
             checks["embedding_config"] = False
         else:
-            checks["embedding_model"] = _is_nonempty_directory(embedding_path)
+            if "embedding" in project_config or any(
+                os.getenv(name) is not None
+                for name in _EMBEDDING_MODEL_ENVIRONMENT_FIELDS
+            ):
+                checks["embedding_model"] = _is_nonempty_directory(embedding_path)
+            else:
+                checks["embedding_model"] = False
 
     llm_environment_present = any(
         os.getenv(name) is not None for name in _LLM_ENVIRONMENT_FIELDS
@@ -334,7 +342,12 @@ def _readiness_checks() -> dict[str, bool]:
         except (OSError, TypeError, ValueError):
             checks["llm_config"] = False
         else:
-            checks["llm_model"] = _is_nonempty_directory(llm.model_path)
+            if "llm" in project_config or any(
+                os.getenv(name) is not None for name in _LLM_MODEL_ENVIRONMENT_FIELDS
+            ):
+                checks["llm_model"] = _is_nonempty_directory(llm.model_path)
+            else:
+                checks["llm_model"] = False
 
     reranker_environment_present = any(
         os.getenv(name) is not None

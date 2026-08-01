@@ -1,11 +1,15 @@
 """Dense retrieval orchestration using injected embedding and vector-store clients."""
 
 from functools import lru_cache
+import logging
+import time
 from typing import TYPE_CHECKING
 
 from udsc2026.config import load_project_config
 from udsc2026.contracts.retrieval import RetrievalHit
 from udsc2026.infrastructure.vector_db.base import VectorDBAdapter
+
+LOGGER = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient
@@ -28,10 +32,12 @@ class DenseRetriever:
         filters: dict[str, str | int | list[str]] | None = None,
     ) -> list[RetrievalHit]:
         """Return ranked dense hits from the configured vector database."""
+
         if not isinstance(query, str) or not query.strip():
             raise ValueError("query must be a non-empty string")
         if isinstance(top_k, bool) or not isinstance(top_k, int) or top_k <= 0:
             raise ValueError("top_k must be a positive integer")
+        started = time.perf_counter()
         vector = self.embedding_client.embed_query(query)
         hits = self.vector_db.search(vector, top_k, filters)
         ranked_hits = []
@@ -40,6 +46,8 @@ class DenseRetriever:
             ranked_hits.append(
                 hit.model_copy(update={"dense_score": score, "rank": rank})
             )
+        LOGGER.info("dense search latency_ms=%.2f", (time.perf_counter() - started) * 1000)
+
         return ranked_hits
 
 
@@ -53,7 +61,7 @@ def _default_retriever() -> DenseRetriever:
     from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient
 
     embedding_client = EmbeddingClient(
-        model_path=embedding_config["embedder_model_path"],
+        model_path=embedding_config.get("model_path", embedding_config["embedder_model_path"]),
         device=embedding_config.get("device", "cpu"),
         batch_size=embedding_config.get("batch_size", 32),
         max_length=embedding_config.get("max_length", 256),

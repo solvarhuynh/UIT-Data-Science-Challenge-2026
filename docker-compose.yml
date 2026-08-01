@@ -162,7 +162,7 @@ services:
       - --loglevel
       - warning
     ports:
-      - "${REDIS_BIND_ADDRESS:-127.0.0.1}:${REDIS_PORT:-6379}:6379"
+      - "${REDIS_BIND_ADDRESS:-127.0.0.1}:6380:6379"
     volumes:
       - redis-data:/data
     healthcheck:

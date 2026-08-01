@@ -1,4 +1,4 @@
-"""Configuration loading for the embedding infrastructure."""
+"""Backward-compatible access to the shared embedding configuration."""
 
 import os
 from collections.abc import Mapping
@@ -32,6 +32,8 @@ def load_embedding_config(
         raise ValueError("Configuration field 'embedding' must be a mapping")
 
     embedding = dict(raw_embedding)
+    if "embedder_model_path" not in embedding and "model_path" in embedding:
+        embedding["embedder_model_path"] = embedding["model_path"]
     environment = os.environ if environ is None else environ
     for variable, field_name in _ENVIRONMENT_FIELDS.items():
         if variable in environment:

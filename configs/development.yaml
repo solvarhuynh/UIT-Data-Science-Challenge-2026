@@ -1,2 +1,8 @@
 environment: development
-config_overrides: {}
+
+embedding:
+  device: cpu
+
+vector_db:
+  type: faiss
+

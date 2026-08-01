@@ -1,8 +1,9 @@
 """Hybrid retrieval orchestration for dense and sparse retrievers."""
 
 from functools import lru_cache
+import logging
+import time
 from typing import Any
-
 from udsc2026.config import load_project_config
 from udsc2026.contracts.retrieval import RetrievalHit
 from udsc2026.retrieval.dense.dense_retriever import DenseRetriever
@@ -10,6 +11,8 @@ from udsc2026.retrieval.hybrid.config import HybridSettings, load_hybrid_setting
 from udsc2026.retrieval.hybrid.score_fusion import fuse_scores
 from udsc2026.retrieval.reranking.pipeline import SearchRetriever
 from udsc2026.retrieval.sparse.bm25_retriever import BM25Retriever
+
+LOGGER = logging.getLogger(__name__)
 
 
 def _config() -> dict[str, Any]:
@@ -73,14 +76,17 @@ class HybridRetriever:
             raise ValueError("query must be a non-empty string")
         if isinstance(top_k, bool) or not isinstance(top_k, int) or top_k <= 0:
             raise ValueError("top_k must be a positive integer")
+        started = time.perf_counter()
         dense_hits = self.dense_retriever.search(query, self.candidate_k, filters)
         sparse_hits = self.sparse_retriever.search(query, self.candidate_k, filters)
         fused = fuse_scores(
             dense_hits, sparse_hits, self.dense_weight, self.sparse_weight
         )
-        return [hit for hit in fused if (hit.final_score or 0.0) >= self.min_score][
+        result = [hit for hit in fused if (hit.final_score or 0.0) >= self.min_score][
             :top_k
         ]
+        LOGGER.info("hybrid search latency_ms=%.2f", (time.perf_counter() - started) * 1000)
+        return result
 
 
 @lru_cache(maxsize=1)
