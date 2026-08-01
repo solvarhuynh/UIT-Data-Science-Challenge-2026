@@ -2,14 +2,13 @@
 
 import json
 from pathlib import Path
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Union
+from typing import Dict, Iterable, Iterator, List, Optional, Union
 
 from udsc2026.ingestion.readers.docx_reader import read_docx
 from udsc2026.ingestion.readers.json_reader import read_json
 from udsc2026.ingestion.readers.models import RawDocument
 from udsc2026.ingestion.readers.pdf_reader import read_pdf
 from udsc2026.ingestion.readers.txt_reader import read_txt
-
 
 READERS = {
     ".pdf": read_pdf,
@@ -29,9 +28,7 @@ def extract_raw_document(
     ext = Path(file_path).suffix.lower()
     reader = READERS.get(ext)
     if reader is None:
-        message = "Định dạng không được hỗ trợ: {0} ({1})".format(
-            ext, file_path
-        )
+        message = "Định dạng không được hỗ trợ: {0} ({1})".format(ext, file_path)
         raise ValueError(message)
     return reader(file_path)
 
@@ -68,9 +65,7 @@ def extract_raw_documents(
     seen_doc_ids = set()
 
     if not source_directory.exists():
-        message = "Không tìm thấy thư mục dữ liệu: {0}".format(
-            source_directory
-        )
+        message = "Không tìm thấy thư mục dữ liệu: {0}".format(source_directory)
         error = FileNotFoundError(message)
         _write_errors([_error_record(source_directory, error)], output_path)
         return documents
@@ -82,9 +77,7 @@ def extract_raw_documents(
         try:
             extracted = extract_raw_document(str(file_path))
             candidates = (
-                (extracted,)
-                if isinstance(extracted, RawDocument)
-                else extracted
+                (extracted,) if isinstance(extracted, RawDocument) else extracted
             )
             for document in candidates:
                 if document.doc_id in seen_doc_ids:

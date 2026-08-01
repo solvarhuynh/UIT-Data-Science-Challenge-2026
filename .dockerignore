@@ -1,0 +1,55 @@
+# Version control and local tooling
+.git
+.gitignore
+.github
+.agents
+.codex
+.idea
+.vscode
+
+# Python build/test artifacts
+**/__pycache__/
+**/*.py[cod]
+**/*.egg-info/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.cache/
+.tox/
+.venv/
+build/
+dist/
+htmlcov/
+coverage.xml
+
+# Secrets and machine-local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Models, corpora, generated indexes, and outputs are runtime mounts.
+models/
+data/raw/
+data/processed/
+data/vector_store/
+artifacts/
+outputs/
+
+# The backend image does not contain frontend or JavaScript dependencies.
+frontend/
+**/node_modules/
+**/.vite/
+
+# Development-only material is not copied into the runtime image.
+docs/
+experiments/
+tests/
+requirements_dev.txt
+
+# Editor/OS noise and logs
+.DS_Store
+Thumbs.db
+*.log
+*.tmp

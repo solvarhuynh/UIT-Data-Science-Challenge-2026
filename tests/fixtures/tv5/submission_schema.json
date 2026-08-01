@@ -1,0 +1,12 @@
+{
+  "schema_name": "dev_submission_v1",
+  "columns": [
+    {"name": "id", "source": "trace_id", "serializer": "text", "required": true},
+    {"name": "answer", "source": "answer", "serializer": "text", "required": true},
+    {"name": "citations_json", "source": "citations", "serializer": "json", "required": true},
+    {"name": "citation_count", "source": "citations", "serializer": "count", "required": true}
+  ],
+  "delimiter": ",",
+  "include_header": true,
+  "encoding": "utf-8-sig"
+}

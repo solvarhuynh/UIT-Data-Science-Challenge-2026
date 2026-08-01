@@ -17,7 +17,9 @@ def main() -> None:
     query_vector = client.embed_query("Điều 10 Bộ luật Lao động quy định gì?")
     document_vectors = client.embed_documents(["a", "b"], batch_size=2)
     print(f"query dimension: {len(query_vector)}")
-    print(f"document vectors: {len(document_vectors)}, dimension: {len(document_vectors[0])}")
+    document_count = len(document_vectors)
+    vector_dimension = len(document_vectors[0])
+    print(f"document vectors: {document_count}, dimension: {vector_dimension}")
 
 
 if __name__ == "__main__":

@@ -183,6 +183,8 @@ __marimo__/
 /models/
 data/raw/
 data/vector_store/
+artifacts/
+outputs/
 
 # Local TV2 verification artifacts
 .pytest_tmp*/

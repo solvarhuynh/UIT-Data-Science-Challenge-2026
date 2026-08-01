@@ -20,7 +20,6 @@ from udsc2026.ingestion.legal_structure.patterns import (
 )
 from udsc2026.ingestion.readers.models import RawDocument
 
-
 _UPPERCASE_LETTER = re.compile(r"[A-ZÀ-ỴĐ]")
 _DocumentInput = Union[str, RawDocument, CleanDocument]
 _StructureNode = Union[Chapter, Section, Article, Clause, Point]
@@ -203,9 +202,7 @@ class LegalStructureParser:
             # Clause and point rules run only in the active Article state.
             # Check points first: otherwise ``a)`` is not a numeric clause,
             # but this ordering documents the intended hierarchy explicitly.
-            point_match = LABELED_POINT.match(line) or PATTERNS["point"].match(
-                line
-            )
+            point_match = LABELED_POINT.match(line) or PATTERNS["point"].match(line)
             if article is not None and point_match:
                 point = None
                 append_to_span(line, line_number)
@@ -229,9 +226,7 @@ class LegalStructureParser:
                 add_entry("point", point.identifier, line, line_number)
                 continue
 
-            clause_match = LABELED_CLAUSE.match(line) or PATTERNS["clause"].match(
-                line
-            )
+            clause_match = LABELED_CLAUSE.match(line) or PATTERNS["clause"].match(line)
             if article is not None and clause_match:
                 clause = point = None
                 append_to_span(line, line_number)
@@ -296,7 +291,7 @@ def parse_legal_text(text: str, title: Optional[str] = None) -> LegalStructureDo
 
 
 def parse_legal_document(
-    document: Union[RawDocument, CleanDocument]
+    document: Union[RawDocument, CleanDocument],
 ) -> LegalStructureDocument:
     """Convenience function for parsing a pipeline document model."""
     return LegalStructureParser().parse_document(document)

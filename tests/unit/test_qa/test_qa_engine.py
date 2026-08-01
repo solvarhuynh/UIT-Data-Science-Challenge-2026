@@ -1,17 +1,17 @@
 """Unit tests for QAEngine using MockLLMClient – no GPU required."""
 
 from pathlib import Path
-from typing import Optional
+from typing import Any
 
 import pytest
 
+import udsc2026.qa.qa_engine as qa_engine_module
 from udsc2026.contracts.retrieval import RetrievalHit
 from udsc2026.infrastructure.llm.client import MockLLMClient
 from udsc2026.infrastructure.llm.config import LLMConfig
 from udsc2026.qa.citation_parser import CitationParser
 from udsc2026.qa.prompt_builder import PromptBuilder
 from udsc2026.qa.qa_engine import QAEngine
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -63,9 +63,7 @@ def good_context() -> list[RetrievalHit]:
 
 
 @pytest.fixture
-def engine(
-    mock_llm: MockLLMClient, tmp_prompts: Path
-) -> QAEngine:
+def engine(mock_llm: MockLLMClient, tmp_prompts: Path) -> QAEngine:
     """QAEngine wired with MockLLMClient, real PromptBuilder and CitationParser."""
     return QAEngine(
         llm_client=mock_llm,  # type: ignore[arg-type]
@@ -97,6 +95,30 @@ class TestGenerateAnswer:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
+    async def test_offloads_blocking_llm_call(
+        self,
+        engine: QAEngine,
+        good_context: list[RetrievalHit],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: list[str] = []
+
+        async def fake_to_thread(function: object, prompt: str) -> str:
+            calls.append(prompt)
+            return function(prompt)  # type: ignore[operator]
+
+        monkeypatch.setattr(
+            qa_engine_module.asyncio,
+            "to_thread",
+            fake_to_thread,
+        )
+
+        await engine.generate_answer("Quyền lao động?", good_context)
+
+        assert len(calls) == 1
+
+    @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_verified_citation_when_context_matches(
         self, engine: QAEngine, good_context: list[RetrievalHit]
     ) -> None:
@@ -110,15 +132,16 @@ class TestGenerateAnswer:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
-    async def test_empty_context_returns_refusal(
-        self, engine: QAEngine
-    ) -> None:
+    async def test_empty_context_returns_refusal(self, engine: QAEngine) -> None:
         """Empty context should trigger the safety guard and return refusal answer."""
         response = await engine.generate_answer(
             question="Quyền của người lao động?",
             contexts=[],
         )
-        assert "không có đủ căn cứ" in response.answer.lower() or "không có văn bản" in response.answer.lower()
+        assert (
+            "không có đủ căn cứ" in response.answer.lower()
+            or "không có văn bản" in response.answer.lower()
+        )
         assert response.confidence == 0.0
         assert len(response.warnings) > 0
         # LLM must NOT have been called – citations should be empty.
@@ -161,6 +184,75 @@ class TestGenerateAnswer:
             contexts=good_context,
         )
         assert response.retrieval_hits == good_context
+
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_accepts_high_final_score_from_reranked_pipeline(
+        self,
+        mock_llm: MockLLMClient,
+        tmp_prompts: Path,
+        good_context: list[RetrievalHit],
+    ) -> None:
+        """The final reranker score must drive the context-quality guard."""
+
+        reranked_context = good_context[0].model_copy(
+            update={
+                "score": None,
+                "hybrid_score": 0.7,
+                "rerank_score": 0.9,
+                "final_score": 0.9,
+            }
+        )
+        threshold_engine = QAEngine(
+            llm_client=mock_llm,  # type: ignore[arg-type]
+            prompt_builder=PromptBuilder(prompts_root=tmp_prompts),
+            citation_parser=CitationParser(),
+            min_context_score=0.5,
+        )
+
+        response = await threshold_engine.generate_answer(
+            "Quyền của người lao động?",
+            [reranked_context],
+        )
+
+        assert response.confidence == pytest.approx(1.0)
+        assert any(citation.is_verified for citation in response.citations)
+
+    @pytest.mark.unit
+    @pytest.mark.asyncio
+    async def test_final_score_takes_precedence_over_legacy_score(
+        self,
+        mock_llm: MockLLMClient,
+        tmp_prompts: Path,
+        good_context: list[RetrievalHit],
+    ) -> None:
+        """A stale vector score cannot hide a low final pipeline score."""
+
+        context = good_context[0].model_copy(update={"score": 0.99, "final_score": 0.1})
+        threshold_engine = QAEngine(
+            llm_client=mock_llm,  # type: ignore[arg-type]
+            prompt_builder=PromptBuilder(prompts_root=tmp_prompts),
+            min_context_score=0.5,
+        )
+
+        response = await threshold_engine.generate_answer("question", [context])
+
+        assert response.confidence == 0.0
+        assert response.citations == []
+
+
+@pytest.mark.parametrize("threshold", [-0.1, float("nan"), float("inf"), True, "0.5"])
+def test_rejects_invalid_min_context_score(
+    threshold: Any,
+    mock_llm: MockLLMClient,
+    tmp_prompts: Path,
+) -> None:
+    with pytest.raises(ValueError, match="min_context_score"):
+        QAEngine(
+            llm_client=mock_llm,  # type: ignore[arg-type]
+            prompt_builder=PromptBuilder(prompts_root=tmp_prompts),
+            min_context_score=threshold,
+        )
 
 
 # ---------------------------------------------------------------------------

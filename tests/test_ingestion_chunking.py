@@ -41,17 +41,11 @@ def test_chunking_links_legal_children_to_full_article_parent():
     assert len(result.chunks) == 4
     assert {chunk.parent_id for chunk in result.chunks} == {"doc001_article_10"}
     assert all(chunk.parent_text == result.parents[0].text for chunk in result.chunks)
-    point_chunk = next(
-        chunk for chunk in result.chunks if chunk.point == "Điểm a"
-    )
+    point_chunk = next(chunk for chunk in result.chunks if chunk.point == "Điểm a")
     assert point_chunk.chunk_id == "doc001_article_10_clause_1_point_a"
     assert point_chunk.metadata["expanded_terms"] == {}
-    clause_chunk = next(
-        chunk for chunk in result.chunks if chunk.clause == "Khoản 1"
-    )
-    assert clause_chunk.metadata["expanded_terms"] == {
-        "BLLĐ": "Bộ luật Lao động"
-    }
+    clause_chunk = next(chunk for chunk in result.chunks if chunk.clause == "Khoản 1")
+    assert clause_chunk.metadata["expanded_terms"] == {"BLLĐ": "Bộ luật Lao động"}
     assert clause_chunk.metadata["chapter"] == "Chương II"
     assert clause_chunk.metadata["effective_date"] == "2026-01-01"
 
@@ -111,9 +105,7 @@ def test_writer_emits_jsonl_and_validation_report(tmp_path):
         review_path=tmp_path / "metadata" / "manual_review.json",
     )
 
-    child_lines = (
-        (chunks_dir / "doc001.jsonl").read_text(encoding="utf-8").splitlines()
-    )
+    child_lines = (chunks_dir / "doc001.jsonl").read_text(encoding="utf-8").splitlines()
     parent_lines = (
         (parents_dir / "doc001.jsonl").read_text(encoding="utf-8").splitlines()
     )

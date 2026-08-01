@@ -6,12 +6,11 @@ import random
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import DefaultDict, Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import DefaultDict, Dict, Iterable, List, Sequence, Tuple, Union
 
 from pydantic import BaseModel, Field
 
 from udsc2026.contracts import LegalChunk
-
 
 QUESTION_TYPES = (
     "definition",
@@ -92,7 +91,8 @@ def generate_synthetic_benchmark(
     if not available_types:
         raise ValueError("No benchmark candidates could be built")
 
-    randomizer = random.Random(seed)
+    # Determinism is required for benchmark reproducibility, not for security.
+    randomizer = random.Random(seed)  # nosec B311
     for kind in available_types:
         randomizer.shuffle(candidates[kind])
 
@@ -146,7 +146,9 @@ def _is_usable(chunk: LegalChunk) -> bool:
     return bool(chunk.text.strip() and chunk.law_name and chunk.article)
 
 
-def _build_candidates(chunks: Sequence[LegalChunk]) -> Dict[str, List[Tuple[LegalChunk, ...]]]:
+def _build_candidates(
+    chunks: Sequence[LegalChunk],
+) -> Dict[str, List[Tuple[LegalChunk, ...]]]:
     candidates: Dict[str, List[Tuple[LegalChunk, ...]]] = {
         kind: [] for kind in QUESTION_TYPES
     }
@@ -223,6 +225,8 @@ def _normalise_text(text: str) -> str:
 
 
 def main() -> None:
+    """Generate a deterministic synthetic benchmark from processed chunks."""
+
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--chunks-dir",

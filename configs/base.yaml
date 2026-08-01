@@ -11,6 +11,18 @@ embedding:
   max_length: 256
   normalize_embeddings: true
 
+llm:
+  model_path: "./models/qwen3-legal"
+  backend: "transformers"
+  device: "cpu"
+  dtype: "float32"
+  max_new_tokens: 1024
+  temperature: 0.1
+  top_p: 0.9
+  repetition_penalty: 1.05
+  stream: false
+  timeout_seconds: 60.0
+
 vector_db:
   type: qdrant
   qdrant_url: http://localhost:6333
@@ -25,3 +37,14 @@ hybrid:
   sparse_weight: 0.5
   candidate_k: 50
   min_score: 0.0
+  top_k: 10
+  bm25_index_path: data/vector_store/bm25/legal_chunks.pkl
+
+reranker:
+  enabled: true
+  model_name_or_path: "./models/reranker"
+  device: "cpu"
+  batch_size: 16
+  max_length: 512
+  top_n: 10
+  local_files_only: true

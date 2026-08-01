@@ -1,13 +1,11 @@
 """Unit tests for PromptBuilder – no GPU or model weights required."""
 
-import tempfile
 from pathlib import Path
 
 import pytest
 
 from udsc2026.contracts.retrieval import RetrievalHit
 from udsc2026.qa.prompt_builder import PromptBuilder, _build_context_block
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -51,6 +49,7 @@ def sample_hits() -> list[RetrievalHit]:
             law_name="Bộ luật Lao động 2019",
             article="Điều 10",
             clause="Khoản 1",
+            metadata={"point": "Điểm a"},
         ),
         RetrievalHit(
             chunk_id="doc002_article_5",
@@ -116,9 +115,43 @@ class TestBuildPrompt:
             )
 
     @pytest.mark.unit
-    def test_empty_contexts_uses_sentinel(
-        self, builder: PromptBuilder
+    @pytest.mark.parametrize(
+        "unsafe_name",
+        [
+            "../secret",
+            "..\\secret",
+            "/absolute/secret",
+            "C:\\secret",
+            "name.md",
+            "",
+            " ",
+        ],
+    )
+    def test_rejects_unsafe_template_names_before_file_access(
+        self,
+        builder: PromptBuilder,
+        sample_hits: list[RetrievalHit],
+        unsafe_name: str,
     ) -> None:
+        """User-controlled versions cannot traverse outside prompt folders."""
+
+        with pytest.raises(ValueError, match="template name"):
+            builder.build_prompt(
+                question="test",
+                contexts=sample_hits,
+                prompt_version=unsafe_name,
+            )
+
+    @pytest.mark.unit
+    def test_version_identifier_rejects_unsafe_name(
+        self,
+        builder: PromptBuilder,
+    ) -> None:
+        with pytest.raises(ValueError, match="template name"):
+            builder.get_prompt_version_id("../../secret")
+
+    @pytest.mark.unit
+    def test_empty_contexts_uses_sentinel(self, builder: PromptBuilder) -> None:
         """Empty context list should produce a sentinel string in the prompt."""
         prompt = builder.build_prompt(question="Câu hỏi?", contexts=[])
         assert "Không có văn bản pháp luật" in prompt
@@ -127,10 +160,23 @@ class TestBuildPrompt:
     def test_template_caching(
         self, builder: PromptBuilder, sample_hits: list[RetrievalHit]
     ) -> None:
-        """Second call should use cached template (same result, no FileNotFoundError)."""
+        """Reuse the cached template on the second call."""
         p1 = builder.build_prompt(question="Q1?", contexts=sample_hits)
         p2 = builder.build_prompt(question="Q1?", contexts=sample_hits)
         assert p1 == p2
+
+    @pytest.mark.unit
+    def test_default_root_uses_runtime_environment(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_prompts: Path,
+    ) -> None:
+        """Wheel installs can locate prompts copied outside site-packages."""
+        monkeypatch.setenv("UDSC2026_PROMPTS_PATH", str(tmp_prompts))
+
+        prompt = PromptBuilder().build_prompt(question="Câu hỏi?", contexts=[])
+
+        assert "Câu hỏi?" in prompt
 
 
 # ---------------------------------------------------------------------------
@@ -154,6 +200,7 @@ class TestBuildContextBlock:
         block = _build_context_block(sample_hits)
         assert "Bộ luật Lao động 2019" in block
         assert "Điều 10" in block
+        assert "point=Điểm a" in block
 
     @pytest.mark.unit
     def test_empty_list_returns_sentinel(self) -> None:

@@ -1,0 +1,17 @@
+# Direct runtime constraints used by Docker builds.
+# Keep these aligned with requirements_dev.txt and the optional dependencies in
+# pyproject.toml; pip still resolves platform-specific transitive wheels.
+# Docker seeds the official CPU-only torch wheel before resolving this file.
+accelerate==0.33.0
+faiss-cpu==1.8.0
+fastapi==0.112.2
+numpy==1.26.4
+pydantic==2.8.2
+pyvi==0.1.1
+PyYAML==6.0.2
+qdrant-client==1.10.1
+rank-bm25==0.2.2
+sentence-transformers==3.0.1
+torch==2.2.2
+transformers==4.44.2
+uvicorn==0.30.6

@@ -2,7 +2,7 @@
 
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from udsc2026.contracts.retrieval import RetrievalHit
 
@@ -15,6 +15,8 @@ class Citation(BaseModel):
     Unverified citations are potential hallucinations and must be surfaced as
     warnings rather than silently dropped.
     """
+
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     law_name: Optional[str] = None
     article: Optional[str] = None
@@ -33,11 +35,18 @@ class QAResponse(BaseModel):
     without defensive None-checks for the core fields.
     """
 
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
     answer: str
     citations: List[Citation] = Field(default_factory=list)
     used_prompt_version: str
     retrieval_hits: List[RetrievalHit] = Field(default_factory=list)
-    confidence: Optional[float] = None
+    confidence: Optional[float] = Field(
+        default=None,
+        ge=0,
+        le=1,
+        allow_inf_nan=False,
+    )
     warnings: List[str] = Field(default_factory=list)
     cache_hit: bool = False
     trace_id: Optional[str] = None

@@ -93,4 +93,3 @@ class LegalStructureDocument(BaseModel):
     entries: List[StructureEntry] = Field(default_factory=list)
     requires_manual_review: bool = False
     review_reasons: List[str] = Field(default_factory=list)
-

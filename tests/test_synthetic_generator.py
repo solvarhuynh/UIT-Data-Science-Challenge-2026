@@ -27,11 +27,29 @@ def _chunk(chunk_id, text, article="Điều 10", clause="Khoản 1"):
 
 def _coverage_chunks():
     return [
-        _chunk("law_article_10_clause_1", "Khái niệm hợp đồng lao động là sự thỏa thuận."),
-        _chunk("law_article_10_clause_2", "Người lao động có quyền yêu cầu bảo vệ quyền lợi.", clause="Khoản 2"),
-        _chunk("law_article_10_clause_3", "Trường hợp áp dụng khi hợp đồng còn hiệu lực.", clause="Khoản 3"),
-        _chunk("law_article_11_clause_1", "Mức phạt tiền đối với hành vi vi phạm là 5 triệu đồng.", article="Điều 11"),
-        _chunk("law_article_12_clause_1", "Hồ sơ và trình tự thực hiện thủ tục được quy định như sau.", article="Điều 12"),
+        _chunk(
+            "law_article_10_clause_1", "Khái niệm hợp đồng lao động là sự thỏa thuận."
+        ),
+        _chunk(
+            "law_article_10_clause_2",
+            "Người lao động có quyền yêu cầu bảo vệ quyền lợi.",
+            clause="Khoản 2",
+        ),
+        _chunk(
+            "law_article_10_clause_3",
+            "Trường hợp áp dụng khi hợp đồng còn hiệu lực.",
+            clause="Khoản 3",
+        ),
+        _chunk(
+            "law_article_11_clause_1",
+            "Mức phạt tiền đối với hành vi vi phạm là 5 triệu đồng.",
+            article="Điều 11",
+        ),
+        _chunk(
+            "law_article_12_clause_1",
+            "Hồ sơ và trình tự thực hiện thủ tục được quy định như sau.",
+            article="Điều 12",
+        ),
     ]
 
 
@@ -88,7 +106,9 @@ def test_jsonl_round_trip_preserves_benchmark_contract(tmp_path):
 def test_chunk_loader_reads_jsonl_records_written_by_chunking(tmp_path):
     chunk = _coverage_chunks()[0]
     path = tmp_path / "chunks.jsonl"
-    path.write_text(json.dumps(chunk.model_dump(), ensure_ascii=False) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(chunk.model_dump(), ensure_ascii=False) + "\n", encoding="utf-8"
+    )
 
     loaded = load_legal_chunks(path)
 

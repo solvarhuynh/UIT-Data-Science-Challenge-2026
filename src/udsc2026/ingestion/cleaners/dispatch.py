@@ -8,7 +8,6 @@ from udsc2026.ingestion.cleaners.document_cleaner import clean_document
 from udsc2026.ingestion.cleaners.models import CleanDocument
 from udsc2026.ingestion.readers.models import RawDocument
 
-
 DEFAULT_DOCUMENTS_DIR = Path("data/processed/documents")
 DEFAULT_ERRORS_PATH = Path("data/processed/metadata/clean_errors.json")
 

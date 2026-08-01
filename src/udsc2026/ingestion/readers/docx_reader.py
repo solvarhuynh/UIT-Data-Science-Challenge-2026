@@ -7,7 +7,7 @@ from udsc2026.ingestion.readers._helpers import first_nonempty_line, make_doc_id
 from udsc2026.ingestion.readers.models import RawDocument
 
 
-def _require_docx():
+def _require_docx() -> Any:
     try:
         from docx import Document
     except ImportError as error:  # pragma: no cover - incomplete install only

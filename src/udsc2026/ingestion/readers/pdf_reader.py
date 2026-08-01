@@ -7,7 +7,7 @@ from udsc2026.ingestion.readers._helpers import first_nonempty_line, make_doc_id
 from udsc2026.ingestion.readers.models import RawDocument
 
 
-def _require_pdfplumber():
+def _require_pdfplumber() -> Any:
     try:
         import pdfplumber
     except ImportError as error:  # pragma: no cover - incomplete install only

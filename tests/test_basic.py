@@ -4,7 +4,6 @@ Simple test to verify testing infrastructure works
 
 import json
 import os
-import sys
 
 import pytest
 

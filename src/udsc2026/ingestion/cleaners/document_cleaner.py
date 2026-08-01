@@ -21,7 +21,6 @@ from udsc2026.ingestion.cleaners.patterns import (
 )
 from udsc2026.ingestion.readers.models import RawDocument
 
-
 OCR_REPLACEMENTS = {
     "\u00a0": " ",
     "\u00ad": "",
@@ -128,8 +127,7 @@ def is_garbage_line(line: str, in_table_of_contents: bool) -> bool:
 def _remove_repeated_noise(text: str) -> Tuple[str, List[str]]:
     """Remove headers, footers, page markers, watermarks, and TOC entries."""
     pages = [
-        [normalize_line(line) for line in page.split("\n")]
-        for page in text.split("\f")
+        [normalize_line(line) for line in page.split("\n")] for page in text.split("\f")
     ]
     repeated_edges = repeated_page_edges(pages)
     cleaned_pages: List[str] = []
@@ -192,8 +190,7 @@ def _merge_page_lines(lines: Iterable[str]) -> str:
 def merge_hard_wrapped_lines(text_with_pages: str) -> str:
     """Join hard wraps without ever combining text from different PDF pages."""
     cleaned_pages = [
-        _merge_page_lines(page.splitlines())
-        for page in text_with_pages.split("\f")
+        _merge_page_lines(page.splitlines()) for page in text_with_pages.split("\f")
     ]
     return "\f".join(page for page in cleaned_pages if page)
 

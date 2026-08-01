@@ -2,7 +2,6 @@
 
 import re
 
-
 LEGAL_STRUCTURE_LINE = re.compile(
     r"^\s*(?:Chương\s+(?:[IVXLCDM]+|\d+)|Mục\s+\d+|Điều\s+\d+|"
     r"Khoản\s+\d+|Điểm\s+[a-zđ]|\d+[.)]|[a-zđ][.)])(?:[.:)]\s*|\s|$)",

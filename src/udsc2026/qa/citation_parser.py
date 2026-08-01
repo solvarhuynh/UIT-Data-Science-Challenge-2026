@@ -32,8 +32,9 @@ _BRACKET_PATTERN = re.compile(r"\[([^\[\]]+)\]")
 # number, and an optional clause.
 _INLINE_PATTERN = re.compile(
     r"(?:(?P<law_pre>[\w\s\-]+?)\s+)?Điều\s+(?P<article>\d+[a-z]?)"
-    r"(?:[,\s]+[Kk]hoản\s+(?P<clause>\d+))?",
-    re.UNICODE,
+    r"(?:[,\s]+Khoản\s+(?P<clause>\d+))?"
+    r"(?:[,\s]+Điểm\s+(?P<point>[a-zđ]))?",
+    re.IGNORECASE | re.UNICODE,
 )
 
 # Named-group pattern to extract law_name, article, clause, point from
@@ -50,17 +51,24 @@ _POINT_RE = re.compile(
     r"Điểm\s+(?P<point>[a-zđ])",
     re.IGNORECASE,
 )
-# Law name: everything before "Điều", "Khoản" or a trailing comma.
-_LAW_NAME_RE = re.compile(
-    r"^(?P<law>.+?)(?:,\s*Điều|\s+Điều|,\s*Khoản|\s+Khoản)",
-    re.IGNORECASE,
-)
-
 # Noise words that should not be treated as law name prefixes in inline matches.
 _INLINE_NOISE_WORDS = frozenset(
     [
-        "tại", "theo", "cụ thể", "cụ", "thể", "quy định", "quy", "định",
-        "xem", "căn cứ", "căn", "cứ", "dựa", "vào", "của",
+        "tại",
+        "theo",
+        "cụ thể",
+        "cụ",
+        "thể",
+        "quy định",
+        "quy",
+        "định",
+        "xem",
+        "căn cứ",
+        "căn",
+        "cứ",
+        "dựa",
+        "vào",
+        "của",
     ]
 )
 
@@ -74,9 +82,10 @@ class CitationParser:
         citations = parser.parse_citations(answer_text)
         verified  = parser.validate_citations(citations, retrieval_hits)
 
-    Any citation whose ``law_name`` + ``article`` pair cannot be matched to
-    at least one supplied ``RetrievalHit`` is marked ``is_verified=False``
-    and receives a warning string flagging a potential hallucination.
+    Any citation whose explicit law/article/clause/point fields cannot be
+    matched to at least one supplied ``RetrievalHit`` is marked
+    ``is_verified=False`` and receives a warning flagging a potential
+    hallucination.
     """
 
     # ------------------------------------------------------------------
@@ -139,8 +148,9 @@ class CitationParser:
         """Verify each citation against the supplied retrieval context.
 
         A citation is *verified* when at least one ``RetrievalHit`` in
-        ``contexts`` matches on ``law_name`` AND ``article`` (case-insensitive
-        partial match is accepted for law names that may be abbreviated).
+        ``contexts`` matches its article and every other locator explicitly
+        named by the citation. Case-insensitive partial matching is accepted
+        only for law names that may be abbreviated.
 
         Citations that fail verification are marked ``is_verified=False`` and
         populated with a warning string.  The original citation list is not
@@ -229,10 +239,17 @@ def _parse_single_citation(raw: str) -> Optional[Citation]:
     point_match = _POINT_RE.search(raw)
     point = f"Điểm {point_match.group('point')}" if point_match else None
 
-    law_name_match = _LAW_NAME_RE.match(raw)
-    law_name: Optional[str] = None
-    if law_name_match:
-        law_name = law_name_match.group("law").strip().strip(",")
+    law_candidate = _ARTICLE_RE.sub(" ", raw)
+    law_candidate = _CLAUSE_RE.sub(" ", law_candidate)
+    law_candidate = _POINT_RE.sub(" ", law_candidate)
+    law_candidate = re.sub(r"[\s,;:]+", " ", law_candidate).strip(" -")
+    law_candidate = re.sub(
+        r"^(?:theo|tại|căn\s+cứ)\s+",
+        "",
+        law_candidate,
+        flags=re.IGNORECASE,
+    ).strip()
+    law_name = law_candidate or None
 
     return Citation(
         law_name=law_name,
@@ -249,18 +266,31 @@ def _find_matching_hit(
 ) -> Optional[RetrievalHit]:
     """Return the first ``RetrievalHit`` that matches the citation, or None."""
     for hit in contexts:
-        if _article_matches(citation.article, hit.article) and _law_matches(
-            citation.law_name, hit.law_name
+        raw_hit_point = hit.metadata.get("point")
+        hit_point = raw_hit_point if isinstance(raw_hit_point, str) else None
+        if (
+            _locator_matches(citation.article, hit.article, required=True)
+            and _law_matches(citation.law_name, hit.law_name)
+            and _locator_matches(citation.clause, hit.clause)
+            and _locator_matches(citation.point, hit_point)
         ):
             return hit
     return None
 
 
-def _article_matches(citation_article: Optional[str], hit_article: Optional[str]) -> bool:
-    """Compare article numbers with normalised whitespace."""
-    if citation_article is None or hit_article is None:
+def _locator_matches(
+    citation_value: Optional[str],
+    hit_value: Optional[str],
+    *,
+    required: bool = False,
+) -> bool:
+    """Match one legal locator, treating only omitted citation fields as wildcards."""
+
+    if citation_value is None:
+        return not required
+    if hit_value is None:
         return False
-    return citation_article.strip().lower() == hit_article.strip().lower()
+    return _normalize_text(citation_value) == _normalize_text(hit_value)
 
 
 def _law_matches(citation_law: Optional[str], hit_law: Optional[str]) -> bool:
@@ -269,16 +299,33 @@ def _law_matches(citation_law: Optional[str], hit_law: Optional[str]) -> bool:
     If citation_law is None (e.g. LLM wrote "theo Điều 5, Khoản 1"), it matches
     the hit as long as the article number matches and no conflicting law is specified.
     """
-    if citation_law is None or hit_law is None:
+    if citation_law is None:
         return True
-    a = citation_law.strip().lower()
-    b = hit_law.strip().lower()
+    if hit_law is None:
+        return False
+    a = _normalize_text(citation_law)
+    b = _normalize_text(hit_law)
     return a in b or b in a
+
+
+def _normalize_text(value: str) -> str:
+    """Case-fold and collapse whitespace for stable legal-label comparison."""
+
+    return " ".join(value.casefold().split())
 
 
 def _citation_display(citation: Citation) -> str:
     """Format a citation as a short human-readable string for logging."""
-    parts = [p for p in [citation.law_name, citation.article, citation.clause] if p]
+    parts = [
+        part
+        for part in (
+            citation.law_name,
+            citation.article,
+            citation.clause,
+            citation.point,
+        )
+        if part
+    ]
     return ", ".join(parts) if parts else "(unknown)"
 
 
@@ -287,7 +334,7 @@ def _extract_inline_citations(text: str) -> list[Citation]:
 
     Extracts citations like ``"Theo Bộ luật Lao động 2019, Điều 5, Khoản 1"`` or
     ``"theo Điều 10 Bộ luật Lao động 2019"`` that do not use bracket
-    notation.  Each unique ``(article, law_name)`` pair is returned once.
+    notation. Each unique law/article/clause/point locator is returned once.
 
     Args:
         text: The raw LLM answer string (already confirmed to contain no
@@ -297,7 +344,7 @@ def _extract_inline_citations(text: str) -> list[Citation]:
         Deduplicated list of ``Citation`` objects with ``is_verified=False``.
     """
     citations: list[Citation] = []
-    seen: set[tuple[str, str]] = set()
+    seen: set[tuple[str, str, str, str]] = set()
 
     for match in _INLINE_PATTERN.finditer(text):
         article_num = match.group("article")
@@ -305,10 +352,13 @@ def _extract_inline_citations(text: str) -> list[Citation]:
 
         clause_num = match.group("clause")
         clause = f"Khoản {clause_num}" if clause_num else None
+        point_name = match.group("point")
+        point = f"Điểm {point_name}" if point_name else None
 
         law_name: Optional[str] = None
 
-        # 1. Try to extract law name from preceding text (e.g. "Theo Bộ luật Lao động 2019, Điều 5")
+        # 1. Try the preceding text, for example:
+        # "Theo Bộ luật Lao động 2019, Điều 5".
         start_pos = match.start()
         preceding = text[max(0, start_pos - 80) : start_pos]
         law_lead = re.search(
@@ -319,7 +369,8 @@ def _extract_inline_citations(text: str) -> list[Citation]:
         if law_lead:
             law_name = law_lead.group(1).strip()
         else:
-            # 2. Try to extract law name from trailing text (e.g. "Điều 5 Bộ luật Lao động 2019")
+            # 2. Try the trailing text, for example:
+            # "Điều 5 Bộ luật Lao động 2019".
             end_pos = match.end()
             trailing = text[end_pos : end_pos + 80]
             law_trail = re.match(
@@ -332,10 +383,11 @@ def _extract_inline_citations(text: str) -> list[Citation]:
 
         # Clean up any trailing punctuation/words from law_name
         if law_name:
-            law_name = re.sub(r"[,\s]+(?:tại|theo|cụ thể)?$", "", law_name, flags=re.IGNORECASE).strip()
+            law_name = re.sub(
+                r"[,\s]+(?:tại|theo|cụ thể)?$", "", law_name, flags=re.IGNORECASE
+            ).strip()
 
-        # Deduplicate on (article, law_name or "")
-        key = (article, law_name or "")
+        key = (article, law_name or "", clause or "", point or "")
         if key in seen:
             continue
         seen.add(key)
@@ -345,6 +397,7 @@ def _extract_inline_citations(text: str) -> list[Citation]:
                 law_name=law_name,
                 article=article,
                 clause=clause,
+                point=point,
                 is_verified=False,
             )
         )

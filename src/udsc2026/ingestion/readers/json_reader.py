@@ -14,7 +14,6 @@ from udsc2026.ingestion.readers._helpers import (
 )
 from udsc2026.ingestion.readers.models import RawDocument
 
-
 CONTENT_FIELDS = ("raw_text", "content", "text", "body", "document_text")
 
 
@@ -73,7 +72,9 @@ def _raw_document_from_json_record(
     if content is not None:
         raw_text = str(content)
         metadata["content_field"] = next(
-            field for field in CONTENT_FIELDS if mapping and mapping.get(field) is not None
+            field
+            for field in CONTENT_FIELDS
+            if mapping and mapping.get(field) is not None
         )
 
     return RawDocument(

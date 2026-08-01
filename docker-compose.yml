@@ -1,31 +1,212 @@
+name: ${COMPOSE_PROJECT_NAME:-udsc2026}
+
+x-backend-build: &backend-build
+  context: .
+  dockerfile: docker/backend.Dockerfile
+  args:
+    PYTHON_VERSION: ${PYTHON_VERSION:-3.11.9-slim-bookworm}
+    APP_UID: ${APP_UID:-10001}
+    APP_GID: ${APP_GID:-10001}
+    PYTORCH_CPU_INDEX_URL: ${PYTORCH_CPU_INDEX_URL:-https://download.pytorch.org/whl/cpu}
+    # Use "-" (not ":-") so BACKEND_EXTRAS= intentionally builds core-only.
+    BACKEND_EXTRAS: ${BACKEND_EXTRAS-llm,rerank,retrieval}
+
+x-default-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: ${LOG_MAX_SIZE:-10m}
+    max-file: ${LOG_MAX_FILES:-3}
+
 services:
   backend:
-    build:
-      context: .
-      dockerfile: docker/backend.Dockerfile
-    container_name: udsc2026-backend
-    command: uvicorn udsc2026.api.app:app --host 0.0.0.0 --port 8000
-    ports:
-      - "8000:8000"
+    image: ${BACKEND_IMAGE:-hcmute-shipcode/udsc2026-backend:local}
+    build: *backend-build
+    init: true
+    restart: unless-stopped
     environment:
-      UDSC2026_ENV: development
-      MODEL_EMBEDDER_PATH: /app/models/bkai-bi-encoder
-      MODEL_LLM_PATH: /app/models/qwen3-legal
+      UDSC2026_CONFIG_PATH: ${UDSC2026_CONFIG_PATH:-/app/configs/base.yaml}
+      UDSC2026_PROMPTS_PATH: /app/prompts
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      MODEL_EMBEDDER_PATH: ${MODEL_EMBEDDER_PATH:-/app/models/bkai-bi-encoder}
+      MODEL_LLM_PATH: ${MODEL_LLM_PATH:-/app/models/qwen3-legal}
+      EMBEDDING_DEVICE: ${EMBEDDING_DEVICE:-cpu}
+      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-32}
+      EMBEDDING_MAX_LENGTH: ${EMBEDDING_MAX_LENGTH:-256}
+      EMBEDDING_NORMALIZE_EMBEDDINGS: ${EMBEDDING_NORMALIZE_EMBEDDINGS:-true}
+      LLM_BACKEND: ${LLM_BACKEND:-transformers}
+      LLM_DEVICE: ${LLM_DEVICE:-cpu}
+      LLM_DTYPE: ${LLM_DTYPE:-float32}
+      LLM_MAX_NEW_TOKENS: ${LLM_MAX_NEW_TOKENS:-1024}
+      LLM_TEMPERATURE: ${LLM_TEMPERATURE:-0.1}
+      LLM_TOP_P: ${LLM_TOP_P:-0.9}
+      LLM_REPETITION_PENALTY: ${LLM_REPETITION_PENALTY:-1.05}
+      LLM_STREAM: ${LLM_STREAM:-false}
+      LLM_TIMEOUT_SECONDS: ${LLM_TIMEOUT_SECONDS:-60}
+      RERANKER_ENABLED: ${RERANKER_ENABLED:-true}
+      RERANKER_MODEL_PATH: ${RERANKER_MODEL_PATH:-/app/models/reranker}
+      VECTOR_DB_TYPE: ${VECTOR_DB_TYPE:-qdrant}
+      QDRANT_URL: ${QDRANT_URL:-http://qdrant:6333}
+      QDRANT_API_KEY: ${QDRANT_API_KEY:-}
+      QDRANT_COLLECTION_NAME: ${QDRANT_COLLECTION_NAME:-legal_chunks}
+      FAISS_INDEX_PATH: ${FAISS_INDEX_PATH:-/app/data/vector_store/faiss}
+      FAISS_COLLECTION_NAME: ${FAISS_COLLECTION_NAME:-legal_chunks}
+      BM25_INDEX_PATH: ${BM25_INDEX_PATH:-/app/data/vector_store/bm25/index.json}
+      # A deliberately empty REDIS_URL disables the optional readiness probe.
+      REDIS_URL: ${REDIS_URL-redis://redis:6379/0}
+      RERANKER_DEVICE: ${RERANKER_DEVICE:-cpu}
+      RERANKER_BATCH_SIZE: ${RERANKER_BATCH_SIZE:-16}
+      RERANKER_MAX_LENGTH: ${RERANKER_MAX_LENGTH:-512}
+      RERANKER_TOP_N: ${RERANKER_TOP_N:-10}
+      RERANKER_LOCAL_FILES_ONLY: ${RERANKER_LOCAL_FILES_ONLY:-true}
+      SUBMISSION_PATH: ${SUBMISSION_PATH:-/app/output/submission.csv}
+    command:
+      - python
+      - -m
+      - uvicorn
+      - udsc2026.api.app:app
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8000"
+      - --log-level
+      - ${LOG_LEVEL:-info}
+    ports:
+      - "${BACKEND_BIND_ADDRESS:-127.0.0.1}:${BACKEND_PORT:-8000}:8000"
     volumes:
-      - ./configs:/app/configs:ro
-      - ./data:/app/data
-      - ./models:/app/models:ro
-      - ./prompts:/app/prompts:ro
+      - type: bind
+        source: ${MODELS_DIR:-./models}
+        target: /app/models
+        read_only: true
+      - type: bind
+        source: ${PROCESSED_DATA_DIR:-./data/processed}
+        target: /app/data/processed
+        read_only: true
+      - type: bind
+        source: ${VECTOR_STORE_DIR:-./data/vector_store}
+        target: /app/data/vector_store
+        read_only: true
+      - model-cache:/app/cache
+      - submission-output:/app/output
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen("http://127.0.0.1:8000/health", timeout=2).read()
+      interval: 15s
+      timeout: 3s
+      start_period: 15s
+      retries: 5
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging: *default-logging
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: udsc2026-frontend
-    command: npm run dev -- --host 0.0.0.0 --port 5173
-    ports:
-      - "5173:5173"
+  qdrant:
+    image: ${QDRANT_IMAGE:-qdrant/qdrant:v1.10.1}
+    restart: unless-stopped
     environment:
-      VITE_API_BASE_URL: http://localhost:8000
+      QDRANT__TELEMETRY_DISABLED: "true"
+    ports:
+      - "${QDRANT_BIND_ADDRESS:-127.0.0.1}:${QDRANT_HTTP_PORT:-6333}:6333"
+    volumes:
+      - qdrant-data:/qdrant/storage
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+
+  # The official Qdrant image intentionally contains no curl/wget. This
+  # one-shot probe checks its documented /healthz endpoint without modifying
+  # or wrapping the upstream image.
+  qdrant-ready:
+    image: ${QDRANT_PROBE_IMAGE:-alpine:3.20}
+    restart: "no"
     depends_on:
-      - backend
+      qdrant:
+        condition: service_started
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        attempt=0
+        until wget -q -O /dev/null http://qdrant:6333/healthz; do
+          attempt=$$((attempt + 1))
+          if [ "$$attempt" -ge "${QDRANT_HEALTH_RETRIES:-30}" ]; then
+            echo "Qdrant did not become ready in time" >&2
+            exit 1
+          fi
+          sleep "${QDRANT_HEALTH_INTERVAL_SECONDS:-1}"
+        done
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging: *default-logging
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7.2.14-alpine}
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --save
+      - "60"
+      - "1"
+      - --loglevel
+      - warning
+    ports:
+      - "${REDIS_BIND_ADDRESS:-127.0.0.1}:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      start_period: 5s
+      retries: 10
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+
+  backend-smoke:
+    profiles:
+      - smoke
+    image: ${BACKEND_IMAGE:-hcmute-shipcode/udsc2026-backend:local}
+    build: *backend-build
+    init: true
+    command: ["python", "/app/scripts/smoke_test.py", "--mode", "container"]
+    volumes:
+      - type: bind
+        source: ${MODELS_DIR:-./models}
+        target: /app/models
+        read_only: true
+      - type: bind
+        source: ${PROCESSED_DATA_DIR:-./data/processed}
+        target: /app/data/processed
+        read_only: true
+      - type: bind
+        source: ${VECTOR_STORE_DIR:-./data/vector_store}
+        target: /app/data/vector_store
+        read_only: true
+      - model-cache:/app/cache
+      - submission-output:/app/output
+    healthcheck:
+      disable: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    logging: *default-logging
+
+volumes:
+  model-cache:
+  qdrant-data:
+  redis-data:
+  submission-output:

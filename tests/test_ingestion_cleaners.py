@@ -19,9 +19,7 @@ def test_cleaner_normalizes_unicode_noise_and_preserves_legal_structure():
     cleaned_text, removed_lines = clean_text(raw_text)
 
     assert removed_lines == []
-    assert cleaned_text == (
-        "Điều 1. Phạm vi áp dụng của Luật.\n1. Nội dung quy định."
-    )
+    assert cleaned_text == ("Điều 1. Phạm vi áp dụng của Luật.\n1. Nội dung quy định.")
 
 
 def test_cleaner_removes_repeated_headers_footers_and_page_markers():
@@ -33,19 +31,14 @@ def test_cleaner_removes_repeated_headers_footers_and_page_markers():
 
     cleaned_text, removed_lines = clean_text(raw_text)
 
-    assert cleaned_text == (
-        "Điều 1. Nội dung trang một.\fĐiều 2. Nội dung trang hai."
-    )
+    assert cleaned_text == ("Điều 1. Nội dung trang một.\fĐiều 2. Nội dung trang hai.")
     assert "CỔNG THÔNG TIN PHÁP LUẬT" in removed_lines
     assert "Trang 1" in removed_lines
     assert "Trang 2" in removed_lines
 
 
 def test_cleaner_removes_table_of_contents_and_watermark_only():
-    raw_text = (
-        "DỰ THẢO\nMỤC LỤC\nChương I .... 1\n"
-        "Điều 1. Nội dung pháp luật."
-    )
+    raw_text = "DỰ THẢO\nMỤC LỤC\nChương I .... 1\nĐiều 1. Nội dung pháp luật."
 
     cleaned_text, removed_lines = clean_text(raw_text)
 
@@ -73,22 +66,15 @@ def test_clean_document_returns_contract_and_document_abbreviations():
 
 
 def test_expanded_terms_keeps_original_text_unchanged():
-    abbreviations = extract_abbreviations(
-        "Bộ luật Lao động (sau đây gọi là BLLĐ)"
-    )
+    abbreviations = extract_abbreviations("Bộ luật Lao động (sau đây gọi là BLLĐ)")
     text = "BLLĐ quy định quyền của người lao động."
 
-    assert expanded_terms_in_text(text, abbreviations) == {
-        "BLLĐ": "Bộ luật Lao động"
-    }
+    assert expanded_terms_in_text(text, abbreviations) == {"BLLĐ": "Bộ luật Lao động"}
     assert text == "BLLĐ quy định quyền của người lao động."
 
 
 def test_cleaner_preserves_page_boundaries_and_normalizes_old_tones():
-    raw_text = (
-        "Nội dung trang một\nchưa kết thúc\f"
-        "Nội dung trang hai\nhoà giải."
-    )
+    raw_text = "Nội dung trang một\nchưa kết thúc\fNội dung trang hai\nhoà giải."
 
     cleaned_text, _ = clean_text(raw_text)
 

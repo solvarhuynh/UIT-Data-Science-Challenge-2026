@@ -1,6 +1,8 @@
-"""QA Engine: orchestrates LLM generation with prompt management and citation validation."""
+"""Orchestrate LLM generation, prompt management, and citation validation."""
 
+import asyncio
 import logging
+import math
 import re
 import uuid
 from typing import Optional
@@ -8,7 +10,6 @@ from typing import Optional
 from udsc2026.contracts.qa import QAResponse
 from udsc2026.contracts.retrieval import RetrievalHit
 from udsc2026.infrastructure.llm.client import LLMClient
-from udsc2026.infrastructure.llm.config import LLMConfig
 from udsc2026.qa.citation_parser import CitationParser
 from udsc2026.qa.prompt_builder import PromptBuilder
 
@@ -20,8 +21,7 @@ _MIN_CONTEXT_SCORE = 0.0
 
 # Message returned when the engine refuses to answer due to insufficient context.
 _NO_CONTEXT_ANSWER = (
-    "Dựa trên dữ liệu pháp lý được cung cấp, "
-    "không có đủ căn cứ để trả lời câu hỏi này."
+    "Dựa trên dữ liệu pháp lý được cung cấp, không có đủ căn cứ để trả lời câu hỏi này."
 )
 
 # Pattern that signals the LLM has started generating an additional
@@ -73,14 +73,22 @@ class QAEngine:
                 new instance with the standard prompts directory.
             citation_parser: Instance of ``CitationParser``.  Defaults to a
                 new instance.
-            min_context_score: Minimum ``RetrievalHit.score`` required for at
-                least one context hit; if no hit meets the threshold the engine
-                refuses to call the LLM.
+            min_context_score: Minimum effective retrieval score required for
+                at least one context hit. The effective score prefers output
+                from the latest retrieval stage over earlier component scores.
         """
+        raw_min_context_score: object = min_context_score
+        if (
+            isinstance(raw_min_context_score, bool)
+            or not isinstance(raw_min_context_score, (int, float))
+            or not math.isfinite(float(raw_min_context_score))
+            or raw_min_context_score < 0
+        ):
+            raise ValueError("min_context_score must be a finite non-negative number")
         self._llm = llm_client
         self._prompt_builder = prompt_builder or PromptBuilder()
         self._citation_parser = citation_parser or CitationParser()
-        self._min_score = min_context_score
+        self._min_score = float(raw_min_context_score)
 
     # ------------------------------------------------------------------
     # Public API
@@ -123,12 +131,10 @@ class QAEngine:
             len(contexts),
         )
 
-        #  1. Safety guard 
+        #  1. Safety guard
         refusal = self._check_context_quality(contexts)
         if refusal is not None:
-            logger.warning(
-                "trace_id=%s | Refusing to call LLM: %s", tid, refusal
-            )
+            logger.warning("trace_id=%s | Refusing to call LLM: %s", tid, refusal)
             return QAResponse(
                 answer=_NO_CONTEXT_ANSWER,
                 citations=[],
@@ -139,7 +145,7 @@ class QAEngine:
                 trace_id=tid,
             )
 
-        #  2. Build prompt 
+        #  2. Build prompt
         prompt = self._prompt_builder.build_prompt(
             question=question,
             contexts=contexts,
@@ -147,13 +153,11 @@ class QAEngine:
         )
         logger.debug("trace_id=%s | Prompt length: %d chars.", tid, len(prompt))
 
-        #  3. Call LLM 
-        raw_answer = self._llm.generate(prompt)
-        logger.debug(
-            "trace_id=%s | Raw answer length: %d chars.", tid, len(raw_answer)
-        )
+        #  3. Call LLM
+        raw_answer = await asyncio.to_thread(self._llm.generate, prompt)
+        logger.debug("trace_id=%s | Raw answer length: %d chars.", tid, len(raw_answer))
 
-        #  3.5 Post-process: trim LLM continuation artifacts 
+        #  3.5 Post-process: trim LLM continuation artifacts
         # Some small models repeat the RAG template and self-generate extra
         # questions after answering.  Trim everything from the first
         # continuation marker onwards and log a warning for monitoring.
@@ -166,17 +170,15 @@ class QAEngine:
                 trimmed_chars,
             )
 
-        #  4. Parse and validate citations 
+        #  4. Parse and validate citations
         verified_citations, citation_warnings = (
             self._citation_parser.parse_and_validate(clean_answer, contexts)
         )
 
-        #  5. Compute confidence proxy 
+        #  5. Compute confidence proxy
         verified_count = sum(1 for c in verified_citations if c.is_verified)
         total_count = len(verified_citations)
-        confidence = (
-            float(verified_count) / total_count if total_count > 0 else None
-        )
+        confidence = float(verified_count) / total_count if total_count > 0 else None
 
         all_warnings = list(citation_warnings)
         if clean_answer != raw_answer:
@@ -204,9 +206,7 @@ class QAEngine:
     # Private helpers
     # ------------------------------------------------------------------
 
-    def _check_context_quality(
-        self, contexts: list[RetrievalHit]
-    ) -> Optional[str]:
+    def _check_context_quality(self, contexts: list[RetrievalHit]) -> Optional[str]:
         """Return a refusal reason string if context quality is insufficient.
 
         Args:
@@ -222,7 +222,7 @@ class QAEngine:
         # Check if at least one hit meets the minimum score threshold.
         if self._min_score > 0.0:
             best_score = max(
-                (h.score or 0.0 for h in contexts),
+                (_effective_retrieval_score(hit) for hit in contexts),
                 default=0.0,
             )
             if best_score < self._min_score:
@@ -231,6 +231,22 @@ class QAEngine:
                     f"tối thiểu ({self._min_score:.4f}) – không đủ căn cứ."
                 )
         return None
+
+
+def _effective_retrieval_score(hit: RetrievalHit) -> float:
+    """Return the score produced by the latest available retrieval stage."""
+
+    for score in (
+        hit.final_score,
+        hit.rerank_score,
+        hit.hybrid_score,
+        hit.score,
+        hit.dense_score,
+        hit.sparse_score,
+    ):
+        if score is not None:
+            return score
+    return 0.0
 
 
 def _trim_continuation(text: str) -> str:

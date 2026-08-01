@@ -22,7 +22,10 @@ def create_test_qa_data() -> List[Dict[str, Any]]:
     return [
         {
             "question": "Luật giao thông quy định gì về tốc độ tối đa?",
-            "answer": "Theo Luật Giao thông đường bộ, tốc độ tối đa trong khu vực đông dân cư là 50km/h.",
+            "answer": (
+                "Theo Luật Giao thông đường bộ, tốc độ tối đa trong khu vực "
+                "đông dân cư là 50km/h."
+            ),
             "metadata": {
                 "law": "Luật Giao thông đường bộ",
                 "article": "Điều 16",
@@ -31,7 +34,10 @@ def create_test_qa_data() -> List[Dict[str, Any]]:
         },
         {
             "question": "Quy định về hợp đồng lao động là gì?",
-            "answer": "Hợp đồng lao động phải được ký kết bằng văn bản và có các điều khoản cơ bản theo quy định.",
+            "answer": (
+                "Hợp đồng lao động phải được ký kết bằng văn bản và có các "
+                "điều khoản cơ bản theo quy định."
+            ),
             "metadata": {
                 "law": "Bộ luật Lao động",
                 "article": "Điều 15",
@@ -43,8 +49,6 @@ def create_test_qa_data() -> List[Dict[str, Any]]:
 
 def create_temp_json_file(data: List[Dict[str, Any]]) -> str:
     """Create a temporary JSON file with test data"""
-    import tempfile
-
     temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
     json.dump(data, temp_file, ensure_ascii=False, indent=2)
     temp_file.close()
