@@ -99,6 +99,7 @@ class QAEngine:
         question: str,
         contexts: list[RetrievalHit],
         prompt_version: str = "legal_qa_v1",
+        rag_template: str = "default_rag_v1",
         trace_id: Optional[str] = None,
     ) -> QAResponse:
         """Generate a grounded legal answer with citation verification.
@@ -150,6 +151,7 @@ class QAEngine:
             question=question,
             contexts=contexts,
             prompt_version=prompt_version,
+            rag_template=rag_template,
         )
         logger.debug("trace_id=%s | Prompt length: %d chars.", tid, len(prompt))
 

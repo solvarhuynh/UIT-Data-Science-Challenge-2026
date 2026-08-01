@@ -141,6 +141,7 @@ class LLMClient:
         model_path = self._config.model_path
         device = self._config.device
         dtype = self._resolve_dtype()
+        quantization = self._config.quantization
 
         logger.info(
             "Loading tokenizer from '%s'…",
@@ -151,17 +152,42 @@ class LLMClient:
             trust_remote_code=True,
         )
 
+        load_kwargs: dict[str, Any] = {
+            "device_map": device,
+            "trust_remote_code": True,
+        }
+        if quantization != "none":
+            try:
+                import bitsandbytes  # noqa: F401
+                from transformers import BitsAndBytesConfig
+            except ImportError as exc:
+                raise ImportError(
+                    "bitsandbytes is required for model quantization "
+                    "('4bit'/'8bit').  Install it with: pip install bitsandbytes"
+                ) from exc
+            if quantization == "4bit":
+                load_kwargs["quantization_config"] = BitsAndBytesConfig(
+                    load_in_4bit=True,
+                    bnb_4bit_compute_dtype=dtype,
+                    bnb_4bit_use_double_quant=True,
+                )
+            else:
+                load_kwargs["quantization_config"] = BitsAndBytesConfig(
+                    load_in_8bit=True
+                )
+        else:
+            load_kwargs["dtype"] = dtype
+
         logger.info(
-            "Loading model from '%s' (dtype=%s, device=%s)…",
+            "Loading model from '%s' (dtype=%s, device=%s, quantization=%s)…",
             model_path,
             self._config.dtype,
             device,
+            quantization,
         )
         model = AutoModelForCausalLM.from_pretrained(
             model_path,
-            torch_dtype=dtype,
-            device_map=device,
-            trust_remote_code=True,
+            **load_kwargs,
         )
         model.eval()
         self._tokenizer = tokenizer
@@ -235,6 +261,19 @@ class LLMClient:
             self._config.timeout_seconds,
             on_complete=self._generation_lock.release,
         )
+
+    def is_busy(self) -> bool:
+        """Return True while a generation request is still in flight.
+
+        A client that reports ``is_busy()`` for many consecutive calls after a
+        timeout is likely wedged (the worker thread never finished), so callers
+        such as evaluation scripts can abort early instead of looping over
+        thousands of samples that fail immediately.
+        """
+        if self._generation_lock.acquire(blocking=False):
+            self._generation_lock.release()
+            return False
+        return True
 
     def generate_stream(self, prompt: str) -> Generator[str, None, None]:
         """Stream generated tokens one-by-one for SSE support.

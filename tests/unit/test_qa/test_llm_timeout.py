@@ -63,3 +63,30 @@ def test_timed_out_client_rejects_overlap_until_worker_finishes() -> None:
     assert client._generation_lock.acquire(timeout=1.0)  # type: ignore[attr-defined]
     client._generation_lock.release()  # type: ignore[attr-defined]
     assert client.generate("after completion") == "done"
+
+
+def test_is_busy_reflects_an_in_flight_generation() -> None:
+    release = threading.Event()
+    client = object.__new__(LLMClient)
+    client._config = LLMConfig(  # type: ignore[attr-defined]
+        backend="vllm",
+        timeout_seconds=0.05,
+    )
+    client._generation_lock = threading.Lock()  # type: ignore[attr-defined]
+
+    def blocked_generate(_prompt: str) -> str:
+        release.wait(1.0)
+        return "done"
+
+    client._generate_vllm = blocked_generate  # type: ignore[method-assign]
+
+    assert client.is_busy() is False
+    try:
+        with pytest.raises(TimeoutError):
+            client.generate("first")
+        assert client.is_busy() is True
+    finally:
+        release.set()
+    assert client._generation_lock.acquire(timeout=1.0)  # type: ignore[attr-defined]
+    client._generation_lock.release()  # type: ignore[attr-defined]
+    assert client.is_busy() is False
