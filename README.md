@@ -49,6 +49,8 @@ flowchart LR
 
 Yêu cầu: Python 3.10–3.12, Docker và Node.js nếu chạy frontend.
 
+Cài thư viện trước khi khởi chạy:
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -57,6 +59,11 @@ python -m pip install -r requirements_runtime.txt
 python -m pip install -r requirements_dev.txt
 python -m pip install -e ".[llm,rerank,retrieval]"
 $env:PYTHONPATH = "$PWD\src"
+```
+
+Tải model local và khởi chạy service:
+
+```powershell
 python download_models.py
 docker compose up -d
 ```
