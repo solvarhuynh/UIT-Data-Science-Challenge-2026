@@ -21,7 +21,7 @@ class EmbeddingClient:
         self.batch_size = batch_size
         self.max_length = max_length
         self.normalize_embeddings = normalize_embeddings
-        self.model = SentenceTransformer(model_path, device=device)
+        self.model = SentenceTransformer(model_path, device=device, local_files_only=True)
         self.model.max_seq_length = max_length
 
     def embed_query(self, query: str) -> list[float]:

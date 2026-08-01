@@ -1,13 +1,15 @@
-"""Configuration loading for the embedding infrastructure."""
+"""Backward-compatible access to the shared embedding configuration."""
 
-from pathlib import Path
 from typing import Any
 
-import yaml
+from udsc2026.infrastructure.config import load_config
 
 
 def load_embedding_config(path: str = "configs/base.yaml") -> dict[str, Any]:
-    """Load the embedding section from the shared YAML configuration."""
-    with Path(path).open("r", encoding="utf-8") as config_file:
-        config = yaml.safe_load(config_file) or {}
-    return config.get("embedding", {})
+    """Return embedding settings through the common loader.
+
+    ``path`` is retained for compatibility; shared callers should use
+    :func:`udsc2026.infrastructure.config.load_config` directly.
+    """
+    env = "base" if path.endswith("base.yaml") else "development"
+    return load_config(env).get("embedding", {})
