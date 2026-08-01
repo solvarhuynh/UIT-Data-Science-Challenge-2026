@@ -184,5 +184,9 @@ __marimo__/
 data/raw/
 data/vector_store/
 
+# Local TV2 verification artifacts
+.pytest_tmp*/
+data/processed/metadata/index_errors.json
+
 # Ignore documentation files
 cam_nang.md
