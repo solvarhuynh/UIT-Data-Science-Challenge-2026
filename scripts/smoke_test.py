@@ -38,6 +38,8 @@ REQUIRED_ENV_KEYS = {
     "LLM_TEMPERATURE",
     "LLM_TIMEOUT_SECONDS",
     "LLM_TOP_P",
+    "LEGAL_IR_SUBMISSION_PATH",
+    "LEGAL_QA_SUBMISSION_PATH",
     "MODEL_EMBEDDER_PATH",
     "MODEL_LLM_PATH",
     "QDRANT_URL",
@@ -60,6 +62,8 @@ REQUIRED_DOCKERIGNORE_PATTERNS = {
     ".git",
     "data/processed/",
     "data/raw/",
+    "data/task1/",
+    "data/task2/",
     "data/vector_store/",
     "frontend/",
     "models/",
@@ -246,6 +250,16 @@ def _check_evaluation(_: Path, __: str) -> str:
         "BenchmarkSample",
         "EvaluationComparison",
         "EvaluationReport",
+        "LegalIREvaluationReport",
+        "LegalIRPrediction",
+        "LegalIRReference",
+        "LegalIRSubmissionError",
+        "LegalIRSubmissionItem",
+        "LegalQAEvaluationReport",
+        "LegalQAPrediction",
+        "LegalQASubmissionError",
+        "LegalQASubmissionItem",
+        "LegalQAWarmupSample",
         "PredictionSample",
         "SubmissionColumn",
         "SubmissionRow",
@@ -253,20 +267,36 @@ def _check_evaluation(_: Path, __: str) -> str:
         "SyntheticQA",
         "aggregate_latencies",
         "compare_reports",
+        "complete_legal_ir_rankings",
+        "evaluate_legal_ir",
+        "evaluate_legal_qa",
         "evaluate_predictions",
         "evaluate_retrieval",
+        "evaluate_warmup_any_gold",
         "generate_synthetic_benchmark",
+        "legal_ir_prediction_from_hits",
         "load_benchmark",
         "load_legal_chunks",
+        "load_legal_ir_submission",
+        "load_legal_qa_submission",
+        "load_legal_qa_question_ids",
+        "load_legal_qa_warmup",
         "load_predictions",
         "load_qa_responses",
+        "load_warmup",
         "mean_recall_at_k",
         "mean_reciprocal_rank",
         "mean_rouge_l",
+        "meteor_diagnostic_score",
         "recall_at_k",
         "reciprocal_rank",
         "rouge_l_score",
+        "rouge_l_f1_score",
+        "validate_legal_ir_submission",
+        "validate_legal_qa_submission",
         "validate_rerank_candidate_pools",
+        "write_legal_ir_submission",
+        "write_legal_qa_submission",
         "write_report",
         "write_report_bundle",
         "write_submission",
@@ -280,7 +310,77 @@ def _check_evaluation(_: Path, __: str) -> str:
     )
     if missing:
         raise AttributeError(f"udsc2026.evaluation missing public API: {missing}")
-    return f"imported all {len(expected_symbols)} evaluation API symbols"
+
+    reference_type = getattr(module, "LegalIRReference")
+    prediction_type = getattr(module, "LegalIRPrediction")
+    report = getattr(module, "evaluate_legal_ir")(
+        [
+            reference_type(id="q1", gold_document="gold-1"),
+            reference_type(id="q2", gold_document="gold-2"),
+        ],
+        [
+            prediction_type(id="q1", documents=["gold-1", "a", "b"]),
+            prediction_type(id="q2", documents=["a", "b", "c", "gold-2"]),
+        ],
+    )
+    if report.aggregate.mrr != 0.625 or report.aggregate.recall_at_3 != 0.5:
+        raise RuntimeError("LegalIR document-level metrics returned unexpected values")
+    items = getattr(module, "validate_legal_ir_submission")(
+        {"q1": {"answer": ["gold-1", "a", "b"]}},
+        expected_question_ids=["q1"],
+        allowed_document_ids=["gold-1", "a", "b"],
+        require_complete_ranking=True,
+    )
+    if items[0].documents != ("gold-1", "a", "b"):
+        raise RuntimeError("LegalIR submission validation changed ranking order")
+    try:
+        getattr(module, "validate_legal_ir_submission")(
+            [{"id": "q1", "documents": ["gold-1", "a", "b"]}]
+        )
+    except ValueError:
+        pass
+    else:
+        raise RuntimeError("LegalIR validator accepted the obsolete array wire shape")
+
+    legal_qa_reference_type = getattr(module, "LegalQAWarmupSample")
+    legal_qa_prediction_type = getattr(module, "LegalQAPrediction")
+    legal_qa_report = getattr(module, "evaluate_legal_qa")(
+        [
+            legal_qa_reference_type(
+                id="q1",
+                question="Quy định nào?",
+                answer="Điều 1 quy định quyền của người lao động.",
+            )
+        ],
+        [
+            legal_qa_prediction_type(
+                id="q1",
+                answer="Điều 1 quy định quyền của người lao động.",
+            )
+        ],
+    )
+    if legal_qa_report.aggregate.rouge_l != 1.0:
+        raise RuntimeError("LegalQA diagnostic ROUGE-L returned an unexpected value")
+    if not 0 < legal_qa_report.aggregate.meteor <= 1:
+        raise RuntimeError("LegalQA diagnostic METEOR returned an unexpected value")
+    legal_qa_items = getattr(module, "validate_legal_qa_submission")(
+        {"q1": {"answer": "  Giữ nguyên\n ﻿"}},
+        expected_question_ids=["q1"],
+    )
+    if legal_qa_items[0].answer != "  Giữ nguyên\n ﻿":
+        raise RuntimeError("LegalQA submission validation changed answer text")
+    try:
+        getattr(module, "validate_legal_qa_submission")(
+            [{"id": "q1", "answer": "obsolete"}]
+        )
+    except ValueError:
+        pass
+    else:
+        raise RuntimeError("LegalQA validator accepted the obsolete array wire shape")
+    return (
+        f"imported all {len(expected_symbols)} evaluation API symbols; "
+        "LegalIR and LegalQA metric/submission contracts passed"
+    )
 
 
 def _check_prompt_and_api(root: Path, _: str) -> str:

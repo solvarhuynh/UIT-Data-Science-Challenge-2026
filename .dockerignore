@@ -31,6 +31,8 @@ coverage.xml
 
 # Models, corpora, generated indexes, and outputs are runtime mounts.
 models/
+data/task1/
+data/task2/
 data/raw/
 data/processed/
 data/vector_store/

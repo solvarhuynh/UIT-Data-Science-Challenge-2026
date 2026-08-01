@@ -1,0 +1,483 @@
+"""Tests for official and warm-up-specific LegalIR evaluation."""
+
+import json
+import unicodedata
+from pathlib import Path
+
+import pytest
+from pydantic import ValidationError
+
+from udsc2026.contracts.retrieval import RetrievalHit
+from udsc2026.evaluation.legal_ir import (
+    LegalIRAggregate,
+    LegalIREvaluationReport,
+    LegalIRPrediction,
+    LegalIRPredictionSet,
+    LegalIRQueryDiagnostic,
+    LegalIRReference,
+    LegalIRReferenceSet,
+    WarmupDataset,
+    WarmupSample,
+    evaluate_legal_ir,
+    evaluate_warmup_any_gold,
+    legal_ir_prediction_from_hits,
+    legal_ir_recall_at_3,
+    legal_ir_reciprocal_rank,
+    load_legal_ir_question_ids,
+    load_warmup,
+    normalize_legal_ir_query,
+    warmup_any_gold_recall_at_3,
+    warmup_any_gold_reciprocal_rank,
+)
+
+
+def _write_json(path: Path, payload: object) -> None:
+    path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+
+def _official_fixture() -> tuple[list[LegalIRReference], list[LegalIRPrediction]]:
+    references = [
+        LegalIRReference(id="q1", gold_document="gold-1"),
+        LegalIRReference(id="q2", gold_document="gold-2"),
+        LegalIRReference(id="q3", gold_document="gold-3"),
+        LegalIRReference(id="q4", gold_document="gold-4"),
+    ]
+    predictions = [
+        LegalIRPrediction(id="q1", documents=["gold-1", "a", "b"]),
+        LegalIRPrediction(id="q2", documents=["a", "gold-2", "b"]),
+        LegalIRPrediction(id="q3", documents=["a", "b", "c", "gold-3"]),
+        LegalIRPrediction(id="q4", documents=["a", "b", "c"]),
+    ]
+    return references, predictions
+
+
+def test_load_warmup_preserves_raw_query_and_normalizes_retrieval_query(
+    tmp_path: Path,
+) -> None:
+    decomposed = unicodedata.normalize("NFD", "  Người\t lao động \n được nghỉ?  ")
+    payload = {
+        "001": {"question": decomposed, "answer": ["010", "011"]},
+        "002": {"question": "Hỏi gì?", "answer": ["012"]},
+    }
+    path = tmp_path / "warmup.json"
+    _write_json(path, payload)
+
+    samples = load_warmup(path)
+
+    assert [sample.id for sample in samples] == ["001", "002"]
+    assert samples[0].raw_question == decomposed
+    assert samples[0].question == "Người lao động được nghỉ?"
+    assert unicodedata.is_normalized("NFC", samples[0].question)
+    assert samples[0].gold_documents == ["010", "011"]
+
+
+def test_question_manifest_loader_supports_phase_shapes_and_rejects_ambiguity(
+    tmp_path: Path,
+) -> None:
+    mapping = tmp_path / "mapping.json"
+    _write_json(
+        mapping,
+        {
+            "001": {"question": "Câu một?"},
+            "002": {"question": "Câu hai?", "answer": ["doc-2"]},
+        },
+    )
+    assert load_legal_ir_question_ids(mapping) == ["001", "002"]
+
+    string_ids = tmp_path / "ids.json"
+    _write_json(string_ids, ["002", "001"])
+    assert load_legal_ir_question_ids(string_ids) == ["002", "001"]
+
+    object_ids = tmp_path / "objects.json"
+    _write_json(
+        object_ids,
+        [
+            {"id": "001", "question": "Câu một?"},
+            {"id": "002", "answer": ["doc-2"]},
+        ],
+    )
+    assert load_legal_ir_question_ids(object_ids) == ["001", "002"]
+
+    invalid_payloads = (
+        [],
+        ["001", {"id": "002"}],
+        [{"id": "001"}, {"id": "001"}],
+        {"001": {"answer": ["doc-1"]}},
+        {"001": {"question": "Hỏi?", "answer": "doc-1"}},
+        [{"id": "001", "extra": True}],
+    )
+    for index, payload in enumerate(invalid_payloads):
+        invalid = tmp_path / f"invalid-manifest-{index}.json"
+        _write_json(invalid, payload)
+        with pytest.raises((TypeError, ValueError)):
+            load_legal_ir_question_ids(invalid)
+
+
+def test_warmup_root_mapping_is_strict_and_forbids_unknown_fields() -> None:
+    validated = WarmupDataset.model_validate(
+        {"q": {"question": "Câu hỏi?", "answer": ["doc"]}}, strict=True
+    )
+    assert validated.root["q"].answer == ["doc"]
+
+    with pytest.raises(ValidationError, match="Extra inputs"):
+        WarmupDataset.model_validate(
+            {
+                "q": {
+                    "question": "Câu hỏi?",
+                    "answer": ["doc"],
+                    "unknown": True,
+                }
+            },
+            strict=True,
+        )
+    with pytest.raises(ValidationError):
+        WarmupDataset.model_validate(
+            {"q": {"question": "Câu hỏi?", "answer": [123]}}, strict=True
+        )
+    with pytest.raises(ValidationError, match="must not be empty"):
+        WarmupDataset.model_validate({}, strict=True)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {" q": {"question": "Hỏi?", "answer": ["doc"]}},
+        {"q": {"question": "   ", "answer": ["doc"]}},
+        {"q": {"question": "Hỏi?", "answer": []}},
+        {"q": {"question": "Hỏi?", "answer": ["doc", "doc"]}},
+        {"q": {"question": "Hỏi?", "answer": [" doc"]}},
+    ],
+)
+def test_load_warmup_rejects_invalid_identifiers_questions_and_answers(
+    tmp_path: Path,
+    payload: object,
+) -> None:
+    path = tmp_path / "warmup.json"
+    _write_json(path, payload)
+
+    with pytest.raises(ValueError, match="invalid warm-up schema"):
+        load_warmup(path)
+
+
+def test_load_warmup_rejects_duplicate_json_keys_and_non_standard_constants(
+    tmp_path: Path,
+) -> None:
+    duplicate = tmp_path / "duplicate.json"
+    duplicate.write_text(
+        '{"q":{"question":"Một?","answer":["a"]},'
+        '"q":{"question":"Hai?","answer":["b"]}}',
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="duplicate JSON object key: q"):
+        load_warmup(duplicate)
+
+    non_standard = tmp_path / "nan.json"
+    non_standard.write_text('{"q":{"question":NaN,"answer":["a"]}}')
+    with pytest.raises(ValueError, match="non-standard JSON constant"):
+        load_warmup(non_standard)
+
+
+def test_load_warmup_rejects_missing_or_malformed_files(tmp_path: Path) -> None:
+    with pytest.raises(FileNotFoundError, match="does not exist"):
+        load_warmup(tmp_path / "missing.json")
+
+    malformed = tmp_path / "malformed.json"
+    malformed.write_text("{not-json}", encoding="utf-8")
+    with pytest.raises(ValueError, match="invalid JSON"):
+        load_warmup(malformed)
+
+
+def test_query_normalization_is_strict_nfc_and_whitespace_aware() -> None:
+    source = unicodedata.normalize("NFD", "  Bảo   hiểm\n xã hội  ")
+    assert normalize_legal_ir_query(source) == "Bảo hiểm xã hội"
+    with pytest.raises(TypeError, match="must be a string"):
+        normalize_legal_ir_query(123)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="Unicode scalar"):
+        normalize_legal_ir_query("question-\ud800")
+
+
+def test_prediction_and_reference_contracts_are_strict() -> None:
+    with pytest.raises(ValidationError):
+        LegalIRPrediction.model_validate({"id": 1, "documents": ["doc"]})
+    with pytest.raises(ValidationError):
+        LegalIRPrediction.model_validate({"id": "q", "documents": [1]})
+    with pytest.raises(ValidationError, match="unique IDs"):
+        LegalIRPrediction(id="q", documents=["doc", "doc"])
+    with pytest.raises(ValidationError, match="surrounding whitespace"):
+        LegalIRReference(id="q", gold_document=" doc ")
+    with pytest.raises(ValidationError, match="control characters"):
+        LegalIRPrediction(id="q\x00log", documents=[])
+    with pytest.raises(ValidationError, match="control characters"):
+        LegalIRPrediction(id="q", documents=["doc\u0085log"])
+    with pytest.raises(ValidationError, match="Extra inputs"):
+        LegalIRReference.model_validate(
+            {"id": "q", "gold_document": "doc", "answer": "extra"}
+        )
+    with pytest.raises(ValidationError):
+        LegalIRReference.model_validate({"id": "q", "gold_document": ["doc"]})
+    with pytest.raises(ValidationError, match="Unicode scalar"):
+        LegalIRReference(id="q-\ud800", gold_document="doc")
+
+
+def test_prediction_and_reference_root_sets_reject_duplicate_question_ids() -> None:
+    with pytest.raises(ValidationError, match="duplicate question ID"):
+        LegalIRPredictionSet(
+            root=[
+                LegalIRPrediction(id="q", documents=[]),
+                LegalIRPrediction(id="q", documents=["doc"]),
+            ]
+        )
+    with pytest.raises(ValidationError, match="duplicate question ID"):
+        LegalIRReferenceSet(
+            root=[
+                LegalIRReference(id="q", gold_document="a"),
+                LegalIRReference(id="q", gold_document="b"),
+            ]
+        )
+    with pytest.raises(ValidationError, match="must not be empty"):
+        LegalIRPredictionSet(root=[])
+
+
+def test_chunk_hits_collapse_to_unique_documents_in_best_chunk_order() -> None:
+    hits = [
+        RetrievalHit(
+            chunk_id="a-1",
+            doc_id="doc-a",
+            text="A tốt nhất",
+            rerank_score=0.9,
+            rank=1,
+        ),
+        RetrievalHit(
+            chunk_id="a-2",
+            doc_id="doc-a",
+            text="A thứ hai",
+            rerank_score=0.8,
+            rank=2,
+        ),
+        RetrievalHit(
+            chunk_id="b-1",
+            doc_id="doc-b",
+            text="B",
+            rerank_score=0.7,
+            rank=3,
+        ),
+        RetrievalHit(
+            chunk_id="c-1",
+            doc_id="doc-c",
+            text="C",
+            rerank_score=0.6,
+            rank=4,
+        ),
+    ]
+
+    prediction = legal_ir_prediction_from_hits("q", hits, max_documents=2)
+
+    assert prediction.documents == ["doc-a", "doc-b"]
+    assert [hit.rank for hit in hits] == [1, 2, 3, 4]
+
+
+def test_chunk_hit_adapter_rejects_ambiguous_handoff() -> None:
+    hit = RetrievalHit(chunk_id="chunk", doc_id="doc", text="Nội dung", rank=2)
+    with pytest.raises(ValueError, match="ranks must match"):
+        legal_ir_prediction_from_hits("q", [hit])
+    with pytest.raises(ValueError, match="positive integer"):
+        legal_ir_prediction_from_hits("q", [], max_documents=0)
+    with pytest.raises(TypeError, match=r"hits\[0\]"):
+        legal_ir_prediction_from_hits("q", [object()])  # type: ignore[list-item]
+
+    duplicate_chunk = hit.model_copy(update={"rank": 1})
+    with pytest.raises(ValueError, match="duplicate chunk ID"):
+        legal_ir_prediction_from_hits(
+            "q",
+            [duplicate_chunk, duplicate_chunk.model_copy(update={"rank": 2})],
+        )
+
+
+def test_official_metric_fixture_has_expected_mrr_and_recall_at_3() -> None:
+    references, predictions = _official_fixture()
+
+    report = evaluate_legal_ir(references, predictions)
+
+    assert report.evaluation_mode == "official_single_gold"
+    assert report.aggregate.sample_count == 4
+    assert report.aggregate.multi_gold_sample_count == 0
+    assert report.aggregate.mrr == pytest.approx(0.4375)
+    assert report.aggregate.recall_at_3 == pytest.approx(0.5)
+    assert [item.gold_rank for item in report.per_query] == [1, 2, 4, None]
+    assert [item.reciprocal_rank for item in report.per_query] == [1.0, 0.5, 0.25, 0.0]
+    assert [item.hit_at_3 for item in report.per_query] == [True, True, False, False]
+    assert report.per_query[2].top_3_documents == ["a", "b", "c"]
+    assert report.per_query[3].matched_gold_document is None
+
+
+def test_official_metric_functions_handle_rank_and_absence() -> None:
+    assert legal_ir_reciprocal_rank(["a", "gold"], "gold") == 0.5
+    assert legal_ir_reciprocal_rank(["a"], "gold") == 0.0
+    assert legal_ir_recall_at_3(["a", "b", "gold"], "gold") == 1.0
+    assert legal_ir_recall_at_3(["a", "b", "c", "gold"], "gold") == 0.0
+
+
+@pytest.mark.parametrize(
+    ("documents", "gold", "error"),
+    [
+        (["same", "same"], "gold", ValueError),
+        ([""], "gold", ValueError),
+        ([1], "gold", TypeError),
+        ("gold", "gold", TypeError),
+        (["gold"], 1, TypeError),
+    ],
+)
+def test_official_metric_functions_reject_ambiguous_inputs(
+    documents: object,
+    gold: object,
+    error: type[Exception],
+) -> None:
+    with pytest.raises(error):
+        legal_ir_reciprocal_rank(documents, gold)  # type: ignore[arg-type]
+
+
+def test_official_evaluation_aligns_by_id_and_fingerprints_references() -> None:
+    references, predictions = _official_fixture()
+    original = evaluate_legal_ir(references, predictions)
+    reordered_predictions = evaluate_legal_ir(references, list(reversed(predictions)))
+    changed = evaluate_legal_ir(
+        [
+            references[0].model_copy(update={"gold_document": "changed"}),
+            *references[1:],
+        ],
+        predictions,
+    )
+
+    assert reordered_predictions == original
+    assert len(original.dataset_fingerprint) == 64
+    assert changed.dataset_fingerprint != original.dataset_fingerprint
+
+
+def test_official_evaluation_rejects_duplicate_missing_and_unexpected_ids() -> None:
+    references = [LegalIRReference(id="q1", gold_document="gold")]
+    with pytest.raises(ValueError, match="duplicate question ID in references"):
+        evaluate_legal_ir(
+            [references[0], references[0]],
+            [LegalIRPrediction(id="q1", documents=[])],
+        )
+    with pytest.raises(ValueError, match="duplicate question ID in predictions"):
+        evaluate_legal_ir(
+            references,
+            [
+                LegalIRPrediction(id="q1", documents=[]),
+                LegalIRPrediction(id="q1", documents=["other"]),
+            ],
+        )
+    with pytest.raises(ValueError, match="missing IDs: q1.*unexpected IDs: q2"):
+        evaluate_legal_ir(
+            references,
+            [LegalIRPrediction(id="q2", documents=[])],
+        )
+    with pytest.raises(ValueError, match="references must not be empty"):
+        evaluate_legal_ir([], [])
+
+
+def test_evaluation_revalidates_nested_lists_mutated_after_model_creation() -> None:
+    prediction = LegalIRPrediction(id="q", documents=["a", "b"])
+    prediction.documents.append("a")
+    with pytest.raises(ValueError, match="unique IDs"):
+        evaluate_legal_ir(
+            [LegalIRReference(id="q", gold_document="gold")],
+            [prediction],
+        )
+
+    sample = WarmupSample(
+        id="q",
+        raw_question="Câu hỏi?",
+        question="Câu hỏi?",
+        gold_documents=["gold"],
+    )
+    sample.gold_documents.append("gold")
+    with pytest.raises(ValueError, match="unique IDs"):
+        evaluate_warmup_any_gold(
+            [sample],
+            [LegalIRPrediction(id="q", documents=[])],
+        )
+
+
+def test_warmup_any_gold_accepts_best_ranked_answer_without_becoming_official() -> None:
+    sample = WarmupSample(
+        id="q",
+        raw_question="Câu hỏi?",
+        question="Câu hỏi?",
+        gold_documents=["first", "second"],
+    )
+    prediction = LegalIRPrediction(
+        id="q",
+        documents=["wrong", "second", "first"],
+    )
+
+    report = evaluate_warmup_any_gold([sample], [prediction])
+
+    assert report.evaluation_mode == "warmup_any_gold"
+    assert report.aggregate.multi_gold_sample_count == 1
+    assert report.aggregate.mrr == 0.5
+    assert report.aggregate.recall_at_3 == 1.0
+    assert report.per_query[0].matched_gold_document == "second"
+    assert (
+        warmup_any_gold_reciprocal_rank(prediction.documents, sample.gold_documents)
+        == 0.5
+    )
+    assert (
+        warmup_any_gold_recall_at_3(prediction.documents, sample.gold_documents) == 1.0
+    )
+
+
+def test_warmup_fingerprint_includes_preserved_question_source() -> None:
+    first = WarmupSample(
+        id="q",
+        raw_question="Câu hỏi?",
+        question="Câu hỏi?",
+        gold_documents=["gold"],
+    )
+    second = WarmupSample(
+        id="q",
+        raw_question="  Câu  hỏi? ",
+        question="Câu hỏi?",
+        gold_documents=["gold"],
+    )
+    prediction = [LegalIRPrediction(id="q", documents=["gold"])]
+
+    assert (
+        evaluate_warmup_any_gold([first], prediction).dataset_fingerprint
+        != evaluate_warmup_any_gold([second], prediction).dataset_fingerprint
+    )
+
+
+def test_report_contract_rejects_forged_aggregate() -> None:
+    diagnostic = LegalIRQueryDiagnostic(
+        id="q",
+        gold_documents=["gold"],
+        matched_gold_document="gold",
+        gold_rank=1,
+        reciprocal_rank=1.0,
+        hit_at_3=True,
+        top_3_documents=["gold"],
+        predicted_document_count=1,
+    )
+    with pytest.raises(ValidationError, match="aggregate MRR"):
+        LegalIREvaluationReport(
+            evaluation_mode="official_single_gold",
+            dataset_fingerprint="0" * 64,
+            aggregate=LegalIRAggregate(
+                sample_count=1,
+                mrr=0.0,
+                recall_at_3=1.0,
+            ),
+            per_query=[diagnostic],
+        )
+
+
+def test_warmup_sample_rejects_a_normalized_query_unrelated_to_raw() -> None:
+    with pytest.raises(ValidationError, match="normalized form"):
+        WarmupSample(
+            id="q",
+            raw_question="Câu hỏi gốc?",
+            question="Câu hỏi khác?",
+            gold_documents=["gold"],
+        )

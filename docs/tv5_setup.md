@@ -4,9 +4,16 @@ Xem danh sách task đã hoàn thành, các file đã can thiệp, kết quả k
 phạm vi bàn giao tại
 [`docs/tv5_baocaotiendo.md`](tv5_baocaotiendo.md).
 
-Tài liệu này mô tả cách chạy phần TV5 khi ban tổ chức chưa phát hành dataset
-chính thức. Fixture trong `tests/fixtures/tv5/` chỉ dùng để phát triển và kiểm
-thử; không phải dữ liệu cuộc thi và không được dùng để công bố điểm chính thức.
+Hai bộ dữ liệu Warm-up canonical trong repo là `data/task1/warmup.json` cho
+LegalIR và `data/task2/warmup.json` cho LegalQA. Contract, anomaly và lệnh vận
+hành riêng của từng task nằm tại:
+
+- [`docs/tv5_legalir_warmup.md`](tv5_legalir_warmup.md);
+- [`docs/tv5_legalqa_warmup.md`](tv5_legalqa_warmup.md).
+
+Fixture trong `tests/fixtures/tv5/` chỉ dùng để phát triển/kiểm thử, không phải
+dữ liệu cuộc thi và không được dùng để công bố điểm chính thức. Workspace hiện
+chưa có `selected-contexts.zip` hoặc model prediction thật.
 
 ## 1. Cài đặt
 
@@ -148,14 +155,14 @@ python scripts/evaluate.py `
   --benchmark tests/fixtures/tv5/dev_benchmark.jsonl `
   --before tests/fixtures/tv5/predictions_before.json `
   --after tests/fixtures/tv5/predictions_after.jsonl `
-  --output-dir artifacts/evaluation `
+  --output-dir artifacts/task1/evaluation/dev `
   --k 1 3 5
 ```
 
 Output:
 
 ```text
-artifacts/evaluation/
+artifacts/task1/evaluation/dev/
 ├── before.json
 ├── before.md
 ├── after.json
@@ -171,7 +178,8 @@ Metric hiện có:
 - MRR: reciprocal rank của relevant chunk đầu tiên, macro-average theo câu hỏi;
 - Recall@K: tỷ lệ gold chunk xuất hiện trong top K, macro-average;
 - ROUGE-L: F1 theo longest common subsequence sau khi chuẩn hóa Unicode tiếng
-  Việt;
+  Việt; đây là metric phát triển của benchmark chung, không phải bằng chứng
+  parity với scorer LegalQA ẩn;
 - latency: total, min, max, mean, median, P95 và P99.
 
 Loader căn chỉnh benchmark/prediction bằng `question_id`, không phụ thuộc thứ tự
@@ -210,21 +218,84 @@ Python hay object `rank_bm25`. Khi runtime load, schema và từng chunk đượ
 validate lại rồi BM25 được rebuild deterministically trong bộ nhớ. Module-level
 hybrid search luôn load artifact này trước khi phục vụ truy vấn.
 
-## 5. Submission writer
+## 5. Evaluation và submission theo task
 
-Do schema CodaLab chưa được ban tổ chức công bố, writer dùng schema JSON cấu
-hình thay vì hard-code tên cột:
+### 5.1. LegalIR chính thức
+
+LegalIR nộp `submission.zip` chỉ chứa `submission.json`, không phải CSV. Tạo và
+validate artifact bằng:
+
+```powershell
+python scripts/write_legal_ir_submission.py `
+  --input artifacts/task1/predictions.json `
+  --questions data/task1/warmup.json `
+  --corpus-manifest artifacts/task1/corpus_document_ids.json `
+  --output artifacts/task1/submission.zip
+
+python scripts/validate_legal_ir_submission.py `
+  --input artifacts/task1/submission.zip `
+  --questions data/task1/warmup.json `
+  --corpus-manifest artifacts/task1/corpus_document_ids.json
+```
+
+Corpus manifest chưa có trong repo; TV4 cần trích từ toàn bộ context BTC. Không
+dùng tập document IDs xuất hiện trong gold Warm-up thay cho corpus thật.
+
+Wire format trong `submission.json` là JSON object keyed theo question ID:
+`{"<question_id>": {"answer": ["<document_id>", "..."]}}`. Array record dùng
+trong prediction nội bộ không phải schema nộp Codabench.
+
+### 5.2. LegalQA chính thức
+
+Task 2 dùng dữ liệu `data/task2/warmup.json` và artifact tách riêng dưới
+`artifacts/task2/`. Audit, đánh giá local, đóng gói và validate theo thứ tự:
+
+```powershell
+python scripts/audit_legal_qa_warmup.py `
+  --input data/task2/warmup.json `
+  --output artifacts/task2/warmup_audit.json
+
+python scripts/evaluate_legal_qa.py `
+  --references data/task2/warmup.json `
+  --predictions artifacts/task2/predictions.json `
+  --output artifacts/task2/evaluation/diagnostic_report.json
+
+python scripts/write_legal_qa_submission.py `
+  --input artifacts/task2/predictions.json `
+  --questions data/task2/warmup.json `
+  --output artifacts/task2/submission.zip
+
+python scripts/validate_legal_qa_submission.py `
+  --input artifacts/task2/submission.zip `
+  --questions data/task2/warmup.json
+```
+
+Submission Task 2 là ZIP chỉ chứa `submission.json`. Wire format là JSON object
+`{"<question_id>": {"answer": "<câu trả lời>"}}`; mỗi value chỉ có field
+string `answer`. Prediction input local có thể được CLI biểu diễn thành các
+record `id`/`answer`, nhưng writer phải serialize sang object chính thức trên.
+
+METEOR/ROUGE-L do evaluator local tính chỉ là **diagnostic**: report luôn ghi
+`evaluation_scope="local_diagnostic"` và `official_scorer_parity=false`. Chưa có
+implementation/config scorer ẩn từ BTC nên không dùng các điểm này để tuyên bố
+parity hoặc dự đoán điểm leaderboard. Xem toàn bộ contract và release checklist
+tại [`docs/tv5_legalqa_warmup.md`](tv5_legalqa_warmup.md).
+
+### 5.3. Legacy generic CSV adapter
+
+Writer cũ dưới đây vẫn hữu ích cho luồng `QAResponse` tổng quát, nhưng chỉ là
+legacy adapter và không phải format nộp chính thức của Task 1 hoặc Task 2:
 
 ```powershell
 python scripts/write_submission.py `
   --input tests/fixtures/tv5/qa_responses.jsonl `
   --schema tests/fixtures/tv5/submission_schema.json `
-  --output artifacts/submission.csv
+  --output artifacts/legacy/submission.csv
 ```
 
 Writer đọc trực tiếp `QAResponse`, validate field/serializer, ghi CSV atomically
-và hỗ trợ UTF-8 BOM cho Excel. Khi có schema chính thức, chỉ thay file schema và
-adapter input; không sửa metric hoặc reranker.
+và hỗ trợ UTF-8 BOM cho Excel. Ba contract được cô lập để legacy CSV không làm
+hỏng submission ZIP của LegalIR hoặc LegalQA.
 
 ## 6. Kiểm tra trước khi bàn giao
 
@@ -264,11 +335,33 @@ smoke test.
 Xem hướng dẫn container, volume, healthcheck và troubleshooting tại
 [`docs/project/12_docker_deployment.md`](project/12_docker_deployment.md).
 
-## 7. Khi có dataset chính thức
+## 7. Quy trình khi nhận đủ corpus và phase data
 
-1. Viết adapter chuyển record chính thức sang `BenchmarkSample`.
-2. Giữ nguyên `question_id`, `gold_chunk_ids` và reference answer từ nguồn.
-3. Chạy validation, kiểm tra ID trùng/thiếu và lưu version/checksum dataset.
-4. Chạy baseline trước rerank rồi mới chạy sau rerank trên cùng sample/K.
-5. Chốt schema submission theo tài liệu ban tổ chức và thêm regression test.
-6. Không so sánh hai report khác sample set hoặc khác `k_values`.
+Không dùng chung file prediction, report hoặc submission giữa hai task. Task 1
+luôn ở `artifacts/task1/`; Task 2 luôn ở `artifacts/task2/`.
+
+### 7.1. Task 1 — LegalIR
+
+1. TV4 tạo `artifacts/task1/corpus_document_ids.json` từ toàn bộ context BTC và
+   lưu checksum; không suy ra corpus từ gold Warm-up.
+2. TV2 collapse chunk ranking sang document ranking bằng
+   `legal_ir_prediction_from_hits()` và ghi `artifacts/task1/predictions.json`.
+3. TV5 kiểm tra exact question coverage, duplicate, corpus membership, rồi so
+   sánh baseline/rerank trên cùng sample, gold policy và fingerprint.
+4. Dùng MRR và Recall@3 document-level để quyết định model; metric chunk-level
+   chỉ dùng debug retrieval nội bộ.
+5. Ghi/validate `artifacts/task1/submission.zip`, xác nhận wire format object,
+   rồi lưu checksum, config và report trước khi bàn giao nhóm trưởng.
+
+### 7.2. Task 2 — LegalQA
+
+1. TV4 bàn giao phase data immutable tương ứng với
+   `data/task2/warmup.json`, question manifest và checksum.
+2. TV2 bàn giao retrieval trace riêng; TV3 bàn giao đúng một answer cho mỗi
+   question ID vào `artifacts/task2/predictions.json`.
+3. TV5 kiểm tra exact ID coverage, duplicate/extra field và tách trace/citation
+   khỏi payload submission.
+4. Chạy METEOR/ROUGE-L local để chẩn đoán và so sánh run cùng fingerprint;
+   không coi report này là scorer ẩn hoặc điểm leaderboard.
+5. Ghi/validate `artifacts/task2/submission.zip`, xác nhận wire format object,
+   rồi lưu checksum, model/config, prompt version và report trước khi bàn giao.

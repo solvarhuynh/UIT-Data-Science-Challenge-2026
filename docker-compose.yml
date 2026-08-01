@@ -59,6 +59,8 @@ services:
       RERANKER_TOP_N: ${RERANKER_TOP_N:-10}
       RERANKER_LOCAL_FILES_ONLY: ${RERANKER_LOCAL_FILES_ONLY:-true}
       SUBMISSION_PATH: ${SUBMISSION_PATH:-/app/output/submission.csv}
+      LEGAL_IR_SUBMISSION_PATH: ${LEGAL_IR_SUBMISSION_PATH:-/app/output/task1/submission.zip}
+      LEGAL_QA_SUBMISSION_PATH: ${LEGAL_QA_SUBMISSION_PATH:-/app/output/task2/submission.zip}
     command:
       - python
       - -m
@@ -162,7 +164,7 @@ services:
       - --loglevel
       - warning
     ports:
-      - "${REDIS_BIND_ADDRESS:-127.0.0.1}:6380:6379"
+      - "${REDIS_BIND_ADDRESS:-127.0.0.1}:${REDIS_PORT:-6380}:6379"
     volumes:
       - redis-data:/data
     healthcheck:

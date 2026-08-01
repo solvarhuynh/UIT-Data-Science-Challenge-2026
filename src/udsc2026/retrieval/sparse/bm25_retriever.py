@@ -1,11 +1,10 @@
 """Standalone BM25 sparse retriever for legal document chunks."""
 
-import pickle
-import logging
-import time
 import json
+import logging
 import os
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
@@ -35,6 +34,7 @@ def _tokenize_for_bm25(text: str) -> list[str]:
         if normalized and any(character.isalnum() for character in normalized):
             normalized_tokens.append(normalized)
     return normalized_tokens
+
 
 class BM25Retriever:
     """Build, persist, and search a Vietnamese BM25 index over legal chunks."""
@@ -198,7 +198,9 @@ class BM25Retriever:
         if not eligible:
             return []
         eligible.sort(key=lambda item: item[1], reverse=True)
-        LOGGER.info("sparse search latency_ms=%.2f", (time.perf_counter() - started) * 1000)
+        LOGGER.info(
+            "sparse search latency_ms=%.2f", (time.perf_counter() - started) * 1000
+        )
         return [
             _to_hit(self._chunks[index], score) for index, score in eligible[:top_k]
         ]
@@ -208,6 +210,7 @@ class BM25Retriever:
         """Return how many chunks are represented by the current index."""
 
         return len(self._chunks) if self._bm25 is not None else 0
+
 
 def _matches(
     chunk: LegalChunk, filters: dict[str, str | int | list[str]] | None

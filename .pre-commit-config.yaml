@@ -14,10 +14,15 @@ repos:
     rev: v4.6.0
     hooks:
       - id: trailing-whitespace
+        # Preserve organizer phase files byte-for-byte for checksum auditing.
+        exclude: ^data/task[12]/warmup\.json$
       - id: end-of-file-fixer
+        exclude: ^data/task[12]/warmup\.json$
       - id: check-yaml
       - id: check-added-large-files
         args: [--maxkb=1000]
+        # Official Warm-up fixtures are intentionally versioned and checksumed.
+        exclude: ^data/task[12]/warmup\.json$
       - id: check-json
       - id: check-merge-conflict
       - id: debug-statements

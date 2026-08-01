@@ -209,6 +209,8 @@ Docker build context loại trừ:
 
 ```text
 models/
+data/task1/
+data/task2/
 data/raw/
 data/processed/
 data/vector_store/
@@ -224,17 +226,41 @@ Backend nhận model và dữ liệu processed qua bind mount read-only:
 ./data/vector_store -> /app/data/vector_store
 ```
 
-Ba bind mount trên đều read-only trong container. Qdrant, Redis, cache Hugging
-Face và output dùng named volumes riêng. Nếu pipeline đã tạo `submission.csv`,
-sao chép file ra máy khi backend đang chạy:
+Ba bind mount trên đều read-only trong container. Hai phase file canonical nằm
+trên host tại `data/task1/warmup.json` và `data/task2/warmup.json`; Compose hiện
+không mount hai thư mục này, vì vậy mặc định chạy các CLI audit, evaluation và
+submission trên host. Không copy phase data vào image. Nếu cần chạy CLI trong
+container, chỉ bổ sung bind mount đúng thư mục task ở chế độ read-only.
+
+Qdrant, Redis, cache Hugging Face và output dùng named volumes riêng. Output
+trong container tách thành `/app/output/task1/` và `/app/output/task2/`, tương
+ứng với `artifacts/task1/` và `artifacts/task2/` trên host. Sao chép hai
+submission ra host khi backend đang chạy:
 
 ```powershell
-New-Item -ItemType Directory -Force .\outputs | Out-Null
-docker compose cp backend:/app/output/submission.csv .\outputs\submission.csv
+New-Item -ItemType Directory -Force .\artifacts\task1 | Out-Null
+New-Item -ItemType Directory -Force .\artifacts\task2 | Out-Null
+docker compose cp backend:/app/output/task1/submission.zip .\artifacts\task1\submission.zip
+docker compose cp backend:/app/output/task2/submission.zip .\artifacts\task2\submission.zip
 ```
 
-Schema submission chỉ được coi là chính thức sau khi ban tổ chức công bố. Không
-đổi tên cột hoặc khẳng định file hợp lệ cho CodaLab trước thời điểm đó.
+Cả hai task đều nộp ZIP chỉ chứa duy nhất `submission.json`, nhưng schema không
+được dùng lẫn nhau:
+
+- LegalIR: object
+  `{"<question_id>": {"answer": ["<document_id>", "..."]}}`;
+- LegalQA: object `{"<question_id>": {"answer": "<câu trả lời>"}}`.
+
+Writer CSV `write_submission.py` chỉ là adapter `QAResponse` legacy, không phải
+format nộp chính thức của Task 1 hay Task 2. METEOR/ROUGE-L local của Task 2 chỉ
+là diagnostic và report ghi `official_scorer_parity=false`; chưa có cơ sở tuyên
+bố parity với scorer ẩn. Xem runbook
+[`docs/tv5_legalir_warmup.md`](../tv5_legalir_warmup.md) và
+[`docs/tv5_legalqa_warmup.md`](../tv5_legalqa_warmup.md).
+
+Image `codalab/codalab-legacy:py39` trên trang thi là runtime của scoring
+program; vòng file-submission không chạy source/model của đội trong image đó và
+không buộc backend của repo hạ xuống Python 3.9.
 
 ## 7. Biến môi trường chính
 
@@ -296,8 +322,10 @@ nhất được nhóm dưới đây.
 | `QDRANT_COLLECTION_NAME` | `legal_chunks` | Collection truy hồi |
 | `QDRANT_BIND_ADDRESS` / `QDRANT_HTTP_PORT` | `127.0.0.1` / `6333` | Bind Qdrant ra host |
 | `REDIS_URL` | `redis://redis:6379/0` | URL Redis nội bộ |
-| `REDIS_BIND_ADDRESS` / `REDIS_PORT` | `127.0.0.1` / `6379` | Bind Redis ra host |
-| `SUBMISSION_PATH` | `/app/output/submission.csv` | Output trong container |
+| `REDIS_BIND_ADDRESS` / `REDIS_PORT` | `127.0.0.1` / `6380` | Bind Redis ra host; container vẫn dùng `6379` |
+| `SUBMISSION_PATH` | `/app/output/submission.csv` | Adapter CSV tổng quát (legacy, không dùng để nộp Task 1/2) |
+| `LEGAL_IR_SUBMISSION_PATH` | `/app/output/task1/submission.zip` | Artifact ZIP chính thức của Task 1 |
+| `LEGAL_QA_SUBMISSION_PATH` | `/app/output/task2/submission.zip` | Artifact ZIP chính thức của Task 2 |
 | `QDRANT_HEALTH_RETRIES` | `30` | Số lần probe Qdrant |
 | `QDRANT_HEALTH_INTERVAL_SECONDS` | `1` | Khoảng nghỉ giữa hai probe |
 | `LOG_MAX_SIZE` / `LOG_MAX_FILES` | `10m` / `3` | Giới hạn log Docker |
@@ -312,7 +340,8 @@ Compose. Không đặt token, password hoặc đường dẫn riêng của máy 
 `docker/backend.Dockerfile` có hai stage:
 
 1. `wheel-builder` build wheel ứng dụng và dependency runtime.
-2. `runtime` chỉ cài wheel, config, prompt và smoke script.
+2. `runtime` chỉ cài wheel, config, prompt, host smoke và các CLI
+   audit/evaluate/write/validate chính thức của hai task.
 
 Các dependency runtime trực tiếp được khóa trong `requirements_runtime.txt` và
 được truyền vào `pip wheel --constraint`, nên cùng commit không tự trôi phiên
@@ -330,6 +359,8 @@ Runtime:
 - chạy bằng user `app` UID/GID `10001`, không chạy root;
 - không dùng editable install và không chứa source tree;
 - không chứa npm, test tools, model weights, raw data hoặc vector index;
+- không chứa hai oracle `DO_NOT_SUBMIT`; các script rò rỉ label chỉ tồn tại ở
+  môi trường phát triển local;
 - dùng log unbuffered và healthcheck không cần `curl`;
 - mount model/corpus read-only, tách cache/output thành volumes có thể ghi.
 

@@ -1,8 +1,8 @@
 """Dense retrieval orchestration using injected embedding and vector-store clients."""
 
-from functools import lru_cache
 import logging
 import time
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from udsc2026.config import load_project_config
@@ -46,7 +46,9 @@ class DenseRetriever:
             ranked_hits.append(
                 hit.model_copy(update={"dense_score": score, "rank": rank})
             )
-        LOGGER.info("dense search latency_ms=%.2f", (time.perf_counter() - started) * 1000)
+        LOGGER.info(
+            "dense search latency_ms=%.2f", (time.perf_counter() - started) * 1000
+        )
 
         return ranked_hits
 
@@ -61,7 +63,9 @@ def _default_retriever() -> DenseRetriever:
     from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient
 
     embedding_client = EmbeddingClient(
-        model_path=embedding_config.get("model_path", embedding_config["embedder_model_path"]),
+        model_path=embedding_config.get(
+            "model_path", embedding_config["embedder_model_path"]
+        ),
         device=embedding_config.get("device", "cpu"),
         batch_size=embedding_config.get("batch_size", 32),
         max_length=embedding_config.get("max_length", 256),

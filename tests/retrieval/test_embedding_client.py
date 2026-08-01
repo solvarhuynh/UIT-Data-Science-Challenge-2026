@@ -8,11 +8,18 @@ from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient
 
 @pytest.fixture
 def client():
-    with patch("udsc2026.infrastructure.embedding.bkai_client.SentenceTransformer") as model:
+    with patch(
+        "udsc2026.infrastructure.embedding.bkai_client.SentenceTransformer"
+    ) as model:
         model.return_value.encode.side_effect = lambda texts, **kwargs: np.asarray(
-            [0.1, 0.2, 0.3] if isinstance(texts, str) else [[0.1, 0.2, 0.3] for _ in texts]
+            [0.1, 0.2, 0.3]
+            if isinstance(texts, str)
+            else [[0.1, 0.2, 0.3] for _ in texts]
         )
-        with patch("udsc2026.infrastructure.embedding.bkai_client.Path.is_dir", return_value=True):
+        with patch(
+            "udsc2026.infrastructure.embedding.bkai_client.Path.is_dir",
+            return_value=True,
+        ):
             yield EmbeddingClient("local-model")
 
 
@@ -28,7 +35,9 @@ def test_embed_documents_preserves_count(client):
     assert all(isinstance(vector, list) for vector in vectors)
 
 
-@pytest.mark.parametrize("method, value", [("embed_query", ""), ("embed_documents", [])])
+@pytest.mark.parametrize(
+    "method, value", [("embed_query", ""), ("embed_documents", [])]
+)
 def test_empty_input_raises(client, method, value):
     with pytest.raises(ValueError):
         getattr(client, method)(value)

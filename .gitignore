@@ -180,6 +180,7 @@ marimo/_lsp/
 __marimo__/
 
 # Project-specific ignores from cam_nang.md
+.DS_Store
 /models/
 data/raw/
 data/vector_store/

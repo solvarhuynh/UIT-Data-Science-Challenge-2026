@@ -24,6 +24,41 @@ if (-not $ProjectPython) {
 
 Push-Location $ProjectRoot
 try {
+    Write-Host "== TV5 LegalIR and LegalQA evaluation/submission tests =="
+    & $ProjectPython "-m" "pytest" "-q" `
+        "tests/unit/test_evaluation/test_legal_ir.py" `
+        "tests/unit/test_evaluation/test_legal_ir_submission.py" `
+        "tests/unit/test_evaluation/test_legal_ir_cli.py" `
+        "tests/unit/test_evaluation/test_legal_qa_metrics.py" `
+        "tests/unit/test_evaluation/test_legal_qa.py" `
+        "tests/unit/test_evaluation/test_legal_qa_submission.py" `
+        "tests/unit/test_evaluation/test_legal_qa_cli.py"
+    if ($LASTEXITCODE -ne 0) {
+        throw "TV5 competition task tests failed with exit code $LASTEXITCODE"
+    }
+
+    $LegalQAWarmupPath = Join-Path $ProjectRoot "data/task2/warmup.json"
+    if (Test-Path -LiteralPath $LegalQAWarmupPath -PathType Leaf) {
+        Write-Host "== LegalQA Warm-up data audit =="
+        & $ProjectPython ".\scripts\audit_legal_qa_warmup.py" `
+            "--input" $LegalQAWarmupPath `
+            "--output" ".\artifacts\task2\warmup_audit.json"
+        if ($LASTEXITCODE -ne 0) {
+            throw "LegalQA Warm-up audit failed with exit code $LASTEXITCODE"
+        }
+    }
+
+    $WarmupPath = Join-Path $ProjectRoot "data/task1/warmup.json"
+    if (Test-Path -LiteralPath $WarmupPath -PathType Leaf) {
+        Write-Host "== LegalIR Warm-up data audit =="
+        & $ProjectPython ".\scripts\audit_legal_ir_warmup.py" `
+            "--input" $WarmupPath `
+            "--output" ".\artifacts\task1\warmup_audit.json"
+        if ($LASTEXITCODE -ne 0) {
+            throw "Warm-up audit failed with exit code $LASTEXITCODE"
+        }
+    }
+
     Write-Host "== TV5 offline smoke checks =="
     & $ProjectPython ".\scripts\smoke_test.py" "--mode" "host"
     if ($LASTEXITCODE -ne 0) {

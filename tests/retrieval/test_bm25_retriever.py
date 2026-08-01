@@ -4,9 +4,15 @@ from udsc2026.retrieval.sparse.bm25_retriever import BM25Retriever
 
 def chunks():
     return [
-        LegalChunk(chunk_id="labor", doc_id="d1", text="hợp đồng lao động và người lao động"),
-        LegalChunk(chunk_id="tax", doc_id="d2", text="thuế thu nhập cá nhân và kê khai thuế"),
-        LegalChunk(chunk_id="leave", doc_id="d3", text="nghỉ phép hằng năm của người lao động"),
+        LegalChunk(
+            chunk_id="labor", doc_id="d1", text="hợp đồng lao động và người lao động"
+        ),
+        LegalChunk(
+            chunk_id="tax", doc_id="d2", text="thuế thu nhập cá nhân và kê khai thuế"
+        ),
+        LegalChunk(
+            chunk_id="leave", doc_id="d3", text="nghỉ phép hằng năm của người lao động"
+        ),
     ]
 
 

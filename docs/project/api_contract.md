@@ -71,7 +71,8 @@ Ghi chú trách nhiệm field:
 
 ### 2.2. `QAResponse` (mới, cố định trong tài liệu này — cần thêm vào `src/udsc2026/contracts/qa.py`)
 
-TV3 trả về `QAResponse` cho mọi lời gọi `generate()`. Đây là output chuẩn để TV1 đưa vào API response và TV5 dùng khi build `submission.csv`.
+TV3 trả về `QAResponse` cho mọi lời gọi `generate()`. Đây là output chuẩn để
+TV1 đưa vào API response và TV5 chuyển đổi sang artifact nộp Task 2.
 
 ```python
 from typing import List, Optional
@@ -110,6 +111,25 @@ Quy ước:
 - `used_prompt_version`: bắt buộc, ví dụ `"legal_qa_v1"`, để TV1 log và TV5 dùng khi so sánh benchmark.
 - `retrieval_hits`: chính là input `contexts` đã dùng để sinh câu trả lời (giữ nguyên để debug/trace), không phải danh sách mới.
 - `is_refusal`: `True` khi model từ chối trả lời do thiếu căn cứ — TV1 dùng field này để quyết định hiển thị UI, TV5 dùng để loại khỏi tính điểm nếu cần.
+
+### 2.3. Adapter nộp bài Task 2 của TV5
+
+`QAResponse` là contract nội bộ; nó **không phải** schema gửi thẳng lên
+Codabench. Tại thời điểm xác minh ngày 01/08/2026, `submission.zip` phải chứa
+duy nhất `submission.json`, và JSON ở dạng object keyed by `question_id`:
+
+```json
+{
+  "147194": {
+    "answer": "Câu trả lời cuối cùng từ QAResponse.answer"
+  }
+}
+```
+
+TV3 bàn giao cặp `(question_id, QAResponse.answer)` cho TV5. TV5 chịu trách
+nhiệm kiểm tra coverage, kiểu string, ID trùng/thiếu, bảo toàn Unicode và đóng
+gói ZIP chính thức. Các field `citations`, `retrieval_hits`, `warnings` và log
+debug chỉ dùng nội bộ, không được ghi thêm vào `submission.json`.
 
 ## 3. Chữ ký hàm bắt buộc
 

@@ -42,9 +42,13 @@ def read_chunks(chunks_dir: str, error_path: Path) -> tuple[list[Any], int]:
                 try:
                     chunks.append(LegalChunk.model_validate(json.loads(raw_line)))
                 except (json.JSONDecodeError, TypeError, ValueError) as exc:
-                    errors.append({"file": str(file_path), "line": line_number, "error": str(exc)})
+                    errors.append(
+                        {"file": str(file_path), "line": line_number, "error": str(exc)}
+                    )
     error_path.parent.mkdir(parents=True, exist_ok=True)
-    error_path.write_text(json.dumps(errors, ensure_ascii=False, indent=2), encoding="utf-8")
+    error_path.write_text(
+        json.dumps(errors, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     return chunks, len(errors)
 
 
@@ -83,16 +87,22 @@ def main() -> int:
     vector_db = get_vector_db_adapter(config)
     embeddings: list[list[float]] = []
     for start in range(0, len(chunks), batch_size):
-        batch_texts = [chunk.text for chunk in chunks[start:start + batch_size]]
+        batch_texts = [chunk.text for chunk in chunks[start : start + batch_size]]
         embeddings.extend(embedder.embed_documents(batch_texts, batch_size=batch_size))
         LOGGER.info("Embedded %d/%d chunks", len(embeddings), len(chunks))
 
     vector_db.create_collection(
-        vector_config["collection_name"], len(embeddings[0]), vector_config.get("distance", "cosine")
+        vector_config["collection_name"],
+        len(embeddings[0]),
+        vector_config.get("distance", "cosine"),
     )
     for start in range(0, len(chunks), batch_size):
-        vector_db.upsert(chunks[start:start + batch_size], embeddings[start:start + batch_size])
-        LOGGER.info("Upserted %d/%d chunks", min(start + batch_size, len(chunks)), len(chunks))
+        vector_db.upsert(
+            chunks[start : start + batch_size], embeddings[start : start + batch_size]
+        )
+        LOGGER.info(
+            "Upserted %d/%d chunks", min(start + batch_size, len(chunks)), len(chunks)
+        )
 
     bm25_path = args.bm25_index_path or config.get("sparse", {}).get(
         "bm25_index_path", "data/vector_store/bm25/index.pkl"

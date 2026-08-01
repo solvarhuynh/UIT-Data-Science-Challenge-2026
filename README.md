@@ -13,9 +13,12 @@ Không yêu cầu dịch vụ LLM bên ngoài trong baseline.
 
 ## Competition Tasks
 
-- LegalIR: parse dữ liệu pháp luật, lập chỉ mục, truy hồi và xếp hạng đoạn văn bản pháp luật.
-- LegalQA: sinh câu trả lời dựa trên context truy hồi, kèm citation và kiểm soát hallucination.
-- Evaluation: đo MRR, Recall@K, ROUGE-L, latency, citation correctness và sinh file `submission.csv`.
+- LegalIR: parse dữ liệu pháp luật, truy hồi/rerank ở cấp chunk rồi hợp nhất và xếp hạng `document_id` để chấm MRR/Recall@3.
+- LegalQA: sinh câu trả lời dựa trên context truy hồi; METEOR là
+  metric chính và ROUGE-L là metric phụ.
+- Evaluation: đo metric phát triển và metric theo từng task; cả LegalIR
+  và LegalQA đều nộp `submission.zip` chứa duy nhất `submission.json`
+  nhưng dùng schema khác nhau.
 
 ## Architecture
 
@@ -135,6 +138,8 @@ python -m pytest tests/unit/test_reranking tests/unit/test_evaluation -v
 udsc2026/
 ├── configs/                         # YAML/env config cho runtime, model, retrieval, cache
 ├── data/
+│   ├── task1/                       # LegalIR phase data, gồm warmup.json
+│   ├── task2/                       # LegalQA phase data, gồm warmup.json
 │   ├── raw/                         # Dữ liệu gốc từ BTC, không commit file lớn
 │   ├── processed/                   # Output ETL: chunks, parents, metadata, benchmark
 │   │   ├── chunks/                  # LegalChunk JSONL cho TV2 index
@@ -200,7 +205,10 @@ udsc2026/
 | TV2 - Nghĩa | Full Retrieval Specialist | `src/udsc2026/retrieval/dense/`, `sparse/`, `hybrid/`, BKAI bi-encoder, Qdrant/FAISS, BM25 tiếng Việt, Hybrid Fusion | `list[RetrievalHit]` đã normalize score, giữ metadata citation và sẵn sàng cho reranking |
 | TV3 - Quân | QA & LLM Specialist | `src/udsc2026/qa/`, `src/udsc2026/infrastructure/llm/`, `prompts/`, Qwen3, prompt versioning, citation parser, anti-hallucination | `QAResponse` có answer, citation đã validate, prompt version, confidence và warnings |
 | TV4 - Trung Khang | Data & Benchmark Specialist | Legal ETL, parser cấu trúc luật, Unicode cleanup, Parent-Child Chunking, synthetic benchmark Q&A | Chunk/document JSONL sạch, metadata đầy đủ, benchmark dataset |
-| TV5 - Nguyên Khang | Reranking, Evaluation, MLOps Specialist & Web UI/UX | Cross-Encoder reranking, metrics MRR/Recall@K/ROUGE-L, Docker multi-stage, submission writer, frontend Web UI/UX | Kết quả rerank, báo cáo evaluation, Docker runtime, `submission.csv` và giao diện frontend |
+| TV5 - Nguyên Khang | Reranking, Evaluation, MLOps & Web UI/UX | Cross-Encoder reranking, LegalIR MRR/Recall@3, LegalQA METEOR/ROUGE-L, Docker, submission writer/validator; Web UI/UX là workstream demo riêng | Kết quả rerank, báo cáo evaluation, `submission.zip` tách riêng cho hai task và giao diện frontend |
+
+Frontend không nằm trên đường chấm điểm và không phải điều kiện để nộp Warm-up;
+phần Web UI/UX trong phân công TV5 phục vụ demo/tích hợp sản phẩm riêng.
 
 ## Documents
 
@@ -208,6 +216,9 @@ udsc2026/
 - [API Contract](docs/project/api_contract.md)
 - [Git Workflow](docs/project/git_workflow.md)
 - [TV5 Setup & Evaluation](docs/tv5_setup.md)
+- [TV5 LegalIR Warm-up Runbook](docs/tv5_legalir_warmup.md)
+- [TV5 LegalQA Warm-up Runbook](docs/tv5_legalqa_warmup.md)
+- [Competition Data Layout](data/README.md)
 - [TV1 Work Plan](docs/member/tv1.md)
 - [TV2 Work Plan](docs/member/tv2.md)
 - [TV3 Work Plan](docs/member/tv3.md)
@@ -226,4 +237,5 @@ Mỗi thành viên dùng branch/worktree riêng, thử nghiệm trong `experimen
 2. Index dữ liệu bằng BKAI bi-encoder, VectorDB và BM25.
 3. Tích hợp Hybrid Search trong Retrieval Pipeline và Cross-Encoder reranking.
 4. Tích hợp Qwen3 local với prompt versioning, citation parsing và anti-hallucination.
-5. Đánh giá LegalIR/LegalQA, tối ưu latency, Docker hóa và chuẩn bị `submission.csv`.
+5. Đánh giá LegalIR/LegalQA, tối ưu latency, Docker hóa và chuẩn bị
+   `submission.zip` đúng schema riêng của từng task.

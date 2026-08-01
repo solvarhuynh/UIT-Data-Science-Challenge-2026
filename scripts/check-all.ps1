@@ -50,8 +50,32 @@ try {
     Invoke-CheckedCommand "Docstring style" {
         & $ProjectPython -m pydocstyle src
     }
-    Invoke-CheckedCommand "Pytest" {
-        & $ProjectPython -m pytest -q -rs --cov=src/udsc2026 --cov-report=term-missing --cov-fail-under=70
+    Invoke-CheckedCommand "Pytest sharded for native FAISS isolation" {
+        $PreviousOmpThreads = $env:OMP_NUM_THREADS
+        $PreviousOpenBlasThreads = $env:OPENBLAS_NUM_THREADS
+        try {
+            $env:OMP_NUM_THREADS = "1"
+            $env:OPENBLAS_NUM_THREADS = "1"
+            & $ProjectPython -m pytest -q -rs `
+                --ignore=tests/unit/test_vector_db `
+                --ignore=tests/retrieval/test_vector_db_adapters.py `
+                --cov=src/udsc2026 `
+                --cov-report=
+            if ($LASTEXITCODE -ne 0) {
+                throw "non-VectorDB pytest shard failed with exit code $LASTEXITCODE"
+            }
+            & $ProjectPython -m pytest -q -rs `
+                tests/unit/test_vector_db `
+                tests/retrieval/test_vector_db_adapters.py `
+                --cov=src/udsc2026 `
+                --cov-append `
+                --cov-report=term-missing `
+                --cov-fail-under=70
+        }
+        finally {
+            $env:OMP_NUM_THREADS = $PreviousOmpThreads
+            $env:OPENBLAS_NUM_THREADS = $PreviousOpenBlasThreads
+        }
     }
     Invoke-CheckedCommand "Bandit" {
         & $ProjectPython -m bandit -q -r src

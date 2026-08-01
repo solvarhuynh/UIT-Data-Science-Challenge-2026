@@ -1,9 +1,10 @@
 """Hybrid retrieval orchestration for dense and sparse retrievers."""
 
-from functools import lru_cache
 import logging
 import time
+from functools import lru_cache
 from typing import Any
+
 from udsc2026.config import load_project_config
 from udsc2026.contracts.retrieval import RetrievalHit
 from udsc2026.retrieval.dense.dense_retriever import DenseRetriever
@@ -85,7 +86,9 @@ class HybridRetriever:
         result = [hit for hit in fused if (hit.final_score or 0.0) >= self.min_score][
             :top_k
         ]
-        LOGGER.info("hybrid search latency_ms=%.2f", (time.perf_counter() - started) * 1000)
+        LOGGER.info(
+            "hybrid search latency_ms=%.2f", (time.perf_counter() - started) * 1000
+        )
         return result
 
 

@@ -75,6 +75,7 @@ def get_vector_db_adapter(config: dict[str, Any]) -> VectorDBAdapter:
         )
     if backend == "faiss":
         from udsc2026.infrastructure.vector_db.faiss_adapter import FaissAdapter
+
         if not vector_db.get("faiss_index_path"):
             raise ValueError("vector_db.faiss_index_path is required for FAISS")
         if not vector_db.get("collection_name"):
