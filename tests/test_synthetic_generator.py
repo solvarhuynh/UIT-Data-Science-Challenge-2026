@@ -66,6 +66,7 @@ def test_generator_builds_100_to_200_grounded_records_for_all_question_types():
     for record in records:
         assert record.question
         assert record.answer
+        assert record.answer.startswith("Căn cứ ")
         assert record.law_name == "Bộ luật Lao động 2019"
         assert record.article
         assert record.gold_chunk_ids

@@ -201,7 +201,7 @@ def _to_record(
             _SINGLE_QUESTIONS[question_type].format(citation=citations[0]), suffix
         )
         difficulty = "easy" if question_type == "definition" else "medium"
-    answer = " ".join(_normalise_text(chunk.text) for chunk in chunks)
+    answer = _format_answer(question_type, citations, chunks)
     return SyntheticQA(
         question_id="syn_{0:04d}".format(index),
         question=question,
@@ -218,6 +218,21 @@ def _to_record(
 def _citation(chunk: LegalChunk) -> str:
     values = [chunk.law_name, chunk.article, chunk.clause, chunk.point]
     return ", ".join(value for value in values if value)
+
+
+def _format_answer(
+    question_type: str,
+    citations: Sequence[str],
+    chunks: Sequence[LegalChunk],
+) -> str:
+    """Render a concise prose answer that stays stable across benchmark phases."""
+    body = " ".join(_normalise_text(chunk.text) for chunk in chunks)
+    if question_type in {"comparison", "multi_clause"}:
+        lead = "Căn cứ các quy định sau: {0}.".format("; ".join(citations))
+    else:
+        lead = "Căn cứ {0} quy định như sau:".format(citations[0])
+
+    return "{0} {1}".format(lead, body).strip()
 
 
 def _normalise_text(text: str) -> str:

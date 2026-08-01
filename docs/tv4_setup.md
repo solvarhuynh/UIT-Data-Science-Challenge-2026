@@ -125,6 +125,7 @@ Vị trí: `src/udsc2026/evaluation/synthetic_generator.py`
   `procedure`, `comparison`, `multi_clause`.
 - Câu trả lời là trích xuất chuẩn hoá từ gold chunk; so sánh/nhiều khoản luôn
   trỏ tới tối thiểu hai chunk/citation. Không dùng LLM hoặc tự thêm fact.
+- Đã tinh chỉnh `_format_answer()` trong `src/udsc2026/evaluation/synthetic_generator.py` để answer synthetic giữ văn phong văn xuôi ổn định cho benchmark và thi đấu, đồng thời đối chiếu theo `warmup Task 2.json` để khớp style câu trả lời tham chiếu, nhưng vẫn giữ nguyên schema `gold_chunk_ids` và `gold_citations`.
 
 ### Test tự động và mock corpus
 
