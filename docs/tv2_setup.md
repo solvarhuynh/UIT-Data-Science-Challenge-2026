@@ -114,7 +114,7 @@ Script tạo:
 Chạy test:
 
 ```powershell
-python -m pytest tests/retrieval/ -v --basetemp "$PWD\.pytest_tmp"
+python -m pytest tests/retrieval/ -v --basetemp .pytest_tmp -p no:cacheprovider
 
 | Tasks | Phạm vi | Verify sau khi hoàn tất |
 |---|---|---|
@@ -192,8 +192,7 @@ frontend vào TV2.
 ```powershell
 python scripts/index_chunks.py --vector-db-type faiss --chunks-dir data/processed/chunks
 python -c "from udsc2026.retrieval.hybrid import search; print(search('Điều 10 Bộ luật Lao động quy định gì?', 5))"
-python -m pytest tests/unit/test_retrieval -v
-/ -v --basetemp "$PWD\.pytest_tmp"
+python -m pytest tests/unit/test_retrieval -v --basetemp .pytest_tmp -p no:cacheprovider
 ```
 
 Nếu dùng Qdrant, khởi động Qdrant local rồi chạy:

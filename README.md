@@ -65,7 +65,7 @@ Index dữ liệu và chạy toàn bộ test:
 
 ```powershell
 python scripts/index_chunks.py --chunks-dir data/processed/chunks --vector-db-type faiss
-python -m pytest -v --basetemp D:\udsc2026\.pytest_tmp -p no:cacheprovider
+python -m pytest -v --basetemp .pytest_tmp -p no:cacheprovider
 ```
 
 Chạy backend:
@@ -110,7 +110,7 @@ tương thích với `faiss-cpu==1.8.0`.
 
 ```powershell
 # Ví dụ test TV2
-python -m pytest tests/retrieval/ -v --basetemp D:\udsc2026\.pytest_tmp -p no:cacheprovider
+python -m pytest tests/retrieval/ -v --basetemp .pytest_tmp -p no:cacheprovider
 
 # Ví dụ test TV3
 python -m pytest tests/unit/test_qa -v
