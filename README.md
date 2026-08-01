@@ -165,7 +165,7 @@ udsc2026/
 | TV2 - Nghĩa | Full Retrieval Specialist | `src/udsc2026/retrieval/dense/`, `sparse/`, `hybrid/`, BKAI bi-encoder, Qdrant/FAISS, BM25 tiếng Việt, Hybrid Fusion | `list[RetrievalHit]` đã normalize score, giữ metadata citation và sẵn sàng cho reranking |
 | TV3 - Quân | QA & LLM Specialist | `src/udsc2026/qa/`, `src/udsc2026/infrastructure/llm/`, `prompts/`, Qwen3, prompt versioning, citation parser, anti-hallucination | `QAResponse` có answer, citation đã validate, prompt version, confidence và warnings |
 | TV4 - Trung Khang | Data & Benchmark Specialist | Legal ETL, parser cấu trúc luật, Unicode cleanup, Parent-Child Chunking, synthetic benchmark Q&A | Chunk/document JSONL sạch, metadata đầy đủ, benchmark dataset |
-| TV5 - Nguyên Khang | Reranking, Evaluation & MLOps Specialist | Cross-Encoder reranking, metrics MRR/Recall@K/ROUGE-L, Docker multi-stage, submission writer | Kết quả rerank, báo cáo evaluation, Docker runtime và `submission.csv` |
+| TV5 - Nguyên Khang | Reranking, Evaluation, MLOps Specialist & Web UI/UX | Cross-Encoder reranking, metrics MRR/Recall@K/ROUGE-L, Docker multi-stage, submission writer, frontend Web UI/UX | Kết quả rerank, báo cáo evaluation, Docker runtime, `submission.csv` và giao diện frontend |
 
 ## Documents
 
