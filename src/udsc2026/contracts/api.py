@@ -17,7 +17,8 @@ class QueryRequest(BaseModel):
     top_k: int = Field(default=10, ge=1, le=100)
     top_n: int = Field(default=5, ge=1, le=100)
     filters: dict[str, str | int | list[str]] | None = None
-    prompt_version: str = Field(default="legal_qa_v1", min_length=1)
+    prompt_version: Literal["legal_qa_v1", "legal_qa_v2"] = "legal_qa_v1"
+    rag_template: Literal["default_rag_v1", "default_rag_v2"] = "default_rag_v1"
     debug: bool = False
 
     @model_validator(mode="after")
@@ -51,6 +52,7 @@ class QueryResponse(BaseModel):
     latency_ms: LatencyBreakdown
     cache_hit: bool
     prompt_version: str
+    rag_template: Literal["default_rag_v1", "default_rag_v2"] = "default_rag_v1"
     warnings: list[str] = Field(default_factory=list)
     trace_id: str
     status: Literal["ok"] = "ok"

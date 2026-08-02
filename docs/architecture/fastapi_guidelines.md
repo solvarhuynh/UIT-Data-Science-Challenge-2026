@@ -29,15 +29,19 @@ Schema phải nằm trong `src/udsc2026/contracts/`.
 ```python
 class QueryRequest(BaseModel):
     question: str
-    top_k: int = 5
-    filters: dict | None = None
-    stream: bool = False
+    top_k: int = 10
+    top_n: int = 5
+    filters: dict[str, str | int | list[str]] | None = None
+    prompt_version: str = "legal_qa_v1"
+    rag_template: str = "default_rag_v1"
+    debug: bool = False
 ```
 
 Response cần ổn định để frontend và evaluation dùng chung:
 
 ```text
-answer, citations, retrieval_hits, route, latency_ms, warnings
+answer, citations, retrieval_hits, latency_ms, cache_hit, prompt_version,
+rag_template, warnings, trace_id
 ```
 
 ## Sync và Async

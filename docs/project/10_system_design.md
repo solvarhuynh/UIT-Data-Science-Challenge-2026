@@ -104,7 +104,7 @@ QA không tự truy cập database. Mọi context phải đi qua `RetrievalHit` 
 RetrieveRequest  = question, top_k, filters?
 RetrievalResult  = chunks: list[RetrievalHit], query_metadata
 RetrievalHit     = chunk_id, doc_id, text, score?, source?, law_name?, article?, clause?, metadata, dense_score?, sparse_score?, hybrid_score?, rerank_score?, final_score?, rank?
-QARequest        = question, context[], prompt_version
+QARequest        = question, context[], prompt_version, rag_template
 QAResponse       = answer, citations[], usage, latency
 ```
 
@@ -141,7 +141,9 @@ Request mẫu:
 ```json
 {
   "question": "Điều kiện cấp giấy chứng nhận quyền sử dụng đất là gì?",
-  "top_k": 5
+  "top_k": 5,
+  "prompt_version": "legal_qa_v1",
+  "rag_template": "default_rag_v1"
 }
 ```
 

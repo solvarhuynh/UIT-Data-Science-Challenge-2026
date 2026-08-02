@@ -89,13 +89,21 @@ def search(query: str, top_k: int, filters: Optional[dict] = None) -> list[Retri
 - Cấu trúc tối thiểu cho hàm public:
 
 ```python
-def generate_answer(question: str, contexts: list[RetrievalHit], stream: bool = False) -> "QAResponse":
+async def generate_answer(
+    question: str,
+    contexts: list[RetrievalHit],
+    prompt_version: str = "legal_qa_v1",
+    rag_template: str = "default_rag_v1",
+    trace_id: str | None = None,
+) -> "QAResponse":
     """Sinh câu trả lời pháp lý có căn cứ từ danh sách context đã truy hồi.
 
     Args:
         question: Câu hỏi của người dùng.
         contexts: Danh sách `RetrievalHit` làm căn cứ trả lời, đã qua retrieval/rerank.
-        stream: Nếu True, trả kết quả dạng streaming cho tầng API xử lý SSE.
+        prompt_version: Tên system prompt trong `prompts/system/`.
+        rag_template: Tên user-turn template trong `prompts/rag_templates/`.
+        trace_id: Mã truy vết do TV1 truyền xuống.
 
     Returns:
         `QAResponse` chứa câu trả lời, citation, và metadata (prompt version, confidence).

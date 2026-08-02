@@ -45,6 +45,7 @@ class QAEngine(Protocol):
         question: str,
         contexts: list[RetrievalHit],
         prompt_version: str = "legal_qa_v1",
+        rag_template: str = "default_rag_v1",
         trace_id: str | None = None,
     ) -> QAResponse:
         """Generate a cited answer from supplied contexts."""
@@ -119,6 +120,7 @@ class RAGOrchestrator:
             request.question,
             hits,
             prompt_version=request.prompt_version,
+            rag_template=request.rag_template,
             trace_id=trace_id,
         )
         generation_ms = self._elapsed_ms(generation_started)
@@ -135,6 +137,7 @@ class RAGOrchestrator:
             ),
             cache_hit=False,
             prompt_version=qa_response.used_prompt_version,
+            rag_template=request.rag_template,
             warnings=qa_response.warnings,
             trace_id=qa_response.trace_id or trace_id,
         )
@@ -153,6 +156,7 @@ class RAGOrchestrator:
             "top_k": request.top_k,
             "top_n": request.top_n,
             "prompt_version": request.prompt_version,
+            "rag_template": request.rag_template,
             "retriever_version": self._retriever_version,
             "reranker_version": self._reranker_version,
         }
@@ -175,10 +179,12 @@ class RAGOrchestrator:
         """Emit structured quality signals consumed by log aggregation/benchmarking."""
         LOGGER.info(
             (
-                "rag_query trace_id=%s cache_hit=%s hits=%d citations=%d "
-                "warnings=%d total_ms=%.3f"
+                "rag_query trace_id=%s prompt_version=%s rag_template=%s "
+                "cache_hit=%s hits=%d citations=%d warnings=%d total_ms=%.3f"
             ),
             response.trace_id,
+            response.prompt_version,
+            response.rag_template,
             response.cache_hit,
             len(response.retrieval_hits),
             len(response.citations),

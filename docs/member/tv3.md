@@ -44,11 +44,12 @@ QA engine:
 from udsc2026.contracts.qa import QAResponse
 from udsc2026.contracts.retrieval import RetrievalHit
 
-def generate_answer(
+async def generate_answer(
     question: str,
     contexts: list[RetrievalHit],
     prompt_version: str = "legal_qa_v1",
-    stream: bool = False,
+    rag_template: str = "default_rag_v1",
+    trace_id: str | None = None,
 ) -> QAResponse: ...
 ```
 

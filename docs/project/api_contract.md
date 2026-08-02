@@ -165,17 +165,19 @@ Cam kết từ TV2:
 - `chunk_id`/`doc_id`/`text` không được rỗng; nếu vector store lỗi, raise exception rõ ràng (không trả `RetrievalHit` rỗng giả).
 - Không phụ thuộc FastAPI request/response object trong hàm này.
 
-### 3.2. TV3 — QA: `generate()`
+### 3.2. TV3 — QA: `generate_answer()`
 
 ```python
 from udsc2026.contracts.retrieval import RetrievalHit
 from udsc2026.contracts.qa import QAResponse
 
 
-def generate(
+async def generate_answer(
     question: str,
     contexts: list[RetrievalHit],
-    stream: bool = False,
+    prompt_version: str = "legal_qa_v1",
+    rag_template: str = "default_rag_v1",
+    trace_id: str | None = None,
 ) -> QAResponse:
     """Sinh câu trả lời pháp lý có căn cứ từ danh sách context đã truy hồi.
 
@@ -183,10 +185,9 @@ def generate(
         question: Câu hỏi gốc của người dùng.
         contexts: Danh sách `RetrievalHit` làm căn cứ trả lời (đầu ra của
             `search()`/Hybrid/Rerank).
-        stream: Nếu `True`, TV1 sẽ tiêu thụ kết quả dạng streaming (SSE) ở
-            tầng API; bản thân `generate()` vẫn trả `QAResponse` hoàn chỉnh
-            khi không stream, hoặc TV3 cung cấp hàm sinh generator riêng cho
-            trường hợp `stream=True` (thống nhất thêm khi cần).
+        prompt_version: Tên system prompt trong `prompts/system/`.
+        rag_template: Tên user-turn template trong `prompts/rag_templates/`.
+        trace_id: Mã truy vết do TV1 truyền xuống để liên kết log.
 
     Returns:
         `QAResponse` chứa câu trả lời, citation và metadata liên quan.
@@ -201,20 +202,33 @@ def generate(
 Cam kết từ TV3:
 
 - Không sửa field đã có ý nghĩa cố định trong `RetrievalHit` (ví dụ không viết đè `text` gốc).
-- Khi `contexts` rỗng hoặc không đủ căn cứ, trả `QAResponse(is_refusal=True, ...)` thay vì raise exception, để TV1 xử lý nhất quán ở tầng API.
+- Khi `contexts` rỗng hoặc không đủ căn cứ, trả câu từ chối với
+  `confidence=0`, `warnings` có lý do và `citations=[]` thay vì raise exception,
+  để TV1 xử lý nhất quán ở tầng API.
 - `used_prompt_version` bắt buộc phải khớp với file thực tế trong `prompts/system/`.
 
 ## 4. Ví dụ tích hợp (do TV1 thực hiện, TV2/TV3 chỉ cần biết để hình dung)
 
 ```python
+import asyncio
+
 from udsc2026.contracts.retrieval import RetrievalHit
-from udsc2026.retrieval.dense import search  # TV2
-from udsc2026.qa import generate  # TV3
+from udsc2026.qa.qa_engine import QAEngine
+from udsc2026.retrieval.hybrid import search
 
 
-def handle_query(question: str, top_k: int = 5) -> "QAResponse":
-    hits: list[RetrievalHit] = search(query=question, top_k=top_k)
-    return generate(question=question, contexts=hits)
+async def handle_query(
+    qa_engine: QAEngine,
+    question: str,
+    top_k: int = 5,
+) -> "QAResponse":
+    hits: list[RetrievalHit] = await asyncio.to_thread(search, question, top_k)
+    return await qa_engine.generate_answer(
+        question=question,
+        contexts=hits,
+        prompt_version="legal_qa_v1",
+        rag_template="default_rag_v1",
+    )
 ```
 
 TV2 và TV3 **không cần chờ nhau code xong** để bắt đầu: mỗi bên có thể viết unit test với `RetrievalHit`/`QAResponse` giả (mock/fixture) dựa đúng theo schema ở mục 2, rồi TV1 nối hai hàm thật lại sau.

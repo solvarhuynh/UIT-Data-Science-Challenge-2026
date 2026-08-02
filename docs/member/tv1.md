@@ -13,9 +13,10 @@ TV1 không làm Web Frontend. Vai trò chính là giữ kiến trúc backend s�
 - [ ] Tích hợp output ETL/chunk metadata của TV4 vào contract chung để các module retrieval, rerank và QA dùng thống nhất.
 - [ ] Quản lý Dependency Injection cho `EmbeddingClient`, `VectorStore`, `SparseRetriever`, `HybridRetriever`, `Reranker`, `QAEngine`, `CacheClient` và `Logger`.
 - [ ] Chuẩn hóa async handling: endpoint không block event loop, các tác vụ inference/vector search nặng phải có strategy rõ ràng như async client, threadpool hoặc worker.
-- [ ] Xây endpoint `/query` nhận `QueryRequest` và trả `QueryResponse` chuẩn cho frontend hoặc script evaluation.
+- [ ] Xây endpoint chuẩn `/api/v1/query` nhận `QueryRequest` và trả
+  `QueryResponse`; giữ `/query` làm alias tương thích ẩn khỏi OpenAPI.
 - [ ] Xây endpoint `/health` và `/ready` để kiểm tra model, vector DB, cache và trạng thái service.
-- [ ] Xây cơ chế caching cho câu hỏi trùng lặp bằng key hash từ `question`, `filters`, `top_k`, `prompt_version`, `retriever_version` và `reranker_version`.
+- [ ] Xây cơ chế caching cho câu hỏi trùng lặp bằng key hash từ `question`, `filters`, `top_k`, `top_n`, `prompt_version`, `rag_template`, `retriever_version` và `reranker_version`.
 - [ ] Hỗ trợ cache Redis cho môi trường chạy thật và fallback in-memory cache cho local/dev.
 - [ ] Tối ưu latency bằng cách đo thời gian từng stage: cache, dense retrieval, sparse retrieval, hybrid fusion, rerank, generation và total.
 - [ ] Xây logging nâng cao cho request lỗi, exception, timeout, câu trả lời rỗng, retrieval score thấp, citation thiếu và feedback xấu.
@@ -43,6 +44,7 @@ class QueryRequest(BaseModel):
     top_n: int = 5
     filters: dict[str, str | int | list[str]] | None = None
     prompt_version: str = "legal_qa_v1"
+    rag_template: str = "default_rag_v1"
     debug: bool = False
 ```
 
@@ -58,13 +60,19 @@ Các module phải được gọi qua contract chung:
 search_dense(query: str, top_k: int, filters: dict | None = None) -> list[RetrievalHit]
 search_hybrid(query: str, dense_hits: list[RetrievalHit], top_k: int) -> list[RetrievalHit]
 rerank(query: str, candidates: list[RetrievalHit], top_n: int) -> list[RetrievalHit]
-generate_answer(question: str, contexts: list[RetrievalHit], prompt_version: str) -> QAResponse
+async def generate_answer(
+    question: str,
+    contexts: list[RetrievalHit],
+    prompt_version: str = "legal_qa_v1",
+    rag_template: str = "default_rag_v1",
+    trace_id: str | None = None,
+) -> QAResponse: ...
 ```
 
 Output chính:
 
 ```text
-answer, citations, retrieval_hits, latency_ms, cache_hit, prompt_version, warnings, trace_id
+answer, citations, retrieval_hits, latency_ms, cache_hit, prompt_version, rag_template, warnings, trace_id
 ```
 
 Tất cả schema dùng chung phải đặt trong `src/udsc2026/contracts/`; không định nghĩa lại `RetrievalHit`, `Citation`, `QAResponse` trong router.
@@ -72,7 +80,8 @@ Tất cả schema dùng chung phải đặt trong `src/udsc2026/contracts/`; kh�
 ## 4. Tiêu chuẩn nghiệm thu (Definition of Done)
 
 - [ ] `/query` chạy end-to-end với module thật hoặc mock chuẩn của TV2, TV3, TV4 và TV5.
-- [ ] Response có answer, citations, retrieval hits, latency từng stage, `cache_hit` và `trace_id`.
+- [ ] Response có answer, citations, retrieval hits, latency từng stage,
+  `cache_hit`, `prompt_version`, `rag_template` và `trace_id`.
 - [ ] Câu hỏi lặp lại tạo cache hit, trả kết quả đúng và giảm latency rõ ràng.
 - [ ] Redis cache chạy được khi có cấu hình; in-memory cache chạy được khi dev local.
 - [ ] Low-score retrieval, lỗi QA, citation thiếu và exception được ghi log structured rõ ràng.
