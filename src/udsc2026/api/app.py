@@ -7,6 +7,7 @@ clients during startup, keeping liveness checks lightweight.
 
 from __future__ import annotations
 
+import logging
 import os
 import socket
 import ssl
@@ -14,12 +15,16 @@ from collections.abc import Mapping
 from functools import lru_cache
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+from typing import TYPE_CHECKING, Callable, cast
 from urllib.parse import unquote, urlsplit
 from urllib.request import Request, urlopen
 
-from fastapi import FastAPI, Response, status
+from fastapi import FastAPI, HTTPException, Response, status
 
+from udsc2026.api.cache import FallbackCache, InMemoryCache, RedisCache
+from udsc2026.api.orchestrator import RAGOrchestrator
 from udsc2026.config import load_project_config, resolve_config_path
+from udsc2026.contracts.api import QueryRequest, QueryResponse
 from udsc2026.contracts.health import HealthResponse, ReadinessResponse
 from udsc2026.infrastructure.embedding.config import load_embedding_config
 from udsc2026.infrastructure.llm.config import load_llm_config
@@ -29,7 +34,9 @@ from udsc2026.infrastructure.reranker.config import (
 )
 from udsc2026.infrastructure.vector_db.base import validate_collection_name
 from udsc2026.infrastructure.vector_db.factory import resolve_vector_db_config
-from udsc2026.retrieval.hybrid.config import HybridSettings, load_hybrid_settings
+
+if TYPE_CHECKING:
+    from udsc2026.retrieval.hybrid.config import HybridSettings
 
 _READINESS_TIMEOUT_SECONDS = 0.5
 _REDIS_PING = b"*1\r\n$4\r\nPING\r\n"
@@ -57,6 +64,63 @@ _LLM_ENVIRONMENT_FIELDS = (
     "LLM_TIMEOUT_SECONDS",
 )
 _LLM_MODEL_ENVIRONMENT_FIELDS = ("MODEL_LLM_PATH",)
+LOGGER = logging.getLogger(__name__)
+
+
+def _build_orchestrator() -> RAGOrchestrator:
+    """Lazily build heavyweight pipeline dependencies on the first query."""
+    from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient
+    from udsc2026.infrastructure.embedding.config import load_embedding_config
+    from udsc2026.infrastructure.llm.client import LLMClient
+    from udsc2026.infrastructure.reranker.config import load_reranker_settings
+    from udsc2026.infrastructure.vector_db.factory import get_vector_db_adapter
+    from udsc2026.qa.qa_engine import QAEngine
+    from udsc2026.retrieval.dense.dense_retriever import DenseRetriever
+    from udsc2026.retrieval.hybrid.config import load_hybrid_settings
+    from udsc2026.retrieval.hybrid.hybrid_retriever import HybridRetriever
+    from udsc2026.retrieval.reranking.cross_encoder import CrossEncoderReranker
+    from udsc2026.retrieval.sparse.bm25_retriever import BM25Retriever
+
+    config = load_project_config()
+    embedding_config = load_embedding_config()
+    embedding_client = EmbeddingClient(
+        model_path=embedding_config["embedder_model_path"],
+        device=embedding_config.get("device", "cpu"),
+        batch_size=embedding_config.get("batch_size", 32),
+        max_length=embedding_config.get("max_length", 256),
+        normalize_embeddings=embedding_config.get("normalize_embeddings", True),
+    )
+    dense = DenseRetriever(embedding_client, get_vector_db_adapter(config))
+    hybrid_settings = load_hybrid_settings()
+    sparse = BM25Retriever(hybrid_settings.bm25_index_path)
+    sparse.load()
+    retriever = HybridRetriever(
+        dense,
+        sparse,
+        dense_weight=hybrid_settings.dense_weight,
+        sparse_weight=hybrid_settings.sparse_weight,
+        candidate_k=hybrid_settings.candidate_k,
+        min_score=hybrid_settings.min_score,
+    )
+    reranker_settings = load_reranker_settings()
+    reranker = None
+    reranker_version = "disabled"
+    if reranker_settings.enabled:
+        reranker = CrossEncoderReranker(reranker_settings.create_client())
+        reranker_version = reranker_settings.model_name_or_path
+    local_cache = InMemoryCache()
+    redis_url = os.getenv("REDIS_URL", "").strip()
+    cache = (
+        FallbackCache(RedisCache(redis_url), local_cache) if redis_url else local_cache
+    )
+    return RAGOrchestrator(
+        retriever=retriever,
+        reranker=reranker,
+        qa_engine=QAEngine(LLMClient(load_llm_config())),
+        cache=cache,
+        retriever_version="hybrid_v1",
+        reranker_version=reranker_version,
+    )
 
 
 def _package_version() -> str:
@@ -433,8 +497,10 @@ def _readiness_checks() -> dict[str, bool]:
 
     if "hybrid" in project_config or os.getenv("BM25_INDEX_PATH") is not None:
         try:
+            from udsc2026.retrieval.hybrid.config import load_hybrid_settings
+
             hybrid_settings = load_hybrid_settings(config_path)
-        except (OSError, TypeError, ValueError):
+        except (ImportError, OSError, TypeError, ValueError):
             checks["hybrid_config"] = False
         else:
             checks["bm25"] = _check_bm25_artifact(hybrid_settings.bm25_index_path)
@@ -454,13 +520,15 @@ def _readiness_checks() -> dict[str, bool]:
 
 
 def create_app() -> FastAPI:
-    """Create an API shell without loading models or external services."""
+    """Create API routes without loading models or external services at startup."""
     application = FastAPI(
         title="UDSC2026 Legal RAG",
         version=_package_version(),
         docs_url="/docs",
         redoc_url=None,
     )
+    application.state.orchestrator = None
+    application.state.orchestrator_factory = _build_orchestrator
 
     @application.get("/health", response_model=HealthResponse, tags=["system"])
     def health() -> HealthResponse:
@@ -483,6 +551,37 @@ def create_app() -> FastAPI:
                 missing=missing,
             )
         return ReadinessResponse(status="ready", checks=checks)
+
+    @application.post(
+        "/api/v1/query",
+        response_model=QueryResponse,
+        tags=["query"],
+    )
+    @application.post("/query", response_model=QueryResponse, include_in_schema=False)
+    async def query(request: QueryRequest) -> QueryResponse:
+        """Run the RAG pipeline with lazy, injectable dependencies."""
+        orchestrator = cast(RAGOrchestrator | None, application.state.orchestrator)
+        if orchestrator is None:
+            try:
+                factory = cast(
+                    Callable[[], RAGOrchestrator],
+                    application.state.orchestrator_factory,
+                )
+                orchestrator = factory()
+            except (ImportError, OSError, RuntimeError, ValueError) as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="RAG pipeline dependencies are unavailable",
+                ) from exc
+            application.state.orchestrator = orchestrator
+        try:
+            return await orchestrator.answer(request)
+        except (OSError, RuntimeError, TimeoutError, ValueError) as exc:
+            LOGGER.exception("RAG query failed")
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="RAG pipeline could not process the query",
+            ) from exc
 
     return application
 
