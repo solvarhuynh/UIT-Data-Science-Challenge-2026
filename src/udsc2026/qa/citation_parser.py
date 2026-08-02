@@ -28,13 +28,28 @@ logger = logging.getLogger(__name__)
 _BRACKET_PATTERN = re.compile(r"\[([^\[\]]+)\]")
 
 # Matches inline natural-language citations not wrapped in brackets.
-# Captures an optional leading law fragment before "Điều", the article
-# number, and an optional clause.
+# Format A: "Điều X, khoản Y" – article before clause (most common).
+# Note: re.IGNORECASE does not reliably handle Vietnamese diacritical characters,
+# so both lowercase and uppercase forms are listed explicitly.
 _INLINE_PATTERN = re.compile(
-    r"(?:(?P<law_pre>[\w\s\-]+?)\s+)?Điều\s+(?P<article>\d+[a-z]?)"
-    r"(?:[,\s]+Khoản\s+(?P<clause>\d+))?"
-    r"(?:[,\s]+Điểm\s+(?P<point>[a-zđ]))?",
-    re.IGNORECASE | re.UNICODE,
+    r"(?:(?P<law_pre>[\w\s\-]+?)\s+)?(?:[Đđ]i[ềê]u)\s+(?P<article>\d+[a-z]?)"
+    r"(?:[,\s]+[Kk]ho[ảă]n\s+(?P<clause>\d+))?"
+    r"(?:[,\s]+[Đđ]i[ểê]m\s+(?P<point>[a-zđ]))?",
+    re.UNICODE,
+)
+
+# Format B: "khoản X Điều Y" – clause before article (common in BTC warmup answers)
+# e.g. "Căn cứ khoản 2 Điều 38 Luật An toàn vệ sinh lao động năm 2015"
+_INLINE_REVERSED_PATTERN = re.compile(
+    r"[Kk]hoản\s+(?P<clause>\d+)\s+[Đđ]iều\s+(?P<article>\d+[a-z]?)",
+    re.UNICODE,
+)
+
+# Law name patterns: matches the most common Vietnamese legal document prefixes.
+_LAW_NAME_LEADING_RE = re.compile(
+    r"((?:Bộ\s+luật|Luật|Nghị\s+định(?:\s+số)?|Thông\s+tư|Quyết\s+định)"
+    r"[^,.\n\[\]]{3,70})",
+    re.UNICODE,
 )
 
 # Named-group pattern to extract law_name, article, clause, point from
@@ -316,25 +331,21 @@ def _normalize_text(value: str) -> str:
 
 def _citation_display(citation: Citation) -> str:
     """Format a citation as a short human-readable string for logging."""
-    parts = [
-        part
-        for part in (
-            citation.law_name,
-            citation.article,
-            citation.clause,
-            citation.point,
-        )
-        if part
-    ]
+    parts = [p for p in [citation.law_name, citation.article, citation.clause] if p]
     return ", ".join(parts) if parts else "(unknown)"
 
 
 def _extract_inline_citations(text: str) -> list[Citation]:
     """Scan free-form text for natural-language legal references.
 
-    Extracts citations like ``"Theo Bộ luật Lao động 2019, Điều 5, Khoản 1"`` or
-    ``"theo Điều 10 Bộ luật Lao động 2019"`` that do not use bracket
-    notation. Each unique law/article/clause/point locator is returned once.
+    Performs two sub-passes to catch both common Vietnamese citation formats:
+
+    * **Format A** – ``"Điều X, khoản Y ..."`` (article before clause)
+    * **Format B** – ``"khoản X Điều Y ..."`` (clause before article,
+      common in BTC warmup reference answers, e.g.
+      ``"Căn cứ khoản 2 Điều 38 Luật An toàn vệ sinh lao động 2015"``).
+
+    Each unique ``(article, law_name)`` pair is returned once.
 
     Args:
         text: The raw LLM answer string (already confirmed to contain no
@@ -344,62 +355,112 @@ def _extract_inline_citations(text: str) -> list[Citation]:
         Deduplicated list of ``Citation`` objects with ``is_verified=False``.
     """
     citations: list[Citation] = []
-    seen: set[tuple[str, str, str, str]] = set()
+    seen: set[tuple[str, str]] = set()
 
+    # ── Format A: "Điều X, khoản Y" ─────────────────────────────────────
     for match in _INLINE_PATTERN.finditer(text):
-        article_num = match.group("article")
-        article = f"Điều {article_num}"
-
-        clause_num = match.group("clause")
-        clause = f"Khoản {clause_num}" if clause_num else None
-        point_name = match.group("point")
-        point = f"Điểm {point_name}" if point_name else None
-
-        law_name: Optional[str] = None
-
-        # 1. Try the preceding text, for example:
-        # "Theo Bộ luật Lao động 2019, Điều 5".
-        start_pos = match.start()
-        preceding = text[max(0, start_pos - 80) : start_pos]
-        law_lead = re.search(
-            r"((?:Bộ\s+luật|Luật|Nghị\s+định|Thông\s+tư)[^,.\n\[\]]{3,60})",
-            preceding,
-            re.UNICODE,
-        )
-        if law_lead:
-            law_name = law_lead.group(1).strip()
-        else:
-            # 2. Try the trailing text, for example:
-            # "Điều 5 Bộ luật Lao động 2019".
-            end_pos = match.end()
-            trailing = text[end_pos : end_pos + 80]
-            law_trail = re.match(
-                r"[,\s]*((?:Bộ\s+luật|Luật|Nghị\s+định|Thông\s+tư)[^,.\n\[\]]{3,60})",
-                trailing,
-                re.UNICODE,
-            )
-            if law_trail:
-                law_name = law_trail.group(1).strip()
-
-        # Clean up any trailing punctuation/words from law_name
-        if law_name:
-            law_name = re.sub(
-                r"[,\s]+(?:tại|theo|cụ thể)?$", "", law_name, flags=re.IGNORECASE
-            ).strip()
-
-        key = (article, law_name or "", clause or "", point or "")
-        if key in seen:
+        citation = _build_inline_citation(text, match)
+        if citation is None:
             continue
-        seen.add(key)
+        # Dedup on (article, clause, law_name) so that the same article with
+        # different clauses (e.g. "Điều 10, Khoản 1" vs "Điều 10, Khoản 2")
+        # is treated as two distinct citations.
+        key = (citation.article or "", citation.clause or "", citation.law_name or "")
+        if key not in seen:
+            seen.add(key)
+            citations.append(citation)
 
-        citations.append(
-            Citation(
-                law_name=law_name,
-                article=article,
-                clause=clause,
-                point=point,
-                is_verified=False,
+    # ── Format B: "khoản X Điều Y" (reversed order) ──────────────────────
+    for match in _INLINE_REVERSED_PATTERN.finditer(text):
+        article_num = match.group("article")
+        clause_num = match.group("clause")
+        article = f"Điều {article_num}"
+        clause = f"Khoản {clause_num}"
+
+        law_name = _extract_law_name_around(text, match.start(), match.end())
+        key = (article, clause, law_name or "")
+        if key not in seen:
+            seen.add(key)
+            citations.append(
+                Citation(
+                    law_name=law_name,
+                    article=article,
+                    clause=clause,
+                    is_verified=False,
+                )
             )
-        )
 
     return citations
+
+
+def _build_inline_citation(text: str, match: re.Match) -> Optional[Citation]:  # type: ignore[type-arg]
+    """Build a ``Citation`` from a single ``_INLINE_PATTERN`` match.
+
+    Args:
+        text: Full answer text (used to look up surrounding law name).
+        match: Regex match object from ``_INLINE_PATTERN``.
+
+    Returns:
+        ``Citation`` or ``None`` if the match has no recognisable article.
+    """
+    article_num = match.group("article")
+    if not article_num:
+        return None
+    article = f"Điều {article_num}"
+
+    clause_num = match.group("clause")
+    clause = f"Khoản {clause_num}" if clause_num else None
+
+    point_match_str = match.group("point")
+    point = f"Điểm {point_match_str}" if point_match_str else None
+
+    law_name = _extract_law_name_around(text, match.start(), match.end())
+    if law_name:
+        law_name = re.sub(
+            r"[,\s]+(?:tại|theo|cụ thể)?$", "", law_name, flags=re.IGNORECASE
+        ).strip()
+
+    return Citation(
+        law_name=law_name,
+        article=article,
+        clause=clause,
+        point=point,
+        is_verified=False,
+    )
+
+
+def _extract_law_name_around(
+    text: str, start_pos: int, end_pos: int
+) -> Optional[str]:
+    """Extract the law name from text immediately before or after a citation match.
+
+    Searches up to 90 characters before the match for a law name prefix
+    (e.g. ``"Bộ luật Lao động 2019"`` or ``"Nghị định số 87/2018/NĐ-CP"``),
+    then falls back to searching the 90 characters after the match.
+
+    Args:
+        text: Full answer string.
+        start_pos: Start index of the citation match.
+        end_pos: End index of the citation match.
+
+    Returns:
+        Extracted and stripped law name string, or ``None`` if not found.
+    """
+    # 1. Look backwards (e.g. "Theo Bộ luật Lao động 2019, Điều 5")
+    preceding = text[max(0, start_pos - 90) : start_pos]
+    law_lead = _LAW_NAME_LEADING_RE.search(preceding)
+    if law_lead:
+        return law_lead.group(1).strip()
+
+    # 2. Look forwards (e.g. "Điều 5 Bộ luật Lao động 2019")
+    trailing = text[end_pos : end_pos + 90]
+    law_trail = re.match(
+        r"[,\s]*((?:Bộ\s+luật|Luật|Nghị\s+định(?:\s+số)?|Thông\s+tư|Quyết\s+định)"
+        r"[^,.\n\[\]]{3,70})",
+        trailing,
+        re.UNICODE,
+    )
+    if law_trail:
+        return law_trail.group(1).strip()
+
+    return None

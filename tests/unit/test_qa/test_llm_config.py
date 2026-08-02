@@ -54,3 +54,40 @@ def test_llm_config_rejects_unknown_yaml_fields_and_non_finite_values(
     invalid_path.write_text("llm:\n  timeout_seconds: .nan\n", encoding="utf-8")
     with pytest.raises(ValidationError, match="finite number"):
         load_llm_config(invalid_path, environ={})
+
+
+def test_llm_config_quantization_defaults_to_none(tmp_path: Path) -> None:
+    config_path = tmp_path / "base.yaml"
+    config_path.write_text("llm: {}\n", encoding="utf-8")
+
+    config = load_llm_config(config_path, environ={})
+
+    assert config.quantization == "none"
+
+
+def test_llm_config_quantization_accepts_4bit_and_8bit(tmp_path: Path) -> None:
+    config_path = tmp_path / "base.yaml"
+    config_path.write_text("llm: {}\n", encoding="utf-8")
+
+    config = load_llm_config(
+        config_path,
+        environ={"LLM_QUANTIZATION": "4bit"},
+    )
+    assert config.quantization == "4bit"
+
+    config = load_llm_config(
+        config_path,
+        environ={"LLM_QUANTIZATION": "8bit"},
+    )
+    assert config.quantization == "8bit"
+
+
+def test_llm_config_quantization_rejects_unknown_value(tmp_path: Path) -> None:
+    config_path = tmp_path / "base.yaml"
+    config_path.write_text("llm: {}\n", encoding="utf-8")
+
+    with pytest.raises(ValidationError, match="quantization"):
+        load_llm_config(
+            config_path,
+            environ={"LLM_QUANTIZATION": "3bit"},
+        )

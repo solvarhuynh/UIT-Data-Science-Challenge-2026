@@ -14,6 +14,7 @@ _ENVIRONMENT_FIELDS = {
     "LLM_BACKEND": "backend",
     "LLM_DEVICE": "device",
     "LLM_DTYPE": "dtype",
+    "LLM_QUANTIZATION": "quantization",
     "LLM_MAX_NEW_TOKENS": "max_new_tokens",
     "LLM_TEMPERATURE": "temperature",
     "LLM_TOP_P": "top_p",
@@ -62,6 +63,13 @@ class LLMConfig(BaseModel):
     dtype: Literal["bfloat16", "float16", "float32"] = Field(
         default="bfloat16",
         description="Model weight dtype.  bfloat16 is recommended for Qwen3 on CUDA.",
+    )
+    quantization: Literal["none", "4bit", "8bit"] = Field(
+        default="none",
+        description=(
+            "Quantize model weights on load. '4bit'/'8bit' use bitsandbytes so the "
+            "checkpoint fits on small GPUs; 'none' keeps the configured dtype."
+        ),
     )
     max_new_tokens: int = Field(
         default=1024,
