@@ -24,15 +24,13 @@ from udsc2026.evaluation.legal_ir import (  # noqa: E402
     LegalIRReference,
     LegalIRReferenceSet,
     evaluate_legal_ir,
-    evaluate_warmup_any_gold,
     load_warmup,
 )
 from udsc2026.evaluation.legal_ir_submission import (  # noqa: E402
     load_legal_ir_submission,
 )
 
-OFFICIAL_MODE = "official-single-gold"
-WARMUP_MODE = "warmup-any-gold"
+OFFICIAL_MODE = "official-set"
 
 
 def _reject_json_constant(value: str) -> NoReturn:
@@ -71,38 +69,25 @@ def _load_strict_json(path: Path) -> object:
 
 
 def _load_official_references(path: Path) -> list[LegalIRReference]:
-    """Load official references, rejecting every ambiguous multi-gold record."""
+    """Load official one-or-more-gold references from supported strict shapes."""
 
     payload = _load_strict_json(path)
     if isinstance(payload, dict):
         samples = load_warmup(path)
-        multi_gold_ids = [
-            sample.id for sample in samples if len(sample.gold_documents) != 1
+        return [
+            LegalIRReference(
+                id=sample.id,
+                gold_documents=list(sample.gold_documents),
+            )
+            for sample in samples
         ]
-        if multi_gold_ids:
-            preview = ", ".join(multi_gold_ids[:5])
-            if len(multi_gold_ids) > 5:
-                preview += ", ..."
-            raise ValueError(
-                "official single-gold mode requires exactly one gold document "
-                f"for every question; found {len(multi_gold_ids)} ambiguous "
-                f"question(s): {preview}. Use --mode warmup-any-gold explicitly "
-                "for warm-up diagnostics"
-            )
-        references: list[LegalIRReference] = []
-        for sample in samples:
-            (gold_document,) = sample.gold_documents
-            references.append(
-                LegalIRReference(id=sample.id, gold_document=gold_document)
-            )
-        return references
 
     try:
         return list(LegalIRReferenceSet.model_validate(payload, strict=True).root)
     except ValidationError as exc:
         raise ValueError(
             "official references must be a JSON array of exact "
-            "{id, gold_document} objects, or a single-gold warm-up mapping: "
+            "{id, gold_documents} objects, or a warm-up root mapping: "
             f"{exc}"
         ) from exc
 
@@ -216,8 +201,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(
         description=(
-            "Evaluate ranked LegalIR document IDs. Official mode requires one "
-            "gold per question; warmup-any-gold is an explicit diagnostic mode."
+            "Evaluate LegalIR document IDs with official macro Recall (primary) "
+            "and macro Precision (secondary). Multiple gold documents are valid; "
+            "ranking order does not directly affect either set metric."
         )
     )
     parser.add_argument(
@@ -237,17 +223,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--mode",
-        choices=(OFFICIAL_MODE, WARMUP_MODE),
+        choices=(OFFICIAL_MODE,),
         default=OFFICIAL_MODE,
-        help=(
-            "Metric semantics (default: official-single-gold). The warm-up "
-            "any-gold mode must be selected explicitly."
-        ),
+        help="Metric semantics (default and only current mode: official-set).",
     )
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("artifacts/evaluation/legal_ir_report.json"),
+        default=Path("artifacts/task1/evaluation/report.json"),
         help="Atomic JSON report path.",
     )
     return parser
@@ -263,14 +246,11 @@ def run(args: argparse.Namespace) -> LegalIREvaluationReport:
                 f"{args.output} conflicts with {input_path}"
             )
 
-    if args.mode == OFFICIAL_MODE:
-        references = _load_official_references(args.references)
-        predictions = _load_predictions(args.predictions)
-        report = evaluate_legal_ir(references, predictions)
-    else:
-        samples = load_warmup(args.references)
-        predictions = _load_predictions(args.predictions)
-        report = evaluate_warmup_any_gold(samples, predictions)
+    if args.mode != OFFICIAL_MODE:
+        raise ValueError(f"unsupported LegalIR evaluation mode: {args.mode}")
+    references = _load_official_references(args.references)
+    predictions = _load_predictions(args.predictions)
+    report = evaluate_legal_ir(references, predictions)
     _write_report(report, args.output)
     return report
 
@@ -287,8 +267,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     print(
         f"mode={report.evaluation_mode} "
         f"questions={report.aggregate.sample_count} "
-        f"MRR={report.aggregate.mrr:.12f} "
-        f"Recall@3={report.aggregate.recall_at_3:.12f}"
+        f"Recall(primary)={report.aggregate.recall:.12f} "
+        f"Precision(secondary)={report.aggregate.precision:.12f}"
     )
     print(args.output)
     return 0

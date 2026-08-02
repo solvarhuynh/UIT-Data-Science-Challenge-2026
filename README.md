@@ -13,7 +13,9 @@ Không yêu cầu dịch vụ LLM bên ngoài trong baseline.
 
 ## Competition Tasks
 
-- LegalIR: parse dữ liệu pháp luật, truy hồi/rerank ở cấp chunk rồi hợp nhất và xếp hạng `document_id` để chấm MRR/Recall@3.
+- LegalIR: parse dữ liệu pháp luật, truy hồi/rerank ở cấp chunk rồi hợp nhất
+  thành các `document_id`; macro Recall là metric chính và macro Precision là
+  metric phụ/tiebreak, hỗ trợ nhiều gold document cho mỗi câu.
 - LegalQA: sinh câu trả lời dựa trên context truy hồi; METEOR là
   metric chính và ROUGE-L là metric phụ.
 - Evaluation: đo metric phát triển và metric theo từng task; cả LegalIR
@@ -205,7 +207,7 @@ udsc2026/
 | TV2 - Nghĩa | Full Retrieval Specialist | `src/udsc2026/retrieval/dense/`, `sparse/`, `hybrid/`, BKAI bi-encoder, Qdrant/FAISS, BM25 tiếng Việt, Hybrid Fusion | `list[RetrievalHit]` đã normalize score, giữ metadata citation và sẵn sàng cho reranking |
 | TV3 - Quân | QA & LLM Specialist | `src/udsc2026/qa/`, `src/udsc2026/infrastructure/llm/`, `prompts/`, Qwen3, prompt versioning, citation parser, anti-hallucination | `QAResponse` có answer, citation đã validate, prompt version, confidence và warnings |
 | TV4 - Trung Khang | Data & Benchmark Specialist | Legal ETL, parser cấu trúc luật, Unicode cleanup, Parent-Child Chunking, synthetic benchmark Q&A | Chunk/document JSONL sạch, metadata đầy đủ, benchmark dataset |
-| TV5 - Nguyên Khang | Reranking, Evaluation, MLOps & Web UI/UX | Cross-Encoder reranking, LegalIR MRR/Recall@3, LegalQA METEOR/ROUGE-L, Docker, submission writer/validator; Web UI/UX là workstream demo riêng | Kết quả rerank, báo cáo evaluation, `submission.zip` tách riêng cho hai task và giao diện frontend |
+| TV5 - Nguyên Khang | Reranking, Evaluation, MLOps & Web UI/UX | Cross-Encoder reranking, LegalIR macro Recall/Precision multi-gold, LegalQA METEOR/ROUGE-L, Docker, submission writer/validator; Web UI/UX là workstream demo riêng | Kết quả rerank, báo cáo evaluation, `submission.zip` tách riêng cho hai task và giao diện frontend |
 
 Frontend không nằm trên đường chấm điểm và không phải điều kiện để nộp Warm-up;
 phần Web UI/UX trong phân công TV5 phục vụ demo/tích hợp sản phẩm riêng.

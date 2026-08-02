@@ -96,7 +96,8 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Validate the exact {question_id: {answer: [document_ids]}} LegalIR "
             "submission structure. Optional manifests enable question coverage, "
-            "corpus membership, and full-ranking checks."
+            "corpus membership, and legacy full-ranking checks. Empty answer "
+            "arrays are valid under the organizer contract."
         )
     )
     parser.add_argument(
@@ -122,8 +123,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--require-complete-ranking",
         action="store_true",
         help=(
-            "Require every question to rank the full corpus. This requires "
-            "--corpus-manifest."
+            "Legacy diagnostic only: require every question to rank the full "
+            "corpus. The organizer does not require this and it can reduce "
+            "Precision. Requires --corpus-manifest."
         ),
     )
     return parser

@@ -120,7 +120,6 @@ def test_json_and_zip_writers_reject_legacy_array_contract(tmp_path: Path) -> No
         ({"q": "not-an-object"}, "must be a JSON object"),
         ({"q": {"documents": ["1", "2", "3"]}}, "exactly.*answer"),
         ({"q": {}}, "exactly.*answer"),
-        ({"q": {"answer": ["1", "2"]}}, "3 items"),
         (
             {"q": {"answer": ["1", "2", "3"], "scores": []}},
             "exactly.*answer",
@@ -160,6 +159,18 @@ def test_validation_rejects_malformed_items(
 def test_model_directly_uses_strict_strings_and_forbids_extra_fields() -> None:
     with pytest.raises(ValidationError):
         LegalIRSubmissionItem.model_validate({"id": 1, "documents": ["1", "2", "3"]})
+
+
+@pytest.mark.parametrize(
+    "documents",
+    [[], ["doc-1"], ["doc-1", "doc-2"]],
+)
+def test_validation_accepts_variable_length_and_empty_answers(
+    documents: list[str],
+) -> None:
+    items = validate_legal_ir_submission({"q": {"answer": documents}})
+
+    assert items == [LegalIRSubmissionItem(id="q", documents=tuple(documents))]
 
 
 def test_decoded_payload_requires_answer_to_be_a_real_json_array() -> None:
@@ -234,9 +245,13 @@ def test_completion_sorts_unordered_corpus_deterministically() -> None:
     assert completed[0].documents == ("d3", "d1", "d2", "d4")
 
 
-def test_completion_rejects_too_small_corpus_and_unknown_prefix_id() -> None:
-    with pytest.raises(LegalIRSubmissionError, match="at least three"):
-        complete_legal_ir_rankings(_payload(), ["doc-1", "doc-2"])
+def test_completion_accepts_small_corpus_and_rejects_unknown_prefix_id() -> None:
+    completed = complete_legal_ir_rankings(
+        {"q": {"answer": []}},
+        ["doc-1", "doc-2"],
+    )
+
+    assert completed[0].documents == ("doc-1", "doc-2")
     with pytest.raises(LegalIRSubmissionError, match="outside the corpus"):
         complete_legal_ir_rankings(
             {"q": {"answer": ["d1", "d2", "unknown"]}},
@@ -258,6 +273,20 @@ def test_json_writer_is_deterministic_compact_utf8_and_atomic(tmp_path: Path) ->
     assert b" " not in first
     assert json.loads(first) == _payload()
     assert not list(output.parent.glob(f".{output.name}.*.tmp"))
+
+
+def test_json_and_zip_round_trip_empty_answer(tmp_path: Path) -> None:
+    payload = {"q": {"answer": []}}
+    json_output = tmp_path / "submission.json"
+    zip_output = tmp_path / "submission.zip"
+
+    write_legal_ir_submission_json(payload, json_output)
+    write_legal_ir_submission_zip(payload, zip_output)
+
+    assert load_legal_ir_submission(json_output)[0].documents == ()
+    assert load_legal_ir_submission(zip_output)[0].documents == ()
+    with ZipFile(zip_output) as archive:
+        assert json.loads(archive.read(SUBMISSION_MEMBER_NAME)) == payload
 
 
 def test_json_writer_can_complete_every_ranking(tmp_path: Path) -> None:

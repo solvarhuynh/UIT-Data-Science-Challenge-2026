@@ -1,7 +1,7 @@
 # TV5 — Báo cáo tiến độ Reranking, Evaluation và MLOps
 
 > Thành viên phụ trách: Nguyên Khang
-> Ngày cập nhật: 01/08/2026
+> Ngày cập nhật: 02/08/2026
 > Phạm vi: Reranking, Evaluation Benchmark, Submission adapter, MLOps và
 > quality gates
 
@@ -24,16 +24,16 @@ inference thực tế còn phụ thuộc bàn giao từ TV2/TV3/TV4.
 | Cross-Encoder reranking | Hoàn thành | Có `rerank_score`, `final_score`, `rank`, giữ score gốc |
 | Hybrid → Reranker wiring | Hoàn thành | Có thể bật/tắt bằng cấu hình, kiểm tra candidate pool |
 | Bảo toàn citation metadata | Hoàn thành | Giữ chunk, văn bản, điều, khoản, điểm, nguồn và parent |
-| Evaluation metrics | Hoàn thành | LegalIR MRR/Recall@3; LegalQA METEOR/ROUGE-L diagnostic; metric phát triển và latency |
+| Evaluation metrics | Hoàn thành | LegalIR macro Recall/Precision multi-gold; LegalQA METEOR/ROUGE-L diagnostic; metric phát triển và latency |
 | Report trước/sau rerank | Hoàn thành | JSON và Markdown, kiểm tra dataset fingerprint |
 | LegalIR submission | Hoàn thành | Strict JSON/ZIP writer, corpus/coverage validator, deterministic và atomic |
 | LegalQA submission | Hoàn thành | Strict object JSON/ZIP writer, exact coverage, raw-answer preservation và release empty-answer gate |
 | Warm-up audit | Hoàn thành | Task 1: 500 câu/37 câu multi-gold; Task 2: 500 câu cùng Unicode/whitespace diagnostics |
-| Codabench contract | Đã đối chiếu 01/08/2026 | Hai task đều dùng root object keyed by question ID; scoring source vẫn ẩn |
+| Codabench contract | Đã đối chiếu 02/08/2026 | Hai task đều dùng root object keyed by question ID; scoring source vẫn ẩn |
 | BM25 artifact | Hoàn thành | Build/load deterministic, ghi file atomically |
 | Docker và Compose | Hoàn thành cấu hình | Chờ Docker daemon để build/run image thực tế |
 | Smoke test và quality gates | Hoàn thành | Backend, frontend, security và config đều có lệnh kiểm tra |
-| Warm-up local evaluation | Hoàn thành pipeline | Chờ ranking thật; 37 multi-gold cần BTC xác nhận semantics |
+| Warm-up local evaluation | Hoàn thành pipeline | Chờ ranking thật; 37 câu multi-gold được tính trực tiếp theo contract mới |
 | Cross-Encoder inference thật | Chưa thể chạy | Chờ checkpoint/model artifact chính thức |
 
 ## 2. Những task đã hoàn thành
@@ -99,9 +99,10 @@ nguồn khác.
 - Từ chối trường hợp reranker sửa text, citation, metadata hoặc score gốc.
 - Xuất report JSON và Markdown bằng thao tác ghi file atomic.
 - Bổ sung evaluator Task 1 ở cấp `document_id`, tách khỏi metric chunk-level cũ.
-- Tính đúng official MRR trên toàn ranking và Recall@3 dạng hit-rate.
-- Có per-query gold rank/contribution, exact ID coverage và dataset fingerprint.
-- Tách `official_single_gold` khỏi `warmup_any_gold`; không tự lấy `answer[0]`.
+- Tính macro Recall là metric chính và macro Precision là metric phụ/tiebreak.
+- Hỗ trợ trực tiếp nhiều gold document cho một câu; không tự lấy `answer[0]`.
+- Có per-query intersection/Recall/Precision, exact ID coverage và dataset
+  fingerprint.
 - Collapse chunk hits sang unique document IDs theo best-ranked chunk.
 - Bổ sung loader/evaluator Task 2 với exact ID coverage, raw-text preservation,
   dataset/prediction fingerprint và per-query diagnostics.
@@ -111,8 +112,8 @@ nguồn khác.
 
 ### 2.6. Submission adapter
 
-- LegalIR: validate exact `{id, documents}`, tối thiểu ba document, duplicate,
-  question coverage, corpus membership và optional full ranking.
+- LegalIR: validate exact `{id, documents}`, duplicate, question coverage và
+  corpus membership; không ép tối thiểu ba document hoặc full ranking.
 - LegalIR: đọc/ghi JSON hoặc ZIP chỉ có `submission.json`, deterministic và
   atomic; không extract archive.
 - LegalQA: chuyển prediction nội bộ `{id, answer}` sang wire object
@@ -189,7 +190,7 @@ nguồn khác.
 | `scripts/evaluate.py` | CLI đánh giá prediction đã tạo sẵn |
 | `scripts/write_submission.py` | CLI xuất submission CSV |
 | `scripts/audit_legal_ir_warmup.py` | Audit schema, labels, Unicode và multi-gold |
-| `scripts/evaluate_legal_ir.py` | CLI MRR/Recall@3 document-level |
+| `scripts/evaluate_legal_ir.py` | CLI macro Recall/Precision multi-gold document-level |
 | `scripts/write_legal_ir_submission.py` | Tạo JSON/ZIP Task 1 |
 | `scripts/validate_legal_ir_submission.py` | Validate artifact trước upload |
 | `scripts/make_warmup_smoke_submission.py` | Oracle label-leaking có guard, chỉ smoke local |
@@ -328,18 +329,16 @@ Các mục sau chưa thể tuyên bố hoàn thành thực chiến vì thiếu �
 1. Chạy Cross-Encoder thật trên checkpoint chính thức.
 2. Benchmark trên dataset/test set BTC chính thức.
 3. Đo latency thực trên GPU hoặc hạ tầng thi đấu.
-4. Nhận giải thích chính thức cho 37 record Task 1 Warm-up có nhiều gold.
-5. Build và chạy toàn bộ Docker stack khi Docker daemon/model/index sẵn sàng.
-6. Chạy live pipeline để tự sinh prediction before/after thay vì chỉ đánh giá
+4. Build và chạy toàn bộ Docker stack khi Docker daemon/model/index sẵn sàng.
+5. Chạy live pipeline để tự sinh prediction before/after thay vì chỉ đánh giá
    prediction file đã tạo sẵn.
-7. Nhận full corpus manifest để validate document IDs; xác nhận top-K hay full
-   ranking với BTC. Quy mô 10.000 × 8.500 cần writer streaming nếu full ranking
-   là bắt buộc, vì giới hạn an toàn hiện tại là 128 MiB JSON.
-8. Tích hợp retrieval vào HTTP query endpoint; hiện backend mới có
-   `/health` và `/ready`.
-9. Đối chiếu exact implementation/parameters METEOR và ROUGE-L với scorer BTC;
+6. Nhận full corpus manifest để validate document IDs và tune threshold/top-K
+   theo macro Recall/Precision; không nối toàn bộ corpus theo mặc định.
+7. Kiểm thử endpoint `/api/v1/query` mới của TV1 với model/index thật; contract
+   HTTP đã có nhưng runtime end-to-end vẫn phụ thuộc retrieval và QA artifacts.
+8. Đối chiếu exact implementation/parameters METEOR và ROUGE-L với scorer BTC;
    điểm Task 2 hiện chỉ là diagnostic có gắn profile.
-10. Nhận answer model thật từ TV3 để chạy error analysis Task 2; oracle Warm-up
+9. Nhận answer model thật từ TV3 để chạy error analysis Task 2; oracle Warm-up
     chỉ kiểm tra plumbing và tuyệt đối không được upload.
 
 Khi TV2/TV4 bàn giao corpus và ranking thật, TV5 dùng contract hiện có để chạy

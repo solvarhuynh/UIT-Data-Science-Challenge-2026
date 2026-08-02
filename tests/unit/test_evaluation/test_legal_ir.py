@@ -19,15 +19,14 @@ from udsc2026.evaluation.legal_ir import (
     WarmupDataset,
     WarmupSample,
     evaluate_legal_ir,
+    evaluate_warmup,
     evaluate_warmup_any_gold,
+    legal_ir_precision,
     legal_ir_prediction_from_hits,
-    legal_ir_recall_at_3,
-    legal_ir_reciprocal_rank,
+    legal_ir_recall,
     load_legal_ir_question_ids,
     load_warmup,
     normalize_legal_ir_query,
-    warmup_any_gold_recall_at_3,
-    warmup_any_gold_reciprocal_rank,
 )
 
 
@@ -37,13 +36,13 @@ def _write_json(path: Path, payload: object) -> None:
 
 def _official_fixture() -> tuple[list[LegalIRReference], list[LegalIRPrediction]]:
     references = [
-        LegalIRReference(id="q1", gold_document="gold-1"),
-        LegalIRReference(id="q2", gold_document="gold-2"),
-        LegalIRReference(id="q3", gold_document="gold-3"),
-        LegalIRReference(id="q4", gold_document="gold-4"),
+        LegalIRReference(id="q1", gold_documents=["gold-1", "gold-1b"]),
+        LegalIRReference(id="q2", gold_documents=["gold-2"]),
+        LegalIRReference(id="q3", gold_documents=["gold-3", "gold-3b"]),
+        LegalIRReference(id="q4", gold_documents=["gold-4"]),
     ]
     predictions = [
-        LegalIRPrediction(id="q1", documents=["gold-1", "a", "b"]),
+        LegalIRPrediction(id="q1", documents=["gold-1", "a", "gold-1b"]),
         LegalIRPrediction(id="q2", documents=["a", "gold-2", "b"]),
         LegalIRPrediction(id="q3", documents=["a", "b", "c", "gold-3"]),
         LegalIRPrediction(id="q4", documents=["a", "b", "c"]),
@@ -204,19 +203,25 @@ def test_prediction_and_reference_contracts_are_strict() -> None:
     with pytest.raises(ValidationError, match="unique IDs"):
         LegalIRPrediction(id="q", documents=["doc", "doc"])
     with pytest.raises(ValidationError, match="surrounding whitespace"):
-        LegalIRReference(id="q", gold_document=" doc ")
+        LegalIRReference(id="q", gold_documents=[" doc "])
     with pytest.raises(ValidationError, match="control characters"):
         LegalIRPrediction(id="q\x00log", documents=[])
     with pytest.raises(ValidationError, match="control characters"):
         LegalIRPrediction(id="q", documents=["doc\u0085log"])
     with pytest.raises(ValidationError, match="Extra inputs"):
         LegalIRReference.model_validate(
-            {"id": "q", "gold_document": "doc", "answer": "extra"}
+            {"id": "q", "gold_documents": ["doc"], "answer": "extra"}
         )
     with pytest.raises(ValidationError):
-        LegalIRReference.model_validate({"id": "q", "gold_document": ["doc"]})
+        LegalIRReference.model_validate({"id": "q", "gold_documents": [1]})
+    with pytest.raises(ValidationError, match="unique IDs"):
+        LegalIRReference(id="q", gold_documents=["doc", "doc"])
     with pytest.raises(ValidationError, match="Unicode scalar"):
-        LegalIRReference(id="q-\ud800", gold_document="doc")
+        LegalIRReference(id="q-\ud800", gold_documents=["doc"])
+
+    legacy = LegalIRReference(id="q", gold_document="doc")
+    assert legacy.gold_documents == ["doc"]
+    assert legacy.model_dump() == {"id": "q", "gold_documents": ["doc"]}
 
 
 def test_prediction_and_reference_root_sets_reject_duplicate_question_ids() -> None:
@@ -230,8 +235,8 @@ def test_prediction_and_reference_root_sets_reject_duplicate_question_ids() -> N
     with pytest.raises(ValidationError, match="duplicate question ID"):
         LegalIRReferenceSet(
             root=[
-                LegalIRReference(id="q", gold_document="a"),
-                LegalIRReference(id="q", gold_document="b"),
+                LegalIRReference(id="q", gold_documents=["a"]),
+                LegalIRReference(id="q", gold_documents=["b"]),
             ]
         )
     with pytest.raises(ValidationError, match="must not be empty"):
@@ -293,38 +298,47 @@ def test_chunk_hit_adapter_rejects_ambiguous_handoff() -> None:
         )
 
 
-def test_official_metric_fixture_has_expected_mrr_and_recall_at_3() -> None:
+def test_official_metric_fixture_has_expected_macro_recall_and_precision() -> None:
     references, predictions = _official_fixture()
 
     report = evaluate_legal_ir(references, predictions)
 
-    assert report.evaluation_mode == "official_single_gold"
+    assert report.schema_version == "legal-ir-evaluation-v2"
+    assert report.evaluation_mode == "official_set"
+    assert report.metric_priority == ("recall", "precision")
     assert report.aggregate.sample_count == 4
-    assert report.aggregate.multi_gold_sample_count == 0
-    assert report.aggregate.mrr == pytest.approx(0.4375)
-    assert report.aggregate.recall_at_3 == pytest.approx(0.5)
-    assert [item.gold_rank for item in report.per_query] == [1, 2, 4, None]
-    assert [item.reciprocal_rank for item in report.per_query] == [1.0, 0.5, 0.25, 0.0]
-    assert [item.hit_at_3 for item in report.per_query] == [True, True, False, False]
-    assert report.per_query[2].top_3_documents == ["a", "b", "c"]
-    assert report.per_query[3].matched_gold_document is None
+    assert report.aggregate.multi_gold_sample_count == 2
+    assert report.aggregate.recall == pytest.approx(0.625)
+    assert report.aggregate.precision == pytest.approx(0.3125)
+    assert [item.relevant_count for item in report.per_query] == [2, 1, 2, 1]
+    assert [item.predicted_count for item in report.per_query] == [3, 3, 4, 3]
+    assert [item.relevant_retrieved_count for item in report.per_query] == [2, 1, 1, 0]
+    assert report.per_query[0].matched_documents == ["gold-1", "gold-1b"]
+    assert report.per_query[2].missed_gold_documents == ["gold-3b"]
+    assert report.per_query[2].false_positive_documents == ["a", "b", "c"]
+    assert report.per_query[3].matched_documents == []
 
 
-def test_official_metric_functions_handle_rank_and_absence() -> None:
-    assert legal_ir_reciprocal_rank(["a", "gold"], "gold") == 0.5
-    assert legal_ir_reciprocal_rank(["a"], "gold") == 0.0
-    assert legal_ir_recall_at_3(["a", "b", "gold"], "gold") == 1.0
-    assert legal_ir_recall_at_3(["a", "b", "c", "gold"], "gold") == 0.0
+def test_official_metric_functions_use_sets_and_handle_empty_predictions() -> None:
+    gold = ["gold-a", "gold-b"]
+    assert legal_ir_recall(["x", "gold-a"], gold) == 0.5
+    assert legal_ir_precision(["x", "gold-a"], gold) == 0.5
+    assert legal_ir_recall(["gold-b", "x", "gold-a"], gold) == 1.0
+    assert legal_ir_precision(["gold-b", "x", "gold-a"], gold) == pytest.approx(2 / 3)
+    assert legal_ir_recall([], gold) == 0.0
+    assert legal_ir_precision([], gold) == 0.0
 
 
 @pytest.mark.parametrize(
     ("documents", "gold", "error"),
     [
-        (["same", "same"], "gold", ValueError),
-        ([""], "gold", ValueError),
-        ([1], "gold", TypeError),
-        ("gold", "gold", TypeError),
-        (["gold"], 1, TypeError),
+        (["same", "same"], ["gold"], ValueError),
+        ([""], ["gold"], ValueError),
+        ([1], ["gold"], TypeError),
+        ("gold", ["gold"], TypeError),
+        (["gold"], [1], TypeError),
+        (["gold"], [], ValueError),
+        (["gold"], ["gold", "gold"], ValueError),
     ],
 )
 def test_official_metric_functions_reject_ambiguous_inputs(
@@ -332,8 +346,9 @@ def test_official_metric_functions_reject_ambiguous_inputs(
     gold: object,
     error: type[Exception],
 ) -> None:
-    with pytest.raises(error):
-        legal_ir_reciprocal_rank(documents, gold)  # type: ignore[arg-type]
+    for metric in (legal_ir_recall, legal_ir_precision):
+        with pytest.raises(error):
+            metric(documents, gold)  # type: ignore[arg-type]
 
 
 def test_official_evaluation_aligns_by_id_and_fingerprints_references() -> None:
@@ -342,7 +357,7 @@ def test_official_evaluation_aligns_by_id_and_fingerprints_references() -> None:
     reordered_predictions = evaluate_legal_ir(references, list(reversed(predictions)))
     changed = evaluate_legal_ir(
         [
-            references[0].model_copy(update={"gold_document": "changed"}),
+            references[0].model_copy(update={"gold_documents": ["changed"]}),
             *references[1:],
         ],
         predictions,
@@ -354,7 +369,7 @@ def test_official_evaluation_aligns_by_id_and_fingerprints_references() -> None:
 
 
 def test_official_evaluation_rejects_duplicate_missing_and_unexpected_ids() -> None:
-    references = [LegalIRReference(id="q1", gold_document="gold")]
+    references = [LegalIRReference(id="q1", gold_documents=["gold"])]
     with pytest.raises(ValueError, match="duplicate question ID in references"):
         evaluate_legal_ir(
             [references[0], references[0]],
@@ -382,8 +397,16 @@ def test_evaluation_revalidates_nested_lists_mutated_after_model_creation() -> N
     prediction.documents.append("a")
     with pytest.raises(ValueError, match="unique IDs"):
         evaluate_legal_ir(
-            [LegalIRReference(id="q", gold_document="gold")],
+            [LegalIRReference(id="q", gold_documents=["gold"])],
             [prediction],
+        )
+
+    reference = LegalIRReference(id="q", gold_documents=["gold"])
+    reference.gold_documents.append("gold")
+    with pytest.raises(ValueError, match="unique IDs"):
+        evaluate_legal_ir(
+            [reference],
+            [LegalIRPrediction(id="q", documents=[])],
         )
 
     sample = WarmupSample(
@@ -400,7 +423,7 @@ def test_evaluation_revalidates_nested_lists_mutated_after_model_creation() -> N
         )
 
 
-def test_warmup_any_gold_accepts_best_ranked_answer_without_becoming_official() -> None:
+def test_warmup_compatibility_entry_point_uses_official_set_metrics() -> None:
     sample = WarmupSample(
         id="q",
         raw_question="Câu hỏi?",
@@ -412,20 +435,15 @@ def test_warmup_any_gold_accepts_best_ranked_answer_without_becoming_official() 
         documents=["wrong", "second", "first"],
     )
 
-    report = evaluate_warmup_any_gold([sample], [prediction])
+    report = evaluate_warmup([sample], [prediction])
+    legacy_report = evaluate_warmup_any_gold([sample], [prediction])
 
-    assert report.evaluation_mode == "warmup_any_gold"
+    assert report.evaluation_mode == "official_set"
+    assert legacy_report == report
     assert report.aggregate.multi_gold_sample_count == 1
-    assert report.aggregate.mrr == 0.5
-    assert report.aggregate.recall_at_3 == 1.0
-    assert report.per_query[0].matched_gold_document == "second"
-    assert (
-        warmup_any_gold_reciprocal_rank(prediction.documents, sample.gold_documents)
-        == 0.5
-    )
-    assert (
-        warmup_any_gold_recall_at_3(prediction.documents, sample.gold_documents) == 1.0
-    )
+    assert report.aggregate.recall == 1.0
+    assert report.aggregate.precision == pytest.approx(2 / 3)
+    assert report.per_query[0].matched_documents == ["second", "first"]
 
 
 def test_warmup_fingerprint_includes_preserved_question_source() -> None:
@@ -453,21 +471,24 @@ def test_report_contract_rejects_forged_aggregate() -> None:
     diagnostic = LegalIRQueryDiagnostic(
         id="q",
         gold_documents=["gold"],
-        matched_gold_document="gold",
-        gold_rank=1,
-        reciprocal_rank=1.0,
-        hit_at_3=True,
-        top_3_documents=["gold"],
-        predicted_document_count=1,
+        predicted_documents=["gold"],
+        matched_documents=["gold"],
+        missed_gold_documents=[],
+        false_positive_documents=[],
+        relevant_count=1,
+        predicted_count=1,
+        relevant_retrieved_count=1,
+        recall=1.0,
+        precision=1.0,
     )
-    with pytest.raises(ValidationError, match="aggregate MRR"):
+    with pytest.raises(ValidationError, match="aggregate Recall"):
         LegalIREvaluationReport(
-            evaluation_mode="official_single_gold",
+            evaluation_mode="official_set",
             dataset_fingerprint="0" * 64,
             aggregate=LegalIRAggregate(
                 sample_count=1,
-                mrr=0.0,
-                recall_at_3=1.0,
+                recall=0.0,
+                precision=1.0,
             ),
             per_query=[diagnostic],
         )

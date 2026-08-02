@@ -41,18 +41,18 @@ def _run(script: str, *arguments: object) -> subprocess.CompletedProcess[str]:
     )
 
 
-def _official_references() -> list[dict[str, str]]:
+def _official_references() -> list[dict[str, object]]:
     return [
-        {"id": "q1", "gold_document": "gold-1"},
-        {"id": "q2", "gold_document": "gold-2"},
-        {"id": "q3", "gold_document": "gold-3"},
-        {"id": "q4", "gold_document": "gold-4"},
+        {"id": "q1", "gold_documents": ["gold-1", "gold-1b"]},
+        {"id": "q2", "gold_documents": ["gold-2"]},
+        {"id": "q3", "gold_documents": ["gold-3", "gold-3b"]},
+        {"id": "q4", "gold_documents": ["gold-4"]},
     ]
 
 
 def _official_predictions() -> list[dict[str, object]]:
     return [
-        {"id": "q1", "documents": ["gold-1", "a", "b"]},
+        {"id": "q1", "documents": ["gold-1", "a", "gold-1b"]},
         {"id": "q2", "documents": ["a", "gold-2", "b"]},
         {"id": "q3", "documents": ["a", "b", "c", "gold-3"]},
         {"id": "q4", "documents": ["a", "b", "c"]},
@@ -105,8 +105,8 @@ def test_evaluate_internal_and_official_inputs_are_exact_and_deterministic(
         report,
     )
     assert first.returncode == 0, first.stderr
-    assert "MRR=0.437500000000" in first.stdout
-    assert "Recall@3=0.500000000000" in first.stdout
+    assert "Recall(primary)=0.625000000000" in first.stdout
+    assert "Precision(secondary)=0.312500000000" in first.stdout
     first_bytes = report.read_bytes()
 
     second = _run(
@@ -121,17 +121,24 @@ def test_evaluate_internal_and_official_inputs_are_exact_and_deterministic(
     assert second.returncode == 0, second.stderr
     assert report.read_bytes() == first_bytes
     decoded = json.loads(first_bytes)
-    assert decoded["evaluation_mode"] == "official_single_gold"
+    assert decoded["schema_version"] == "legal-ir-evaluation-v2"
+    assert decoded["evaluation_mode"] == "official_set"
+    assert decoded["metric_priority"] == ["recall", "precision"]
     assert decoded["aggregate"] == {
-        "mrr": 0.4375,
-        "multi_gold_sample_count": 0,
-        "recall_at_3": 0.5,
+        "multi_gold_sample_count": 2,
+        "precision": 0.3125,
+        "recall": 0.625,
         "sample_count": 4,
     }
-    assert [item["gold_rank"] for item in decoded["per_query"]] == [1, 2, 4, None]
+    assert [item["relevant_retrieved_count"] for item in decoded["per_query"]] == [
+        2,
+        1,
+        1,
+        0,
+    ]
 
 
-def test_evaluate_warmup_any_gold_is_explicit_and_never_selects_first_only(
+def test_evaluate_warmup_multi_gold_is_official_by_default(
     tmp_path: Path,
 ) -> None:
     warmup = tmp_path / "warmup.json"
@@ -146,7 +153,7 @@ def test_evaluate_warmup_any_gold_is_explicit_and_never_selects_first_only(
         [{"id": "q", "documents": ["gold-b", "x", "y"]}],
     )
 
-    strict = _run(
+    evaluated = _run(
         "evaluate_legal_ir.py",
         "--references",
         warmup,
@@ -155,12 +162,15 @@ def test_evaluate_warmup_any_gold_is_explicit_and_never_selects_first_only(
         "--output",
         report,
     )
-    assert strict.returncode == 2
-    assert "exactly one gold" in strict.stderr
-    assert "warmup-any-gold" in strict.stderr
-    assert not report.exists()
+    assert evaluated.returncode == 0, evaluated.stderr
+    decoded = json.loads(report.read_text(encoding="utf-8"))
+    assert decoded["evaluation_mode"] == "official_set"
+    assert decoded["aggregate"]["recall"] == 0.5
+    assert decoded["aggregate"]["precision"] == pytest.approx(1 / 3)
+    assert decoded["aggregate"]["multi_gold_sample_count"] == 1
+    assert decoded["per_query"][0]["matched_documents"] == ["gold-b"]
 
-    diagnostic = _run(
+    retired_mode = _run(
         "evaluate_legal_ir.py",
         "--references",
         warmup,
@@ -171,19 +181,15 @@ def test_evaluate_warmup_any_gold_is_explicit_and_never_selects_first_only(
         "--output",
         report,
     )
-    assert diagnostic.returncode == 0, diagnostic.stderr
-    decoded = json.loads(report.read_text(encoding="utf-8"))
-    assert decoded["evaluation_mode"] == "warmup_any_gold"
-    assert decoded["aggregate"]["mrr"] == 1.0
-    assert decoded["aggregate"]["multi_gold_sample_count"] == 1
-    assert decoded["per_query"][0]["matched_gold_document"] == "gold-b"
+    assert retired_mode.returncode == 2
+    assert "invalid choice" in retired_mode.stderr
 
 
 def test_evaluate_rejects_coverage_errors_and_malicious_zip(tmp_path: Path) -> None:
     references = tmp_path / "references.json"
     predictions = tmp_path / "bad.zip"
     report = tmp_path / "report.json"
-    _write_json(references, [{"id": "q", "gold_document": "gold"}])
+    _write_json(references, [{"id": "q", "gold_documents": ["gold"]}])
     with ZipFile(predictions, "w") as archive:
         archive.writestr(
             "../submission.json",
@@ -225,7 +231,7 @@ def test_evaluate_refuses_input_output_collision_without_modifying_input(
 ) -> None:
     references = tmp_path / "references.json"
     predictions = tmp_path / "submission.json"
-    _write_json(references, [{"id": "q", "gold_document": "gold"}])
+    _write_json(references, [{"id": "q", "gold_documents": ["gold"]}])
     _write_json(
         predictions,
         [{"id": "q", "documents": ["gold", "a", "b"]}],
@@ -381,6 +387,44 @@ def test_writer_and_validator_accept_question_only_phase_mapping(
     )
     assert validated.returncode == 0, validated.stderr
     assert json.loads(validated.stdout)["question_count"] == 2
+
+
+def test_writer_and_validator_accept_empty_answer_array(tmp_path: Path) -> None:
+    candidate = tmp_path / "candidate.json"
+    questions = tmp_path / "questions.json"
+    corpus = tmp_path / "corpus.json"
+    output = tmp_path / "submission.zip"
+    _write_json(candidate, [{"id": "q", "documents": []}])
+    _write_json(questions, ["q"])
+    _write_json(corpus, ["d1", "d2"])
+
+    written = _run(
+        "write_legal_ir_submission.py",
+        "--input",
+        candidate,
+        "--questions",
+        questions,
+        "--corpus-manifest",
+        corpus,
+        "--output",
+        output,
+    )
+    assert written.returncode == 0, written.stderr
+    assert "min_answer_documents=0" in written.stdout
+
+    validated = _run(
+        "validate_legal_ir_submission.py",
+        "--input",
+        output,
+        "--questions",
+        questions,
+        "--corpus-manifest",
+        corpus,
+    )
+    assert validated.returncode == 0, validated.stderr
+    assert json.loads(validated.stdout)["min_documents_per_question"] == 0
+    with ZipFile(output) as archive:
+        assert json.loads(archive.read("submission.json")) == {"q": {"answer": []}}
 
 
 def test_write_submission_guards_completion_and_all_input_collisions(
@@ -602,7 +646,7 @@ def test_audit_refuses_to_overwrite_warmup(tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(not ACTUAL_WARMUP.is_file(), reason="local warmup.json unavailable")
-def test_actual_warmup_audit_and_official_mode_guard(tmp_path: Path) -> None:
+def test_actual_warmup_audit_and_official_set_evaluation(tmp_path: Path) -> None:
     output = tmp_path / "actual-audit.json"
     audit = _run(
         "audit_legal_ir_warmup.py",
@@ -621,17 +665,30 @@ def test_actual_warmup_audit_and_official_mode_guard(tmp_path: Path) -> None:
     assert report["whitespace_normalization_question_count"] == 22
     assert report["non_nfc_question_count"] == 5
 
-    strict = _run(
+    warmup_payload = json.loads(ACTUAL_WARMUP.read_text(encoding="utf-8"))
+    predictions = tmp_path / "oracle-predictions.json"
+    _write_json(
+        predictions,
+        [
+            {"id": question_id, "documents": record["answer"]}
+            for question_id, record in warmup_payload.items()
+        ],
+    )
+    evaluation_output = tmp_path / "evaluation.json"
+    evaluated = _run(
         "evaluate_legal_ir.py",
         "--references",
         ACTUAL_WARMUP,
         "--predictions",
-        tmp_path / "unused.json",
+        predictions,
         "--output",
-        tmp_path / "unused-report.json",
+        evaluation_output,
     )
-    assert strict.returncode == 2
-    assert "found 37 ambiguous question(s)" in strict.stderr
+    assert evaluated.returncode == 0, evaluated.stderr
+    evaluation = json.loads(evaluation_output.read_text(encoding="utf-8"))
+    assert evaluation["aggregate"]["multi_gold_sample_count"] == 37
+    assert evaluation["aggregate"]["recall"] == 1.0
+    assert evaluation["aggregate"]["precision"] == 1.0
 
 
 def test_oracle_smoke_requires_acknowledgement_and_dangerous_filename(
@@ -694,11 +751,16 @@ def test_oracle_smoke_requires_acknowledgement_and_dangerous_filename(
     assert output.read_bytes() == first_bytes
     with ZipFile(output) as archive:
         payload = json.loads(archive.read("submission.json"))
-    assert payload["q1"]["answer"] == ["d2", "d1", "d3", "d4"]
-    assert all(len(item["answer"]) == 4 for item in payload.values())
+    assert payload == {
+        "q1": {"answer": ["d2", "d1"]},
+        "q2": {"answer": ["d3"]},
+        "q3": {"answer": ["d4"]},
+    }
 
 
-def test_oracle_smoke_rejects_too_few_labeled_documents(tmp_path: Path) -> None:
+def test_oracle_smoke_accepts_fewer_than_three_labeled_documents(
+    tmp_path: Path,
+) -> None:
     warmup = tmp_path / "warmup.json"
     output = tmp_path / "oracle_DO_NOT_SUBMIT.zip"
     _write_json(
@@ -717,6 +779,9 @@ def test_oracle_smoke_rejects_too_few_labeled_documents(tmp_path: Path) -> None:
         output,
         "--acknowledge-label-leakage",
     )
-    assert result.returncode == 2
-    assert "fewer than three" in result.stderr
-    assert not output.exists()
+    assert result.returncode == 0, result.stderr
+    with ZipFile(output) as archive:
+        assert json.loads(archive.read("submission.json")) == {
+            "q1": {"answer": ["d1"]},
+            "q2": {"answer": ["d2"]},
+        }

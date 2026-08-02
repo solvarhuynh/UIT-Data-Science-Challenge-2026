@@ -187,8 +187,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--append-missing-corpus",
         action="store_true",
         help=(
-            "Append every unranked corpus ID in manifest order while preserving "
-            "the model ranking prefix. Requires --corpus-manifest."
+            "Legacy diagnostic only: append every unranked corpus ID in manifest "
+            "order while preserving the model ranking prefix. This is not required "
+            "by the organizer and can reduce Precision. Requires --corpus-manifest."
         ),
     )
     parser.add_argument(
@@ -256,8 +257,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 2
     print(
         f"valid questions={len(items)} "
-        f"min_documents={min(len(item.documents) for item in items)} "
-        f"max_documents={max(len(item.documents) for item in items)}"
+        f"min_answer_documents={min(len(item.documents) for item in items)} "
+        f"max_answer_documents={max(len(item.documents) for item in items)}"
     )
     print(args.output)
     return 0

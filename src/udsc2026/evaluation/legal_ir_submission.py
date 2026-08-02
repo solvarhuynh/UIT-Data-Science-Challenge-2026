@@ -4,7 +4,11 @@ The competition-facing payload is deliberately kept separate from the generic
 LegalQA CSV writer.  A valid payload is a JSON object whose keys are question
 identifiers and whose values contain exactly one ``answer`` ranking::
 
-    {"question-id": {"answer": ["doc-1", "doc-2", "doc-3"]}}
+    {"question-id": {"answer": ["doc-1", "doc-2"]}}
+
+The organizer contract does not impose a minimum answer length.  In
+particular, ``{"answer": []}`` is a valid prediction and receives zero
+precision/recall for that question under the published metric definition.
 
 This module validates untrusted JSON/ZIP input without extracting archives,
 supports exact question/corpus checks, and writes artifacts atomically.
@@ -22,10 +26,9 @@ from pathlib import Path
 from typing import IO, Any, BinaryIO, Iterator, List, Optional, Set, Tuple
 from zipfile import ZIP_DEFLATED, ZIP_STORED, BadZipFile, ZipFile, ZipInfo
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr, field_validator
+from pydantic import BaseModel, ConfigDict, StrictStr, field_validator
 
 SUBMISSION_MEMBER_NAME = "submission.json"
-MIN_DOCUMENTS_PER_QUESTION = 3
 DEFAULT_MAX_JSON_BYTES = 128 * 1024 * 1024
 DEFAULT_MAX_ZIP_BYTES = 256 * 1024 * 1024
 _SUPPORTED_ZIP_COMPRESSION = {ZIP_STORED, ZIP_DEFLATED}
@@ -42,7 +45,7 @@ class LegalIRSubmissionItem(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     id: StrictStr
-    documents: Tuple[StrictStr, ...] = Field(min_length=MIN_DOCUMENTS_PER_QUESTION)
+    documents: Tuple[StrictStr, ...]
 
     @field_validator("id")
     @classmethod
@@ -140,6 +143,7 @@ def validate_legal_ir_submission(
     Args:
         payload: Decoded JSON value.  The root must be a non-empty object mapping
             each question ID to exactly ``{"answer": [document IDs...]}``.
+            The answer array may be empty.
             A non-empty sequence containing only already validated
             :class:`LegalIRSubmissionItem` objects is also accepted as an
             internal hand-off between the loader, completion helper, and writer;
@@ -304,7 +308,9 @@ def complete_legal_ir_rankings(
     """Append missing corpus IDs to each valid ranking without changing its prefix.
 
     Sequence inputs preserve corpus order.  Sets and frozensets are sorted
-    lexicographically so repeated runs remain deterministic.
+    lexicographically so repeated runs remain deterministic.  This is retained
+    as an explicit legacy/diagnostic helper only: completing a ranking is not an
+    organizer requirement and can reduce the secondary Precision score.
     """
 
     corpus_ids = _materialize_ids(
@@ -312,10 +318,6 @@ def complete_legal_ir_rankings(
         label="corpus document ids",
         sort_unordered=True,
     )
-    if len(corpus_ids) < MIN_DOCUMENTS_PER_QUESTION:
-        raise LegalIRSubmissionError(
-            "corpus must contain at least three unique document ids"
-        )
     items = validate_legal_ir_submission(
         payload,
         expected_question_ids=expected_question_ids,
@@ -809,7 +811,6 @@ def package_legal_ir_submission(
 __all__ = [
     "DEFAULT_MAX_JSON_BYTES",
     "DEFAULT_MAX_ZIP_BYTES",
-    "MIN_DOCUMENTS_PER_QUESTION",
     "SUBMISSION_MEMBER_NAME",
     "LegalIRSubmissionError",
     "LegalIRSubmissionItem",

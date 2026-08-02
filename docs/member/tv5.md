@@ -18,7 +18,7 @@ không viết QA prompt.
 - [x] Giữ score gốc từ Dense/Sparse/Hybrid và bổ sung `rerank_score`, `final_score`, `rank`.
 - [x] Viết Evaluation Benchmark trong `src/udsc2026/evaluation/` để đo metric phát triển MRR, Recall@K, ROUGE-L, latency; metric LegalIR chính thức ở cấp `document_id`; và METEOR/ROUGE-L diagnostic cho LegalQA.
 - [x] Hỗ trợ benchmark synthetic của TV4 và adapter riêng cho `data/task1/warmup.json`, `data/task2/warmup.json`; test set public/private dùng cùng contract theo từng task khi BTC phát hành.
-- [x] Viết `scripts/evaluate.py` cho benchmark chung, `scripts/evaluate_legal_ir.py` cho MRR/Recall@3 và `scripts/evaluate_legal_qa.py` cho diagnostic METEOR/ROUGE-L.
+- [x] Viết `scripts/evaluate.py` cho benchmark chung, `scripts/evaluate_legal_ir.py` cho macro Recall/Precision multi-gold và `scripts/evaluate_legal_qa.py` cho diagnostic METEOR/ROUGE-L.
 - [x] Viết writer/validator `submission.zip` → `submission.json` đúng schema object chính thức của LegalIR và LegalQA; giữ CSV tổng quát dưới nhãn legacy, không dùng để nộp task nào.
 - [x] Tạo Multi-stage Docker Image cho backend: stage build dependencies, stage runtime gọn nhẹ.
 - [x] Không copy model weights, raw data hoặc vector store lớn vào Docker image; mount bằng volume hoặc cấu hình path.

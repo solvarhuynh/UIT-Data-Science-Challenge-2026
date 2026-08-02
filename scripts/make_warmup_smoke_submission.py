@@ -96,21 +96,13 @@ def run(args: argparse.Namespace) -> list[LegalIRSubmissionItem]:
     labeled_document_ids = sorted(
         {document_id for sample in samples for document_id in sample.gold_documents}
     )
-    if len(labeled_document_ids) < 3:
-        raise ValueError(
-            "warm-up labels contain fewer than three unique document IDs; "
-            "cannot satisfy the submission contract"
+    items = [
+        LegalIRSubmissionItem(
+            id=sample.id,
+            documents=tuple(sample.gold_documents),
         )
-    items: list[LegalIRSubmissionItem] = []
-    for sample in samples:
-        answer_set = set(sample.gold_documents)
-        ranking = list(sample.gold_documents)
-        ranking.extend(
-            document_id
-            for document_id in labeled_document_ids
-            if document_id not in answer_set
-        )
-        items.append(LegalIRSubmissionItem(id=sample.id, documents=tuple(ranking)))
+        for sample in samples
+    ]
 
     question_ids = [sample.id for sample in samples]
     write_legal_ir_submission_zip(
@@ -123,7 +115,6 @@ def run(args: argparse.Namespace) -> list[LegalIRSubmissionItem]:
         args.output,
         expected_question_ids=question_ids,
         allowed_document_ids=labeled_document_ids,
-        require_complete_ranking=True,
     )
 
 
@@ -141,7 +132,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     print("=" * 79, file=sys.stderr)
     print(
         f"local-only oracle questions={len(items)} "
-        f"documents_per_question={len(items[0].documents)}"
+        f"min_answer_documents={min(len(item.documents) for item in items)} "
+        f"max_answer_documents={max(len(item.documents) for item in items)}"
     )
     print(args.output)
     return 0

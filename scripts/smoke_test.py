@@ -272,9 +272,11 @@ def _check_evaluation(_: Path, __: str) -> str:
         "evaluate_legal_qa",
         "evaluate_predictions",
         "evaluate_retrieval",
-        "evaluate_warmup_any_gold",
+        "evaluate_warmup",
         "generate_synthetic_benchmark",
+        "legal_ir_precision",
         "legal_ir_prediction_from_hits",
+        "legal_ir_recall",
         "load_benchmark",
         "load_legal_chunks",
         "load_legal_ir_submission",
@@ -315,24 +317,25 @@ def _check_evaluation(_: Path, __: str) -> str:
     prediction_type = getattr(module, "LegalIRPrediction")
     report = getattr(module, "evaluate_legal_ir")(
         [
-            reference_type(id="q1", gold_document="gold-1"),
-            reference_type(id="q2", gold_document="gold-2"),
+            reference_type(id="q1", gold_documents=["gold-1", "gold-2"]),
+            reference_type(id="q2", gold_documents=["gold-3"]),
         ],
         [
-            prediction_type(id="q1", documents=["gold-1", "a", "b"]),
-            prediction_type(id="q2", documents=["a", "b", "c", "gold-2"]),
+            prediction_type(id="q1", documents=["gold-1", "noise-1"]),
+            prediction_type(id="q2", documents=["gold-3", "noise-2"]),
         ],
     )
-    if report.aggregate.mrr != 0.625 or report.aggregate.recall_at_3 != 0.5:
-        raise RuntimeError("LegalIR document-level metrics returned unexpected values")
+    if report.aggregate.recall != 0.75 or report.aggregate.precision != 0.5:
+        raise RuntimeError("LegalIR set metrics returned unexpected values")
+    if tuple(report.metric_priority) != ("recall", "precision"):
+        raise RuntimeError("LegalIR metric priority does not match the organizer")
     items = getattr(module, "validate_legal_ir_submission")(
-        {"q1": {"answer": ["gold-1", "a", "b"]}},
+        {"q1": {"answer": []}},
         expected_question_ids=["q1"],
         allowed_document_ids=["gold-1", "a", "b"],
-        require_complete_ranking=True,
     )
-    if items[0].documents != ("gold-1", "a", "b"):
-        raise RuntimeError("LegalIR submission validation changed ranking order")
+    if items[0].documents != ():
+        raise RuntimeError("LegalIR submission validation rejected an empty answer")
     try:
         getattr(module, "validate_legal_ir_submission")(
             [{"id": "q1", "documents": ["gold-1", "a", "b"]}]

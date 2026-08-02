@@ -5,7 +5,7 @@ phạm vi bàn giao tại
 [`docs/tv5_baocaotiendo.md`](tv5_baocaotiendo.md).
 
 Hai bộ dữ liệu Warm-up canonical trong repo là `data/task1/warmup.json` cho
-LegalIR và `data/task2/warmup.json` cho LegalQA. Contract, anomaly và lệnh vận
+LegalIR và `data/task2/warmup.json` cho LegalQA. Contract, audit và lệnh vận
 hành riêng của từng task nằm tại:
 
 - [`docs/tv5_legalir_warmup.md`](tv5_legalir_warmup.md);
@@ -243,7 +243,15 @@ dùng tập document IDs xuất hiện trong gold Warm-up thay cho corpus thật
 
 Wire format trong `submission.json` là JSON object keyed theo question ID:
 `{"<question_id>": {"answer": ["<document_id>", "..."]}}`. Array record dùng
-trong prediction nội bộ không phải schema nộp Codabench.
+trong prediction nội bộ không phải schema nộp Codabench. Mỗi câu có thể có
+nhiều gold document; metric chính thức là macro Recall, còn macro Precision là
+metric phụ/tiebreak. BTC không còn yêu cầu tối thiểu ba document trong mỗi
+`answer`.
+
+Không nối full corpus hoặc bù document chỉ để tăng độ dài danh sách. TV5 cần
+chọn threshold/top-K trên dev để ưu tiên Recall nhưng vẫn kiểm soát Precision;
+mọi document thừa đều làm giảm Precision. Thứ tự giảm dần relevance vẫn được
+giữ trong JSON dù hai metric chính thức so sánh theo tập document.
 
 ### 5.2. LegalQA chính thức
 
@@ -347,9 +355,10 @@ luôn ở `artifacts/task1/`; Task 2 luôn ở `artifacts/task2/`.
 2. TV2 collapse chunk ranking sang document ranking bằng
    `legal_ir_prediction_from_hits()` và ghi `artifacts/task1/predictions.json`.
 3. TV5 kiểm tra exact question coverage, duplicate, corpus membership, rồi so
-   sánh baseline/rerank trên cùng sample, gold policy và fingerprint.
-4. Dùng MRR và Recall@3 document-level để quyết định model; metric chunk-level
-   chỉ dùng debug retrieval nội bộ.
+   sánh baseline/rerank trên cùng sample, toàn bộ multi-gold labels và
+   fingerprint.
+4. Dùng macro Recall document-level để quyết định model và macro Precision làm
+   metric phụ/tiebreak; metric chunk-level chỉ dùng debug retrieval nội bộ.
 5. Ghi/validate `artifacts/task1/submission.zip`, xác nhận wire format object,
    rồi lưu checksum, config và report trước khi bàn giao nhóm trưởng.
 

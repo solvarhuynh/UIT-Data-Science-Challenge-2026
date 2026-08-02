@@ -1,9 +1,10 @@
-"""Strict document-level evaluation contracts for DSC2026 LegalIR.
+"""Strict document-set evaluation contracts for DSC2026 LegalIR.
 
-The competition metric is single-gold document MRR with Recall@3 as a
-question-level hit rate.  The supplied warm-up file currently contains some
-questions with more than one answer, so its permissive any-gold evaluation is
-kept deliberately separate from the official metric path.
+The official Task 1 metrics are macro Recall (primary) and macro Precision
+(secondary).  Each question may have more than one relevant document, and the
+metric treats both gold and predicted document IDs as sets.  Ranked retrieval
+order is retained in prediction artifacts for submission compatibility, but it
+    does not directly affect either official score.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from typing import Annotated, Any, List, Literal, NoReturn, Sequence
 
 from pydantic import (
     AfterValidator,
+    AliasChoices,
     BaseModel,
     ConfigDict,
     Field,
@@ -193,8 +195,8 @@ def legal_ir_prediction_from_hits(
     The first occurrence of a document is its best-ranked chunk, so retaining
     that occurrence preserves reranker order. Explicit hit ranks, when present,
     must agree with list position. The returned ranking can be empty for local
-    evaluation; the competition submission validator separately enforces at
-    least three documents.
+    evaluation and submission. Under the published metric, an empty prediction
+    contributes zero Recall and zero Precision for that question.
     """
 
     if max_documents is not None and (
@@ -227,10 +229,35 @@ def legal_ir_prediction_from_hits(
 
 
 class LegalIRReference(LegalIRModel):
-    """Official single-gold reference for one competition question."""
+    """Official one-or-more-gold reference for one competition question.
+
+    ``gold_document`` remains a validation-only alias for old programmatic
+    callers.  Reports and serialized references always use the canonical
+    plural ``gold_documents`` field.
+    """
 
     id: Identifier
-    gold_document: Identifier
+    gold_documents: List[Identifier] = Field(
+        min_length=1,
+        validation_alias=AliasChoices("gold_documents", "gold_document"),
+    )
+
+    @field_validator("gold_documents", mode="before")
+    @classmethod
+    def accept_legacy_single_gold(cls, value: object) -> object:
+        """Canonicalize the former scalar field without weakening ID checks."""
+
+        if isinstance(value, str):
+            return [value]
+        return value
+
+    @field_validator("gold_documents")
+    @classmethod
+    def validate_unique_gold_documents(cls, values: List[str]) -> List[str]:
+        """Reject duplicate relevance labels before applying set metrics."""
+
+        _reject_duplicate_values(values, label="gold_documents")
+        return values
 
 
 def _validate_unique_sample_ids(
@@ -263,7 +290,7 @@ class LegalIRPredictionSet(RootModel[List[LegalIRPrediction]]):
 
 
 class LegalIRReferenceSet(RootModel[List[LegalIRReference]]):
-    """Strict JSON-array contract for official single-gold references."""
+    """Strict JSON-array contract for official multi-gold references."""
 
     model_config = ConfigDict(strict=True, validate_assignment=True)
 
@@ -282,8 +309,8 @@ class LegalIRAggregate(LegalIRModel):
 
     sample_count: int = Field(ge=1)
     multi_gold_sample_count: int = Field(default=0, ge=0)
-    mrr: float = Field(ge=0, le=1, allow_inf_nan=False)
-    recall_at_3: float = Field(ge=0, le=1, allow_inf_nan=False)
+    recall: float = Field(ge=0, le=1, allow_inf_nan=False)
+    precision: float = Field(ge=0, le=1, allow_inf_nan=False)
 
     @model_validator(mode="after")
     def validate_gold_count(self) -> "LegalIRAggregate":
@@ -295,64 +322,110 @@ class LegalIRAggregate(LegalIRModel):
 
 
 class LegalIRQueryDiagnostic(LegalIRModel):
-    """Auditable rank and contribution for one evaluated question."""
+    """Auditable set counts and score contributions for one question."""
 
     id: Identifier
     gold_documents: List[Identifier] = Field(min_length=1)
-    matched_gold_document: Identifier | None = None
-    gold_rank: int | None = Field(default=None, ge=1)
-    reciprocal_rank: float = Field(ge=0, le=1, allow_inf_nan=False)
-    hit_at_3: bool
-    top_3_documents: List[Identifier] = Field(max_length=3)
-    predicted_document_count: int = Field(ge=0)
+    predicted_documents: List[Identifier] = Field(default_factory=list)
+    matched_documents: List[Identifier] = Field(default_factory=list)
+    missed_gold_documents: List[Identifier] = Field(default_factory=list)
+    false_positive_documents: List[Identifier] = Field(default_factory=list)
+    relevant_count: int = Field(ge=1)
+    predicted_count: int = Field(ge=0)
+    relevant_retrieved_count: int = Field(ge=0)
+    recall: float = Field(ge=0, le=1, allow_inf_nan=False)
+    precision: float = Field(ge=0, le=1, allow_inf_nan=False)
 
-    @field_validator("gold_documents", "top_3_documents")
+    @field_validator(
+        "gold_documents",
+        "predicted_documents",
+        "matched_documents",
+        "missed_gold_documents",
+        "false_positive_documents",
+    )
     @classmethod
     def validate_unique_document_lists(cls, values: List[str]) -> List[str]:
-        """Keep diagnostic labels and rankings unambiguous."""
+        """Keep diagnostic set members unambiguous."""
 
         _reject_duplicate_values(values, label="document list")
         return values
 
     @model_validator(mode="after")
-    def validate_rank_contribution(self) -> "LegalIRQueryDiagnostic":
-        """Ensure rank, hit flag, and reciprocal contribution agree."""
+    def validate_set_contribution(self) -> "LegalIRQueryDiagnostic":
+        """Ensure declared set counts and metric contributions agree."""
 
-        if self.predicted_document_count < len(self.top_3_documents):
-            raise ValueError("predicted_document_count is smaller than top_3_documents")
-        expected_top_count = min(3, self.predicted_document_count)
-        if len(self.top_3_documents) != expected_top_count:
-            raise ValueError("top_3_documents length does not match prediction count")
-        if self.gold_rank is None:
-            if self.matched_gold_document is not None:
-                raise ValueError("matched_gold_document requires gold_rank")
-            if self.reciprocal_rank != 0 or self.hit_at_3:
-                raise ValueError("an unmatched gold must contribute zero and no hit")
-            return self
+        if self.relevant_count != len(self.gold_documents):
+            raise ValueError("relevant_count must equal len(gold_documents)")
+        gold = set(self.gold_documents)
+        predicted = set(self.predicted_documents)
+        expected_matched = [
+            document for document in self.predicted_documents if document in gold
+        ]
+        expected_missed = [
+            document for document in self.gold_documents if document not in predicted
+        ]
+        expected_false_positives = [
+            document for document in self.predicted_documents if document not in gold
+        ]
+        if self.matched_documents != expected_matched:
+            raise ValueError(
+                "matched_documents must be predicted gold documents in prediction order"
+            )
+        if self.missed_gold_documents != expected_missed:
+            raise ValueError(
+                "missed_gold_documents must be unretrieved gold documents in gold order"
+            )
+        if self.false_positive_documents != expected_false_positives:
+            raise ValueError(
+                "false_positive_documents must be non-gold predictions "
+                "in prediction order"
+            )
+        if self.relevant_retrieved_count != len(self.matched_documents):
+            raise ValueError(
+                "relevant_retrieved_count must equal len(matched_documents)"
+            )
+        if self.predicted_count != len(self.predicted_documents):
+            raise ValueError("predicted_count must equal len(predicted_documents)")
 
-        if self.matched_gold_document not in self.gold_documents:
-            raise ValueError("matched_gold_document must be a gold document")
-        expected_rr = 1.0 / self.gold_rank
+        expected_recall = self.relevant_retrieved_count / self.relevant_count
+        expected_precision = (
+            self.relevant_retrieved_count / self.predicted_count
+            if self.predicted_count
+            else 0.0
+        )
         if not math.isclose(
-            self.reciprocal_rank,
-            expected_rr,
+            self.recall,
+            expected_recall,
             rel_tol=0.0,
             abs_tol=1e-15,
         ):
-            raise ValueError("reciprocal_rank must equal one divided by gold_rank")
-        if self.hit_at_3 != (self.gold_rank <= 3):
-            raise ValueError("hit_at_3 must agree with gold_rank")
+            raise ValueError(
+                "recall must equal relevant_retrieved_count/relevant_count"
+            )
+        if not math.isclose(
+            self.precision,
+            expected_precision,
+            rel_tol=0.0,
+            abs_tol=1e-15,
+        ):
+            raise ValueError(
+                "precision must equal relevant_retrieved_count/predicted_count"
+            )
         return self
 
 
-EvaluationMode = Literal["official_single_gold", "warmup_any_gold"]
+EvaluationMode = Literal["official_set"]
 
 
 class LegalIREvaluationReport(LegalIRModel):
     """Deterministic aggregate report plus per-question diagnostics."""
 
-    schema_version: Literal["legal-ir-evaluation-v1"] = "legal-ir-evaluation-v1"
+    schema_version: Literal["legal-ir-evaluation-v2"] = "legal-ir-evaluation-v2"
     evaluation_mode: EvaluationMode
+    metric_priority: tuple[Literal["recall"], Literal["precision"]] = (
+        "recall",
+        "precision",
+    )
     dataset_fingerprint: Fingerprint
     aggregate: LegalIRAggregate
     per_query: List[LegalIRQueryDiagnostic] = Field(min_length=1)
@@ -370,30 +443,26 @@ class LegalIREvaluationReport(LegalIRModel):
         )
         if self.aggregate.multi_gold_sample_count != expected_multi_gold_count:
             raise ValueError("aggregate multi_gold_sample_count must match per_query")
-        if self.evaluation_mode == "official_single_gold" and any(
-            len(item.gold_documents) != 1 for item in self.per_query
-        ):
-            raise ValueError("official_single_gold requires exactly one gold per query")
-        expected_mrr = sum(item.reciprocal_rank for item in self.per_query) / len(
+        expected_recall = sum(item.recall for item in self.per_query) / len(
             self.per_query
         )
-        expected_recall = sum(item.hit_at_3 for item in self.per_query) / len(
+        expected_precision = sum(item.precision for item in self.per_query) / len(
             self.per_query
         )
         if not math.isclose(
-            self.aggregate.mrr,
-            expected_mrr,
-            rel_tol=0.0,
-            abs_tol=1e-15,
-        ):
-            raise ValueError("aggregate MRR must equal the per-query mean")
-        if not math.isclose(
-            self.aggregate.recall_at_3,
+            self.aggregate.recall,
             expected_recall,
             rel_tol=0.0,
             abs_tol=1e-15,
         ):
-            raise ValueError("aggregate Recall@3 must equal the per-query hit rate")
+            raise ValueError("aggregate Recall must equal the per-query mean")
+        if not math.isclose(
+            self.aggregate.precision,
+            expected_precision,
+            rel_tol=0.0,
+            abs_tol=1e-15,
+        ):
+            raise ValueError("aggregate Precision must equal the per-query mean")
         return self
 
 
@@ -616,11 +685,48 @@ def _first_relevant_rank(
     return None, None
 
 
+def _legal_ir_set_counts(
+    documents: Sequence[str],
+    gold_documents: Sequence[str],
+) -> tuple[int, int, int]:
+    """Return validated relevant, predicted, and intersection cardinalities."""
+
+    prediction = _validated_ranked_documents(documents)
+    gold = _validated_gold_documents(gold_documents)
+    return len(gold), len(prediction), len(set(gold).intersection(prediction))
+
+
+def legal_ir_recall(
+    documents: Sequence[str],
+    gold_documents: Sequence[str],
+) -> float:
+    """Compute official per-query set Recall."""
+
+    relevant_count, _, relevant_retrieved_count = _legal_ir_set_counts(
+        documents,
+        gold_documents,
+    )
+    return relevant_retrieved_count / relevant_count
+
+
+def legal_ir_precision(
+    documents: Sequence[str],
+    gold_documents: Sequence[str],
+) -> float:
+    """Compute official per-query set Precision, returning zero for no predictions."""
+
+    _, predicted_count, relevant_retrieved_count = _legal_ir_set_counts(
+        documents,
+        gold_documents,
+    )
+    return relevant_retrieved_count / predicted_count if predicted_count > 0 else 0.0
+
+
 def legal_ir_reciprocal_rank(
     documents: Sequence[str],
     gold_document: str,
 ) -> float:
-    """Compute official single-gold reciprocal rank for one question."""
+    """Compute the retired single-gold rank diagnostic for legacy callers."""
 
     ranking = _validated_ranked_documents(documents)
     if not isinstance(gold_document, str):
@@ -634,7 +740,7 @@ def legal_ir_recall_at_3(
     documents: Sequence[str],
     gold_document: str,
 ) -> float:
-    """Return the official per-question Top-3 hit indicator as 0.0 or 1.0."""
+    """Return the retired single-gold Top-3 diagnostic for legacy callers."""
 
     ranking = _validated_ranked_documents(documents)
     if not isinstance(gold_document, str):
@@ -647,7 +753,7 @@ def warmup_any_gold_reciprocal_rank(
     documents: Sequence[str],
     gold_documents: Sequence[str],
 ) -> float:
-    """Compute reciprocal rank accepting any warm-up answer as relevant."""
+    """Compute the retired any-gold reciprocal-rank diagnostic."""
 
     ranking = _validated_ranked_documents(documents)
     gold = _validated_gold_documents(gold_documents)
@@ -659,7 +765,7 @@ def warmup_any_gold_recall_at_3(
     documents: Sequence[str],
     gold_documents: Sequence[str],
 ) -> float:
-    """Return one when any warm-up answer occurs in the first three results."""
+    """Compute the retired any-gold Top-3 hit diagnostic."""
 
     ranking = _validated_ranked_documents(documents)
     gold = set(_validated_gold_documents(gold_documents))
@@ -711,7 +817,7 @@ def _fingerprint(mode: EvaluationMode, references: Sequence[dict[str, Any]]) -> 
 
     serialized = json.dumps(
         {
-            "schema_version": "legal-ir-evaluation-v1",
+            "schema_version": "legal-ir-evaluation-v2",
             "evaluation_mode": mode,
             "references": references,
         },
@@ -728,18 +834,36 @@ def _build_diagnostic(
     gold_documents: Sequence[str],
     prediction: LegalIRPrediction,
 ) -> LegalIRQueryDiagnostic:
-    """Calculate one auditable diagnostic from an already aligned prediction."""
+    """Calculate one auditable set diagnostic from an aligned prediction."""
 
-    rank, matched = _first_relevant_rank(prediction.documents, gold_documents)
+    validated_gold = _validated_gold_documents(gold_documents)
+    validated_prediction = _validated_ranked_documents(prediction.documents)
+    gold_set = set(validated_gold)
+    matched = [document for document in validated_prediction if document in gold_set]
+    predicted_set = set(validated_prediction)
+    missed_gold = [
+        document for document in validated_gold if document not in predicted_set
+    ]
+    false_positives = [
+        document for document in validated_prediction if document not in gold_set
+    ]
+    relevant_count = len(validated_gold)
+    predicted_count = len(validated_prediction)
+    relevant_retrieved_count = len(matched)
     return LegalIRQueryDiagnostic(
         id=question_id,
-        gold_documents=list(gold_documents),
-        matched_gold_document=matched,
-        gold_rank=rank,
-        reciprocal_rank=1.0 / rank if rank is not None else 0.0,
-        hit_at_3=rank is not None and rank <= 3,
-        top_3_documents=prediction.documents[:3],
-        predicted_document_count=len(prediction.documents),
+        gold_documents=validated_gold,
+        predicted_documents=validated_prediction,
+        matched_documents=matched,
+        missed_gold_documents=missed_gold,
+        false_positive_documents=false_positives,
+        relevant_count=relevant_count,
+        predicted_count=predicted_count,
+        relevant_retrieved_count=relevant_retrieved_count,
+        recall=relevant_retrieved_count / relevant_count,
+        precision=(
+            relevant_retrieved_count / predicted_count if predicted_count else 0.0
+        ),
     )
 
 
@@ -760,8 +884,8 @@ def _build_report(
             multi_gold_sample_count=sum(
                 len(item.gold_documents) > 1 for item in diagnostics
             ),
-            mrr=sum(item.reciprocal_rank for item in diagnostics) / count,
-            recall_at_3=sum(item.hit_at_3 for item in diagnostics) / count,
+            recall=sum(item.recall for item in diagnostics) / count,
+            precision=sum(item.precision for item in diagnostics) / count,
         ),
         per_query=diagnostics,
     )
@@ -771,7 +895,7 @@ def evaluate_legal_ir(
     references: Sequence[LegalIRReference],
     predictions: Sequence[LegalIRPrediction],
 ) -> LegalIREvaluationReport:
-    """Evaluate predictions using the official single-gold document metrics."""
+    """Evaluate predictions using official macro set Recall and Precision."""
 
     if not references:
         raise ValueError("references must not be empty")
@@ -779,6 +903,7 @@ def evaluate_legal_ir(
     for index, reference in enumerate(references):
         if not isinstance(reference, LegalIRReference):
             raise TypeError(f"references[{index}] must be a LegalIRReference")
+        _validated_gold_documents(reference.gold_documents)
         typed_references.append(reference)
     _validate_unique_sample_ids(typed_references, label="references")
 
@@ -788,13 +913,13 @@ def evaluate_legal_ir(
     diagnostics = [
         _build_diagnostic(
             reference.id,
-            [reference.gold_document],
+            reference.gold_documents,
             prediction_by_id[reference.id],
         )
         for reference in typed_references
     ]
     return _build_report(
-        mode="official_single_gold",
+        mode="official_set",
         reference_payload=[
             reference.model_dump(mode="json") for reference in typed_references
         ],
@@ -802,16 +927,11 @@ def evaluate_legal_ir(
     )
 
 
-def evaluate_warmup_any_gold(
+def evaluate_warmup(
     samples: Sequence[WarmupSample],
     predictions: Sequence[LegalIRPrediction],
 ) -> LegalIREvaluationReport:
-    """Evaluate warm-up data by accepting any listed answer as relevant.
-
-    This mode is an analysis aid for the supplied multi-answer warm-up file.  It
-    is intentionally named and reported differently from the official
-    single-gold competition metric.
-    """
+    """Evaluate a typed Warm-up dataset with official set metrics."""
 
     if not samples:
         raise ValueError("samples must not be empty")
@@ -838,10 +958,19 @@ def evaluate_warmup_any_gold(
         for sample in typed_samples
     ]
     return _build_report(
-        mode="warmup_any_gold",
+        mode="official_set",
         reference_payload=[sample.model_dump(mode="json") for sample in typed_samples],
         diagnostics=diagnostics,
     )
+
+
+def evaluate_warmup_any_gold(
+    samples: Sequence[WarmupSample],
+    predictions: Sequence[LegalIRPrediction],
+) -> LegalIREvaluationReport:
+    """Call :func:`evaluate_warmup` for backward import compatibility."""
+
+    return evaluate_warmup(samples, predictions)
 
 
 __all__ = [
@@ -855,8 +984,11 @@ __all__ = [
     "WarmupDataset",
     "WarmupSample",
     "evaluate_legal_ir",
+    "evaluate_warmup",
     "evaluate_warmup_any_gold",
+    "legal_ir_precision",
     "legal_ir_prediction_from_hits",
+    "legal_ir_recall",
     "legal_ir_recall_at_3",
     "legal_ir_reciprocal_rank",
     "load_legal_ir_question_ids",

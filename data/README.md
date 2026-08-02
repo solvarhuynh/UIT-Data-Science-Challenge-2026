@@ -28,9 +28,15 @@ ID là chuỗi opaque. Không ép sang số, không sắp xếp lại theo giá 
 không ghi đè dữ liệu gốc sau khi normalize. Reference answer chỉ dùng cho
 evaluation/audit; artifact oracle phải mang nhãn `DO_NOT_SUBMIT`.
 
+Task 1 hỗ trợ multi-gold: toàn bộ danh sách `answer` là tập gold hợp lệ, gồm cả
+37 câu Warm-up có từ 2 đến 4 document. Metric chính là macro Recall và metric
+phụ/tiebreak là macro Precision; không lấy riêng `answer[0]`, không ép prediction
+đủ ba document và không nối toàn bộ corpus theo mặc định.
+
 Hai file Warm-up đều là root mapping có cả `question` và gold `answer`; chúng
-không được nộp trực tiếp. Theo contract Codabench đã kiểm tra ngày 01/08/2026,
+không được nộp trực tiếp. Theo contract Codabench đã kiểm tra ngày 02/08/2026,
 wire submission cũng là root object keyed by question ID nhưng mỗi value chỉ
-có `answer`: Task 1 là danh sách ranked document IDs, Task 2 là answer string.
+có `answer`: Task 1 là danh sách document IDs không trùng, vẫn giữ thứ tự giảm
+dần relevance; Task 2 là answer string.
 Writer trong `scripts/` chịu trách nhiệm chuyển prediction nội bộ sang đúng
 shape và loại field `question`/trace trước khi đóng ZIP.
