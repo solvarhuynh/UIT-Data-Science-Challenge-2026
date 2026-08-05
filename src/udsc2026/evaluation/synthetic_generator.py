@@ -252,7 +252,7 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("data/processed/benchmarks/synthetic_qa.jsonl"),
+        default=Path("tests/fixtures/benchmarks/synthetic_qa.jsonl"),
         help="Benchmark JSONL output path.",
     )
     parser.add_argument("--count", type=int, default=100, help="Number of Q&A pairs.")
