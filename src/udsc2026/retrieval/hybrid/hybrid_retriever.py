@@ -86,6 +86,10 @@ class HybridRetriever:
         result = [hit for hit in fused if (hit.final_score or 0.0) >= self.min_score][
             :top_k
         ]
+        if len(result) > top_k:
+            raise RuntimeError(
+                f"hybrid retriever returned {len(result)} hits for top_k={top_k}"
+            )
         LOGGER.info(
             "hybrid search latency_ms=%.2f", (time.perf_counter() - started) * 1000
         )

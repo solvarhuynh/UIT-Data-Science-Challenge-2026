@@ -201,9 +201,14 @@ class BM25Retriever:
         LOGGER.info(
             "sparse search latency_ms=%.2f", (time.perf_counter() - started) * 1000
         )
-        return [
+        results = [
             _to_hit(self._chunks[index], score) for index, score in eligible[:top_k]
         ]
+        if len(results) > top_k:
+            raise RuntimeError(
+                f"BM25 returned {len(results)} hits for top_k={top_k}"
+            )
+        return results
 
     @property
     def indexed_chunk_count(self) -> int:

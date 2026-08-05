@@ -79,3 +79,37 @@ class EmbeddingClient:
             ),
         )
         return cast(list[list[float]], vectors.tolist())
+
+    def embed_documents_resilient(
+        self, items: list[tuple[str, str]], batch_size: int | None = None
+    ) -> tuple[list[tuple[str, list[float]]], list[dict[str, str]]]:
+        """Encode batches while recording failed chunk IDs instead of aborting.
+
+        The strict :meth:`embed_documents` API remains unchanged. This method is
+        intended for large indexing/benchmark jobs where one bad document must
+        not discard all successfully encoded batches.
+        """
+        if not items:
+            raise ValueError("items must not be empty")
+        effective_batch_size = self.batch_size if batch_size is None else batch_size
+        if effective_batch_size <= 0:
+            raise ValueError("batch_size must be greater than zero")
+        encoded: list[tuple[str, list[float]]] = []
+        errors: list[dict[str, str]] = []
+        for start in range(0, len(items), effective_batch_size):
+            batch = items[start : start + effective_batch_size]
+            try:
+                vectors = self.embed_documents(
+                    [text for _, text in batch], batch_size=effective_batch_size
+                )
+                if len(vectors) != len(batch):
+                    raise ValueError(
+                        f"model returned {len(vectors)} vectors for {len(batch)} texts"
+                    )
+                encoded.extend(
+                    (chunk_id, vector) for (chunk_id, _), vector in zip(batch, vectors)
+                )
+            except Exception as exc:  # noqa: BLE001 - batch boundary must be resilient
+                for chunk_id, _ in batch:
+                    errors.append({"chunk_id": chunk_id, "error": str(exc)})
+        return encoded, errors

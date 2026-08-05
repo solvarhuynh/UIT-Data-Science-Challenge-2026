@@ -40,6 +40,10 @@ class DenseRetriever:
         started = time.perf_counter()
         vector = self.embedding_client.embed_query(query)
         hits = self.vector_db.search(vector, top_k, filters)
+        if len(hits) > top_k:
+            raise RuntimeError(
+                f"vector database returned {len(hits)} hits for top_k={top_k}"
+            )
         ranked_hits = []
         for rank, hit in enumerate(hits, start=1):
             score = hit.dense_score if hit.dense_score is not None else hit.score

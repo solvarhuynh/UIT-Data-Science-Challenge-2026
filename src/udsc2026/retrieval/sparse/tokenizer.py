@@ -5,7 +5,8 @@ import re
 from pyvi import ViTokenizer
 
 _PROTECTED = re.compile(
-    r"\b(?:(?:Điều|Khoản)\s+\d+[a-zđ]?|Điểm\s+[a-zđ])\b",
+    r"(?:\b(?:(?:Điều|Khoản)\s+\d+[a-zđ]?|Điểm\s+[a-zđ])\b|"
+    r"\b\d{1,4}/\d{4}/[a-zđ]{1,12}\d{0,4}\b)",
     re.IGNORECASE,
 )
 

@@ -41,3 +41,21 @@ def test_embed_documents_preserves_count(client):
 def test_empty_input_raises(client, method, value):
     with pytest.raises(ValueError):
         getattr(client, method)(value)
+
+
+def test_resilient_embedding_skips_failed_batch_and_reports_chunk_ids(client):
+    calls = {"count": 0}
+
+    def encode_batch(texts, **kwargs):
+        calls["count"] += 1
+        if calls["count"] == 2:
+            raise RuntimeError("max_length exceeded")
+        return np.asarray([[0.1, 0.2, 0.3] for _ in texts])
+
+    client.model.encode.side_effect = encode_batch
+    encoded, errors = client.embed_documents_resilient(
+        [("c1", "a"), ("c2", "b"), ("c3", "c")], batch_size=2
+    )
+
+    assert [chunk_id for chunk_id, _ in encoded] == ["c1", "c2"]
+    assert errors == [{"chunk_id": "c3", "error": "max_length exceeded"}]

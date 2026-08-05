@@ -70,11 +70,16 @@ class RerankedRetriever:
             self.candidate_k,
             filters,
         )
-        return self.reranker.rerank(
+        result = self.reranker.rerank(
             query,
             candidates,
             min(top_k, self.top_n),
         )
+        if len(result) > top_k:
+            raise RuntimeError(
+                f"reranker returned {len(result)} hits for top_k={top_k}"
+            )
+        return result
 
 
 def _validate_positive_integer(value: int, field_name: str) -> None:
