@@ -59,6 +59,6 @@ echo "6. Security"
 "$project_python" -m bandit -q -r src
 
 echo "7. TV5 host smoke"
-"$project_python" scripts/smoke_test.py --mode host
+"$project_python" scripts/ci_cd/smoke_test.py --mode host
 
 echo "Local CI check completed"

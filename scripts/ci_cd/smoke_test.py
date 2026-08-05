@@ -83,7 +83,7 @@ class CheckResult:
 def _project_root(mode: str) -> Path:
     if mode == "container":
         return Path("/app")
-    return Path(__file__).resolve().parents[1]
+    return Path(__file__).resolve().parents[2]
 
 
 def _check_python(_: Path, mode: str) -> str:

@@ -76,7 +76,7 @@ docker compose up -d
 Index dữ liệu và chạy toàn bộ test:
 
 ```powershell
-python scripts/index_chunks.py --chunks-dir data/processed/chunks --vector-db-type faiss
+python scripts/data_prep/index_chunks.py --chunks-dir data/processed/chunks --vector-db-type faiss
 python -m pytest -v --basetemp .pytest_tmp -p no:cacheprovider
 ```
 
@@ -128,7 +128,7 @@ python -m pytest tests/retrieval/ -v --basetemp .pytest_tmp -p no:cacheprovider
 python -m pytest tests/unit/test_qa -v
 
 # Ví dụ test TV4
-python -m pytest tests/test_ingestion_chunking.py tests/test_ingestion_cleaners.py -v
+python -m pytest tests/integration/test_ingestion_chunking.py tests/integration/test_ingestion_cleaners.py -v
 
 # Ví dụ test TV5
 python -m pytest tests/unit/test_reranking tests/unit/test_evaluation -v
@@ -217,9 +217,9 @@ phần Web UI/UX trong phân công TV5 phục vụ demo/tích hợp sản phẩm
 - [System Design](docs/project/10_system_design.md)
 - [API Contract](docs/project/api_contract.md)
 - [Git Workflow](docs/project/git_workflow.md)
-- [TV5 Setup & Evaluation](docs/tv5_setup.md)
-- [TV5 LegalIR Warm-up Runbook](docs/tv5_legalir_warmup.md)
-- [TV5 LegalQA Warm-up Runbook](docs/tv5_legalqa_warmup.md)
+- [TV5 Setup & Evaluation](docs/members/tv5_setup.md)
+- [TV5 LegalIR Warm-up Runbook](docs/members/tv5_legalir_warmup.md)
+- [TV5 LegalQA Warm-up Runbook](docs/members/tv5_legalqa_warmup.md)
 - [Competition Data Layout](data/README.md)
 - [TV1 Work Plan](docs/member/tv1.md)
 - [TV2 Work Plan](docs/member/tv2.md)

@@ -40,7 +40,7 @@ try {
     $LegalQAWarmupPath = Join-Path $ProjectRoot "data/task2/warmup.json"
     if (Test-Path -LiteralPath $LegalQAWarmupPath -PathType Leaf) {
         Write-Host "== LegalQA Warm-up data audit =="
-        & $ProjectPython ".\scripts\audit_legal_qa_warmup.py" `
+    & $ProjectPython ".\scripts\evaluation\audit_legal_qa_warmup.py" `
             "--input" $LegalQAWarmupPath `
             "--output" ".\artifacts\task2\warmup_audit.json"
         if ($LASTEXITCODE -ne 0) {
@@ -51,7 +51,7 @@ try {
     $WarmupPath = Join-Path $ProjectRoot "data/task1/warmup.json"
     if (Test-Path -LiteralPath $WarmupPath -PathType Leaf) {
         Write-Host "== LegalIR Warm-up data audit =="
-        & $ProjectPython ".\scripts\audit_legal_ir_warmup.py" `
+    & $ProjectPython ".\scripts\evaluation\audit_legal_ir_warmup.py" `
             "--input" $WarmupPath `
             "--output" ".\artifacts\task1\warmup_audit.json"
         if ($LASTEXITCODE -ne 0) {
@@ -60,7 +60,7 @@ try {
     }
 
     Write-Host "== TV5 offline smoke checks =="
-    & $ProjectPython ".\scripts\smoke_test.py" "--mode" "host"
+    & $ProjectPython ".\scripts\ci_cd\smoke_test.py" "--mode" "host"
     if ($LASTEXITCODE -ne 0) {
         throw "TV5 host smoke checks failed with exit code $LASTEXITCODE"
     }

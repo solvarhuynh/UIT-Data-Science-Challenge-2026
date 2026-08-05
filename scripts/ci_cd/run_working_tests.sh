@@ -35,9 +35,9 @@ case "$test_type" in
     quick)
         echo "[INFO] Running fast contract/API sanity tests"
         "$project_python" -m pytest \
-            tests/test_basic.py \
-            tests/test_api_simple.py \
-            tests/test_utils.py \
+            tests/integration/test_basic.py \
+            tests/integration/test_api_simple.py \
+            tests/integration/test_utils.py \
             -x \
             --tb=line
         ;;

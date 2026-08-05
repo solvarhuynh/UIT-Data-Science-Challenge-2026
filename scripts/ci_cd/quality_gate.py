@@ -32,7 +32,7 @@ def _run(python: Path, arguments: Sequence[str], project_root: Path) -> None:
 def main() -> int:
     """Run formatting, linting, typing, docstring, and security checks."""
 
-    project_root = Path(__file__).resolve().parents[1]
+    project_root = Path(__file__).resolve().parents[2]
     python = _project_python(project_root)
     commands = (
         ("-m", "ruff", "format", "--check", "."),

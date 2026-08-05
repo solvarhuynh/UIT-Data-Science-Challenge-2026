@@ -81,7 +81,7 @@ try {
         & $ProjectPython -m bandit -q -r src
     }
     Invoke-CheckedCommand "TV5 smoke" {
-        & $ProjectPython scripts/smoke_test.py --mode host
+        & $ProjectPython scripts/ci_cd/smoke_test.py --mode host
     }
 
     if (-not $SkipFrontend) {

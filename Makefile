@@ -56,7 +56,7 @@ run-frontend:
 	cd "frontend/giao dien" && npm run dev
 
 tv5-smoke:
-	python scripts/smoke_test.py --mode host
+	python scripts/ci_cd/smoke_test.py --mode host
 
 docker-build:
 	docker compose build
@@ -71,7 +71,7 @@ docker-logs:
 	docker compose logs -f
 
 ci-local:
-	bash scripts/check-ci-local.sh
+	bash scripts/ci_cd/check-ci-local.sh
 
 ci-check: format-check lint typecheck docstyle test security tv5-smoke
 	@echo "CI check completed"

@@ -35,7 +35,7 @@ def test_build_bm25_cli_indexes_sorted_chunk_files(tmp_path: Path) -> None:
     result = subprocess.run(
         [
             sys.executable,
-            str(PROJECT_ROOT / "scripts" / "build_bm25.py"),
+            str(PROJECT_ROOT / "scripts" / "data_prep" / "build_bm25.py"),
             "--chunks",
             str(chunks_dir),
             "--output",
@@ -68,7 +68,7 @@ def test_build_bm25_cli_rejects_duplicates_without_output(tmp_path: Path) -> Non
     result = subprocess.run(
         [
             sys.executable,
-            str(PROJECT_ROOT / "scripts" / "build_bm25.py"),
+            str(PROJECT_ROOT / "scripts" / "data_prep" / "build_bm25.py"),
             "--chunks",
             str(chunks),
             "--output",
