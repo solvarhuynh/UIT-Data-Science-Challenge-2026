@@ -14,7 +14,7 @@ from udsc2026.ingestion.readers._helpers import (
 )
 from udsc2026.ingestion.readers.models import RawDocument
 
-CONTENT_FIELDS = ("raw_text", "content", "text", "body", "document_text")
+CONTENT_FIELDS = ("passage", "raw_text", "content", "text", "body", "document_text")
 
 
 def _decode_json(raw_bytes: bytes, file_path: str) -> str:
@@ -40,6 +40,12 @@ def _metadata_from_mapping(mapping: Optional[Mapping[str, Any]]) -> Dict[str, An
     issue_date = get_first_field(mapping, DATE_FIELDS)
     if issue_date is not None:
         metadata["issue_date"] = issue_date
+    source_link = get_first_field(mapping, ("link",))
+    if source_link is not None:
+        metadata["source_link"] = source_link
+    source_name = get_first_field(mapping, ("name",))
+    if source_name is not None:
+        metadata["source_name"] = source_name
     return metadata
 
 
@@ -76,6 +82,8 @@ def _raw_document_from_json_record(
             for field in CONTENT_FIELDS
             if mapping and mapping.get(field) is not None
         )
+    if source_id is not None:
+        metadata["source_context_id"] = source_id
 
     return RawDocument(
         doc_id=make_doc_id(str(path), source_id),

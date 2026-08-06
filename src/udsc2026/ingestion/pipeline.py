@@ -1,10 +1,18 @@
 """Reproducible raw-to-processed orchestration for legal-document ingestion."""
 
+import json
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 
 from pydantic import BaseModel, Field
 
+from udsc2026.ingestion.btc import (
+    build_btc_manifest,
+    build_btc_orphan_report,
+    discover_btc_context_files,
+    discover_btc_qa_files,
+    extract_btc_context_documents,
+)
 from udsc2026.ingestion.chunking import ValidationReport, write_chunking_outputs
 from udsc2026.ingestion.cleaners import clean_raw_documents
 from udsc2026.ingestion.readers import extract_raw_documents
@@ -19,6 +27,9 @@ class IngestionPipelineResult(BaseModel):
     document_ids: List[str] = Field(default_factory=list)
     validation_report: ValidationReport
     processed_root: str
+    manifest_path: Optional[str] = None
+    orphan_report_path: Optional[str] = None
+    corpus_hash: Optional[str] = None
 
 
 def run_ingestion_pipeline(
@@ -36,9 +47,27 @@ def run_ingestion_pipeline(
     """
     root = Path(processed_root)
     metadata_dir = root / "metadata"
-    raw_documents = extract_raw_documents(
-        str(raw_directory), str(metadata_dir / "extract_errors.json")
-    )
+    source_root = Path(raw_directory)
+    manifest_path = metadata_dir / "manifest.json"
+    orphan_report_path = metadata_dir / "orphan_contexts.json"
+
+    if discover_btc_context_files(source_root) or discover_btc_qa_files(source_root):
+        extraction_result = extract_btc_context_documents(
+            source_root, str(metadata_dir / "extract_errors.json")
+        )
+        raw_documents = extraction_result.raw_documents
+        manifest = build_btc_manifest(extraction_result, source_root)
+        orphan_report = build_btc_orphan_report(extraction_result)
+        _write_json(manifest_path, manifest.model_dump())
+        _write_json(orphan_report_path, orphan_report.model_dump())
+        corpus_hash = manifest.corpus_hash
+    else:
+        raw_documents = extract_raw_documents(
+            str(source_root), str(metadata_dir / "extract_errors.json")
+        )
+        manifest_path = None
+        orphan_report_path = None
+        corpus_hash = None
     clean_documents = clean_raw_documents(
         raw_documents,
         output_dir=root / "documents",
@@ -60,4 +89,12 @@ def run_ingestion_pipeline(
         document_ids=[document.doc_id for document in clean_documents],
         validation_report=report,
         processed_root=str(root),
+        manifest_path=str(manifest_path) if manifest_path else None,
+        orphan_report_path=str(orphan_report_path) if orphan_report_path else None,
+        corpus_hash=corpus_hash,
     )
+
+
+def _write_json(path: Path, value: object) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")

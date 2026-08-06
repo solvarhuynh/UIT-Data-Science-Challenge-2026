@@ -58,6 +58,32 @@ def test_read_json_uses_explicit_content_as_legal_text(tmp_path):
     assert document.metadata["content_field"] == "content"
 
 
+def test_read_btc_context_json_uses_passage_and_context_metadata(tmp_path):
+    path = tmp_path / "context_21.json"
+    path.write_text(
+        json.dumps(
+            {
+                "id": 21,
+                "name": "Quyet-dinh-36-2012-QD-TTg",
+                "link": "https://example.invalid/context/21",
+                "passage": "Điều 1. Nội dung áp dụng.\n1. Trường hợp cụ thể.",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    document = extract_raw_document(str(path))
+
+    assert document.doc_id == "21"
+    assert document.title == "Quyet-dinh-36-2012-QD-TTg"
+    assert document.raw_text == "Điều 1. Nội dung áp dụng.\n1. Trường hợp cụ thể."
+    assert document.metadata["content_field"] == "passage"
+    assert document.metadata["source_context_id"] == 21
+    assert document.metadata["source_link"] == "https://example.invalid/context/21"
+    assert document.metadata["source_name"] == "Quyet-dinh-36-2012-QD-TTg"
+
+
 def test_read_jsonl_reports_record_count(tmp_path):
     path = tmp_path / "records.jsonl"
     path.write_text('{"id": "one"}\n{"id": "two"}\n', encoding="utf-8")

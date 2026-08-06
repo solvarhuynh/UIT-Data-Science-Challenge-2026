@@ -22,7 +22,7 @@ flowchart LR
     I --> L[TV2: embedding + VectorDB]
     J --> M[TV3: QA parent context]
     I --> N[Synthetic Generator]
-    N --> O[tests/fixtures/benchmarks/synthetic_qa.jsonl]
+    N --> O[data/processed/benchmarks/synthetic_qa.jsonl]
     O --> P[TV5: Retrieval/Rerank evaluation]
 ```
 
@@ -66,6 +66,7 @@ dừng toàn bộ corpus.
 Vị trí: `src/udsc2026/ingestion/readers/`
 
 - Đọc `.txt`, `.json`, `.jsonl`, `.docx` và `.pdf` theo phần mở rộng.
+- BTC context files `context_<id>.json` trong `LegalIR/selected-contexts/` và `LegalQA/selected-contexts/` được đọc trực tiếp, giữ `id` làm khóa truy vết và lấy `passage` làm văn bản đầu vào.
 - Chuẩn hoá đầu ra thành `RawDocument`: `doc_id`, `source_path`, `title`,
   `raw_text`, `file_format`, `metadata`.
 - JSON/JSONL có field `content`, `text`, `body`, `raw_text` hoặc
@@ -112,6 +113,16 @@ Vị trí: `src/udsc2026/ingestion/chunking/`
   vượt sang Khoản/Điểm khác.
 - Validation kiểm tra chunk rỗng/quá dài, metadata thiếu, Unicode, ID trùng,
   child không có parent và khả năng ghi JSONL.
+- Khi corpus BTC được đưa vào, `context_id` được giữ nhất quán qua `doc_id`, `parent_id` và `chunk_id` để TV2/TV5 khớp scorer mà không cần sửa tay.
+
+### BTC manifest và orphan report — kiểm kê corpus chính thức
+
+Vị trí: `src/udsc2026/ingestion/btc.py`
+
+- TV4 quét đệ quy `LegalIR` và `LegalQA`, chỉ chunk các `context_*.json`.
+- Sinh `data/processed/metadata/manifest.json` chứa `schema_version`, `corpus_hash`, danh sách context đã nhận và tổng quan các fixture `train.json` / `public-official.json`.
+- Sinh `data/processed/metadata/orphan_contexts.json` để ghi nhận các `context_id` bị rớt, lỗi schema hoặc trùng ID trong lúc extract.
+- TV4 chỉ kiểm tra schema và manifest của `train.json` / `public-official.json`; không sinh prediction cho LegalQA.
 
 ### Synthetic benchmark generator — dữ liệu đánh giá
 
@@ -126,6 +137,7 @@ Vị trí: `src/udsc2026/evaluation/synthetic_generator.py`
 - Câu trả lời là trích xuất chuẩn hoá từ gold chunk; so sánh/nhiều khoản luôn
   trỏ tới tối thiểu hai chunk/citation. Không dùng LLM hoặc tự thêm fact.
 - Đã tinh chỉnh `_format_answer()` trong `src/udsc2026/evaluation/synthetic_generator.py` để answer synthetic giữ văn phong văn xuôi ổn định cho benchmark và thi đấu, đồng thời đối chiếu theo `warmup Task 2.json` để khớp style câu trả lời tham chiếu, nhưng vẫn giữ nguyên schema `gold_chunk_ids` và `gold_citations`.
+- Benchmark chuẩn được ghi ra `data/processed/benchmarks/synthetic_qa.jsonl` để TV5 dùng trực tiếp.
 
 ### Test tự động và mock corpus
 
@@ -150,35 +162,38 @@ Vị trí: `src/udsc2026/evaluation/synthetic_generator.py`
 | `data/processed/metadata/clean_errors.json` | Tài liệu lỗi khi clean | TV4, TV1 |
 | `data/processed/metadata/validation_report.json` | Thống kê document/article/chunk và chỉ số lỗi | TV1, TV4, TV5 |
 | `data/processed/metadata/manual_review_documents.json` | Văn bản không có Điều, cần xử lý thủ công | TV4 |
-| `tests/fixtures/benchmarks/synthetic_qa.jsonl` | 100–200 Q&A có gold chunk/citation | TV5; TV1/TV2/TV3 để smoke test |
+| `data/processed/metadata/manifest.json` | Corpus manifest có `schema_version`, `corpus_hash`, context/QA fixture manifest | TV4, TV1, TV5 |
+| `data/processed/metadata/orphan_contexts.json` | Báo cáo `context_id` bị rớt/mồ côi trong BTC extract | TV4 |
+| `data/processed/benchmarks/synthetic_qa.jsonl` | 100–200 Q&A có gold chunk/citation | TV5; TV1/TV2/TV3 để smoke test |
 
 TV2 index child chunks vào Qdrant/FAISS/BM25 và phải bảo toàn citation metadata.
 TV3 dùng `parent_id` hoặc `parent_text` khi cần context Điều đầy đủ để trả lời.
 TV5 dùng benchmark của TV4 để đo Recall@K, MRR, chất lượng rerank và latency.
 TV1 gọi pipeline hoặc đọc các output chuẩn để tích hợp backend end-to-end.
 
+
 ## 5. Chạy thử ETL và benchmark
 
-### Bước 1 — tạo corpus giả lập (tuỳ chọn)
+### Bước 1 — Chuẩn bị dữ liệu BTC thật
 
-Tui có tạo một script sinh dữ liệu giả lập trong scripts/data_prep/generate_mock_btc_data.py
-*Lưu ý: không chạy bước này nếu đã có dữ liệu BTC thật trong `data/raw/btc/`.
+*Lưu ý quan trọng: Không chạy script sinh dữ liệu giả lập (`generate_mock_btc_data.py`) nữa. Hãy dọn sạch thư mục `data/raw/btc/mock/` và làm trống các thư mục bên trong `data/processed/` nếu trước đó đã chạy mock data.*
 
-```powershell
-py -3.10 scripts/data_prep/generate_mock_btc_data.py
-```
+AE giải nén gói dữ liệu `selected-contexts.zip` cùng các file của Ban tổ chức (BTC) vào đúng cấu trúc như sau:
 
-chạy xong, dữ liệu thô giả lập sẽ được lưu trong data/raw/btc
+- `data/raw/btc/LegalIR/selected-contexts/context_*.json`
+- `data/raw/btc/LegalQA/selected-contexts/context_*.json`
+- `data/raw/btc/LegalQA/train.json` (Dùng để validate schema)
+- `data/raw/btc/LegalQA/public-official.json` (Dùng để validate schema)
 
-### Bước 2 — chạy ETL
+### Bước 2 — Chạy ETL
+
+Pipeline hiện tại đã được tích hợp BTC Adapter mới. Hệ thống sẽ tự động quét đệ quy vào cả 2 thư mục `LegalIR` và `LegalQA` để trực tiếp đọc các file `context_<id>.json` mà không cần cấu hình thêm.
 
 ```powershell
 $env:PYTHONPATH = "src"
 py -3.10 -c "from udsc2026.ingestion import run_ingestion_pipeline; print(run_ingestion_pipeline())"
-```
 
-Sau bước này kiểm tra `chunks/`, `parents/`, `documents/` và
-`metadata/validation_report.json` trong `data/processed/`.
+Sau bước này kiểm tra `chunks/`, `parents/`, `documents/`, `metadata/validation_report.json`, `metadata/manifest.json` và `metadata/orphan_contexts.json` trong `data/processed/`.
 
 ### Bước 3 — sinh benchmark 100 Q&A
 
@@ -189,7 +204,7 @@ thiếu thay vì tạo câu hỏi không có căn cứ.
 $env:PYTHONPATH = "src"
 py -3.10 -m udsc2026.evaluation.synthetic_generator `
   --chunks-dir data/processed/chunks `
-  --output tests/fixtures/benchmarks/synthetic_qa.jsonl `
+  --output data/processed/benchmarks/synthetic_qa.jsonl `
   --count 100
 ```
 
@@ -205,7 +220,6 @@ py -3.10 -m pytest -q -o addopts=''
 ```
 
 ## 6. Ranh giới trách nhiệm TV4
-
 TV4 cung cấp dữ liệu, schema và benchmark có thể tái lập. TV4 không phụ trách
 Web Frontend, FastAPI endpoint, embedding model, VectorDB indexing, retrieval,
 reranking hay sinh câu trả lời LLM. Các module đó thuộc lần lượt TV1, TV2, TV5
