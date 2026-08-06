@@ -178,16 +178,13 @@ TV1 gọi pipeline hoặc đọc các output chuẩn để tích hợp backend e
 
 *Lưu ý quan trọng: Không chạy script sinh dữ liệu giả lập (`generate_mock_btc_data.py`) nữa. Hãy dọn sạch thư mục `data/raw/btc/mock/` và làm trống các thư mục bên trong `data/processed/` nếu trước đó đã chạy mock data.*
 
-AE giải nén gói dữ liệu `selected-contexts.zip` cùng các file của Ban tổ chức (BTC) vào đúng cấu trúc như sau:
-
-- `data/raw/btc/LegalIR/selected-contexts/context_*.json`
-- `data/raw/btc/LegalQA/selected-contexts/context_*.json`
-- `data/raw/btc/LegalQA/train.json` (Dùng để validate schema)
-- `data/raw/btc/LegalQA/public-official.json` (Dùng để validate schema)
+AE giải nén gói dữ liệu `selected-contexts.zip` cùng các file của Ban tổ chức (BTC) vào đúng cấu trúc data/raw/btc/LegalIR và data/raw/btc/LegalQA như trong group Zalo nhé
 
 ### Bước 2 — Chạy ETL
 
 Pipeline hiện tại đã được tích hợp BTC Adapter mới. Hệ thống sẽ tự động quét đệ quy vào cả 2 thư mục `LegalIR` và `LegalQA` để trực tiếp đọc các file `context_<id>.json` mà không cần cấu hình thêm.
+
+Chạy virtual environment: .\.venv\Scripts\Activate.ps1
 
 ```powershell
 $env:PYTHONPATH = "src"
