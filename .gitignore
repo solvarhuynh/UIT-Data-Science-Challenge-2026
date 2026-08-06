@@ -195,3 +195,7 @@ data/processed/metadata/index_errors.json
 # Ignore documentation files
 cam_nang.md
 PROJECT_STATUS.md
+
+# Ignore raw data and prossessed data
+data/
+
