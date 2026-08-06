@@ -178,7 +178,11 @@ TV1 gọi pipeline hoặc đọc các output chuẩn để tích hợp backend e
 
 *Lưu ý quan trọng: Không chạy script sinh dữ liệu giả lập (`generate_mock_btc_data.py`) nữa. Hãy dọn sạch thư mục `data/raw/btc/mock/` và làm trống các thư mục bên trong `data/processed/` nếu trước đó đã chạy mock data.*
 
+<<<<<<< HEAD
 AE giải nén gói dữ liệu selected-contexts.zip cùng các file của Ban tổ chức (BTC) vào đúng cấu trúc data/raw/btc/LegalIR và data/raw/btc/LegalQA như trong group Zalo nhé
+=======
+AE giải nén gói dữ liệu `selected-contexts.zip` cùng các file của Ban tổ chức (BTC) vào đúng cấu trúc data/raw/btc/LegalIR và data/raw/btc/LegalQA như trong group Zalo nhé
+>>>>>>> 15989d50329a7913f2bd3888f6f59b0f0a876cc4
 
 ### Bước 2 — Chạy ETL
 
