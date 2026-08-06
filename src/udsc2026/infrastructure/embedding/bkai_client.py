@@ -5,6 +5,8 @@ from typing import Any, Protocol, cast
 
 from sentence_transformers import SentenceTransformer
 
+from udsc2026.retrieval.sparse.tokenizer import tokenize_vi
+
 
 class _SupportsToList(Protocol):
     """Structural result type returned when encode converts output to NumPy."""
@@ -41,6 +43,11 @@ class EmbeddingClient:
         )
         self.model.max_seq_length = max_length
 
+    def _prepare_text(self, text: str) -> str:
+        """Segment Vietnamese text before embedding so legal terms and word boundaries are preserved better."""
+        tokens = tokenize_vi(text)
+        return " ".join(tokens)
+
     def embed_query(self, query: str) -> list[float]:
         """Encode one non-empty query into a Python list of floats."""
         if query is None or not query.strip():
@@ -48,7 +55,7 @@ class EmbeddingClient:
         vector = cast(
             _SupportsToList,
             self.model.encode(
-                query,
+                self._prepare_text(query),
                 batch_size=1,
                 normalize_embeddings=self.normalize_embeddings,
                 convert_to_numpy=True,
@@ -68,10 +75,11 @@ class EmbeddingClient:
         effective_batch_size = self.batch_size if batch_size is None else batch_size
         if effective_batch_size <= 0:
             raise ValueError("batch_size must be greater than zero")
+        prepared_texts = [self._prepare_text(text) for text in texts]
         vectors = cast(
             _SupportsToList,
             self.model.encode(
-                texts,
+                prepared_texts,
                 batch_size=effective_batch_size,
                 normalize_embeddings=self.normalize_embeddings,
                 convert_to_numpy=True,
