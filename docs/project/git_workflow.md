@@ -43,7 +43,7 @@ Tài liệu này là bản rút gọn để cả thành viên và AI có thể d
     git add <tên các file đã làm việc trong nhóm đó>
     git commit -m "feat(scope): short message"
 
-- Đồng bộ và đẩy lên server (Chạy trước khi push để tránh bị từ chối):
+- Sau khi đã add + commit hết các nhóm -> đồng bộ và đẩy lên server (Chạy trước khi push để tránh bị từ chối):
 
     git pull origin tvX --rebase
     git push origin tvX
