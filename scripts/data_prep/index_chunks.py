@@ -35,16 +35,34 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def calculate_corpus_hash(chunks: list[Any]) -> str:
-    """Return a stable hash for the searchable chunk identity and text."""
-    payload = [
-        {"chunk_id": chunk.chunk_id, "text": chunk.text}
-        for chunk in sorted(chunks, key=lambda item: item.chunk_id)
-    ]
-    encoded = json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode(
-        "utf-8"
-    )
-    return hashlib.sha256(encoded).hexdigest()
+class RunningCorpusHash:
+    """Order-independent incremental hash so we never hold the whole corpus in RAM.
+
+    NOTE: this changes the manifest's corpus_hash algorithm from
+    "sha256(sorted json list)" to "XOR of per-chunk sha256 digests". It is
+    still stable/deterministic and still detects any change to a chunk's
+    (chunk_id, text), it just no longer requires buffering every chunk to
+    sort them first. Old manifests will simply be treated as stale once and
+    rebuilt (safe, one-time cost).
+    """
+
+    def __init__(self) -> None:
+        self._acc = bytearray(32)
+        self.count = 0
+
+    def update(self, chunk_id: str, text: str) -> None:
+        payload = json.dumps(
+            {"chunk_id": chunk_id, "text": text},
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        digest = hashlib.sha256(payload).digest()
+        for i in range(32):
+            self._acc[i] ^= digest[i]
+        self.count += 1
+
+    def hexdigest(self) -> str:
+        return bytes(self._acc).hex()
 
 
 def calculate_model_hash(model_path: str, embedding_config: dict[str, Any]) -> str:
@@ -102,33 +120,63 @@ def write_manifests(
         path.write_text(encoded + "\n", encoding="utf-8")
 
 
-def read_chunks(chunks_dir: str, error_path: Path) -> tuple[list[Any], int]:
+def iter_chunks(chunks_dir: str, errors: list[dict[str, Any]]):
+    """Yield one LegalChunk at a time (generator) instead of loading them all.
+
+    This is the core streaming/lazy-loading fix: at any instant only the
+    current line + current chunk object are alive, not the full corpus.
+    ``errors`` is appended to in place so callers can still persist them.
+    """
     from udsc2026.contracts import LegalChunk
 
-    chunks: list[LegalChunk] = []
-    errors: list[dict[str, Any]] = []
     files = sorted(Path(chunks_dir).glob("*.jsonl"))
+    if not files:
+        LOGGER.warning("No .jsonl files found in %s", chunks_dir)
     for file_path in files:
         with file_path.open("r", encoding="utf-8") as jsonl_file:
             for line_number, raw_line in enumerate(jsonl_file, start=1):
                 if not raw_line.strip() or raw_line.lstrip().startswith("#"):
                     continue
                 try:
-                    chunks.append(LegalChunk.model_validate(json.loads(raw_line)))
+                    yield LegalChunk.model_validate(json.loads(raw_line))
                 except (json.JSONDecodeError, TypeError, ValueError) as exc:
                     errors.append(
                         {"file": str(file_path), "line": line_number, "error": str(exc)}
                     )
-    error_path.parent.mkdir(parents=True, exist_ok=True)
-    error_path.write_text(
-        json.dumps(errors, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
-    return chunks, len(errors)
+
+
+def iter_batches(iterable, batch_size: int):
+    """Chunk a generator into lists of at most ``batch_size`` items."""
+    batch: list[Any] = []
+    for item in iterable:
+        batch.append(item)
+        if len(batch) >= batch_size:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
+
+
+def count_chunks(chunks_dir: str) -> int:
+    """Cheap pre-pass just counting non-blank/non-comment JSONL lines for tqdm totals."""
+    total = 0
+    for file_path in sorted(Path(chunks_dir).glob("*.jsonl")):
+        with file_path.open("r", encoding="utf-8") as jsonl_file:
+            for raw_line in jsonl_file:
+                if raw_line.strip() and not raw_line.lstrip().startswith("#"):
+                    total += 1
+    return total
 
 
 def main() -> int:
     args = parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+    try:
+        from tqdm import tqdm
+    except ImportError:  # pragma: no cover - fallback keeps script runnable without tqdm
+        def tqdm(iterable=None, total=None, desc=None, unit=None):  # type: ignore
+            return iterable if iterable is not None else range(0)
+
     started = time.perf_counter()
     from udsc2026.infrastructure.config import load_config
 
@@ -145,10 +193,14 @@ def main() -> int:
     batch_size = int(embedding_config.get("batch_size", 32))
 
     error_path = Path("data/processed/metadata/index_errors.json")
-    chunks, error_count = read_chunks(args.chunks_dir, error_path)
-    if not chunks:
+    errors: list[dict[str, Any]] = []
+
+    LOGGER.info("Counting chunks in %s (cheap pre-pass, does not load text)...", args.chunks_dir)
+    total_chunks = count_chunks(args.chunks_dir)
+    if total_chunks == 0:
         LOGGER.error("No valid chunks found in %s", args.chunks_dir)
         return 1
+    LOGGER.info("Found %d chunks to index", total_chunks)
 
     model_path = str(embedding_config.get("model_path", "./models/bkai-bi-encoder"))
     vector_db_type = str(vector_config.get("type", "qdrant"))
@@ -156,24 +208,24 @@ def main() -> int:
         "bm25_index_path", "data/vector_store/bm25/index.pkl"
     )
     manifest_file_paths = manifest_paths(vector_config, vector_db_type, bm25_path)
-    manifest = {
-        "timestamp": None,
-        "chunk_count": len(chunks),
-        "corpus_hash": calculate_corpus_hash(chunks),
-        "model_path": model_path,
-        "model_hash": calculate_model_hash(model_path, embedding_config),
-        "vector_db_type": vector_db_type,
-        "collection_name": vector_config["collection_name"],
-        "bm25_index_path": str(bm25_path),
-        "git_commit": git_commit(),
-    }
-    if (
-        not args.force
-        and is_current_manifest(manifest_file_paths[0], manifest)
-        and is_current_manifest(manifest_file_paths[1], manifest)
-    ):
-        print("Index đã up to date, bỏ qua")
-        return 0
+
+    if not args.force:
+        LOGGER.info("Checking cache (cheap text-only pre-pass, no embedding)...")
+        precheck_hash = RunningCorpusHash()
+        precheck_errors: list[dict[str, Any]] = []
+        for chunk in iter_chunks(args.chunks_dir, precheck_errors):
+            precheck_hash.update(chunk.chunk_id, chunk.text)
+        precheck_manifest = {
+            "corpus_hash": precheck_hash.hexdigest(),
+            "model_hash": calculate_model_hash(model_path, embedding_config),
+            "vector_db_type": vector_db_type,
+            "collection_name": vector_config["collection_name"],
+        }
+        if is_current_manifest(manifest_file_paths[0], precheck_manifest) and is_current_manifest(
+            manifest_file_paths[1], precheck_manifest
+        ):
+            print("Index đã up to date, bỏ qua")
+            return 0
 
     embedder = EmbeddingClient(
         model_path=model_path,
@@ -183,33 +235,77 @@ def main() -> int:
         normalize_embeddings=bool(embedding_config.get("normalize_embeddings", True)),
     )
     vector_db = get_vector_db_adapter(config)
-    embeddings: list[list[float]] = []
-    for start in range(0, len(chunks), batch_size):
-        batch_texts = [chunk.text for chunk in chunks[start : start + batch_size]]
-        embeddings.extend(embedder.embed_documents(batch_texts, batch_size=batch_size))
-        LOGGER.info("Embedded %d/%d chunks", len(embeddings), len(chunks))
 
-    vector_db.create_collection(
-        vector_config["collection_name"],
-        len(embeddings[0]),
-        vector_config.get("distance", "cosine"),
-    )
-    for start in range(0, len(chunks), batch_size):
-        vector_db.upsert(
-            chunks[start : start + batch_size], embeddings[start : start + batch_size]
-        )
-        LOGGER.info(
-            "Upserted %d/%d chunks", min(start + batch_size, len(chunks)), len(chunks)
-        )
+    # --- Pass 1: stream chunks -> embed batch -> upsert batch -> discard batch. ---
+    # At no point do we hold more than `batch_size` chunks + their embeddings
+    # in RAM simultaneously; this is the fix for the OOM/"unexpected EOF" crash.
+    running_hash = RunningCorpusHash()
+    collection_created = False
+    processed = 0
+    progress = tqdm(total=total_chunks, desc="Embedding + upserting", unit="chunk")
+    for batch in iter_batches(iter_chunks(args.chunks_dir, errors), batch_size):
+        batch_texts = [chunk.text for chunk in batch]
+        batch_embeddings = embedder.embed_documents(batch_texts, batch_size=batch_size)
 
+        if not collection_created:
+            vector_db.create_collection(
+                vector_config["collection_name"],
+                len(batch_embeddings[0]),
+                vector_config.get("distance", "cosine"),
+            )
+            collection_created = True
+
+        vector_db.upsert(batch, batch_embeddings)
+        for chunk in batch:
+            running_hash.update(chunk.chunk_id, chunk.text)
+
+        processed += len(batch)
+        progress.update(len(batch))
+        LOGGER.info("Embedded+upserted %d/%d chunks", processed, total_chunks)
+    progress.close()
+
+    if processed == 0:
+        LOGGER.error("No valid chunks found in %s", args.chunks_dir)
+        return 1
+
+    manifest = {
+        "timestamp": None,
+        "chunk_count": processed,
+        "corpus_hash": running_hash.hexdigest(),
+        "model_path": model_path,
+        "model_hash": calculate_model_hash(model_path, embedding_config),
+        "vector_db_type": vector_db_type,
+        "collection_name": vector_config["collection_name"],
+        "bm25_index_path": str(bm25_path),
+        "git_commit": git_commit(),
+    }
+
+    # --- Pass 2: BM25 build. ---
+    # rank_bm25's BM25Okapi computes IDF over the whole corpus, so unlike the
+    # vector step this genuinely needs every tokenized chunk resident in RAM
+    # at once -- there is no streaming algorithm for classic BM25 here. We
+    # still stream chunks off disk (not from the pass-1 list, which we never
+    # kept) so vector-store memory has already been freed by the time this
+    # runs, and we only pay the "hold everything" cost once instead of twice.
+    LOGGER.info("Building BM25 index (this pass must hold all chunks in RAM)...")
+    bm25_chunks: list[Any] = []
+    for chunk in tqdm(
+        iter_chunks(args.chunks_dir, errors), total=total_chunks, desc="Loading for BM25", unit="chunk"
+    ):
+        bm25_chunks.append(chunk)
     bm25 = BM25Retriever(bm25_path)
-    bm25.build_index(chunks)
+    bm25.build_index(bm25_chunks)
     bm25.save()
+    del bm25_chunks
+
+    error_path.parent.mkdir(parents=True, exist_ok=True)
+    error_path.write_text(json.dumps(errors, ensure_ascii=False, indent=2), encoding="utf-8")
+
     manifest["timestamp"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     write_manifests(manifest_file_paths, manifest)
     elapsed = time.perf_counter() - started
-    print(f"Indexed chunks: {len(chunks)}")
-    print(f"Skipped errors: {error_count}")
+    print(f"Indexed chunks: {processed}")
+    print(f"Skipped errors: {len(errors)}")
     print(f"Elapsed seconds: {elapsed:.2f}")
     return 0
 
