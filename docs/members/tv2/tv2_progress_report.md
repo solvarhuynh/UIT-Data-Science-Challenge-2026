@@ -52,6 +52,27 @@ Tác dụng sau khi làm xong:
 - Không làm thay đổi contract dữ liệu.
 - Tăng thêm file manifest đi kèm index, nên pipeline đã có thêm một lớp kiểm tra trạng thái.
 
+File runtime chính:
+
+- `scripts/data_prep/index_chunks.py`
+
+File test:
+
+- `tests/unit/test_retrieval/test_index_versioning.py`
+- `tests/unit/test_retrieval/test_build_bm25_cli.py`
+- `tests/retrieval/test_vector_db_adapters.py`
+
+Chức năng:
+
+- Đọc từng `LegalChunk` từ thư mục JSONL và tính `corpus_hash` ổn định từ
+  `chunk_id` cùng nội dung `text` đã sắp xếp.
+- Tạo `model_hash` từ nhận diện/cấu hình embedding để phân biệt index tạo bởi
+  các model hoặc thiết lập khác nhau.
+- Ghi manifest cạnh FAISS/Qdrant và BM25, gồm corpus/model hash, số chunk,
+  collection, đường dẫn BM25 và git commit nếu có.
+- So sánh manifest hiện có trước khi build; nếu corpus/model không đổi thì
+  thoát thành công mà không embed/index lại. Cờ `--force` ép rebuild.
+
 ## 3. Prompt 3 - Benchmark và tăng độ bền của `EmbeddingClient`
 
 Yêu cầu:
@@ -74,6 +95,24 @@ Tác dụng sau khi làm xong:
 - Chỉ thêm một nhánh xử lý an toàn hơn, không phá luồng gọi hiện tại.
 - Giảm rủi ro fail toàn bộ index khi chỉ một vài chunk lỗi.
 
+File runtime chính:
+
+- `src/udsc2026/infrastructure/embedding/bkai_client.py`
+- `scripts/data_prep/benchmark_embedding.py`
+
+File test:
+
+- `tests/retrieval/test_embedding_client.py`
+
+Chức năng:
+
+- Mã hóa query và document theo batch cấu hình được, vẫn giữ nguyên số chiều
+  và dạng dữ liệu embedding mà các retriever hiện tại sử dụng.
+- Đo thời gian toàn bộ, thời gian trung bình mỗi batch và throughput để đánh
+  giá khả năng chạy trên corpus BTC lớn.
+- Khi batch lỗi, log rõ chunk/batch lỗi và tiếp tục phần dữ liệu còn lại theo
+  luồng resilient, thay vì dừng toàn bộ quá trình indexing.
+
 ## 4. Prompt 4 - Regression test BM25 tiếng Việt với thuật ngữ pháp lý thật
 
 Yêu cầu:
@@ -93,6 +132,26 @@ Tác dụng sau khi làm xong:
 Ảnh hưởng tới gì:
 - Không đổi hành vi runtime nếu case cũ đã đúng.
 - Chủ yếu là tăng độ an toàn bằng test regression.
+
+File runtime chính:
+
+- `src/udsc2026/retrieval/sparse/tokenizer.py`
+- `src/udsc2026/retrieval/sparse/bm25_retriever.py`
+
+File test:
+
+- `tests/retrieval/test_bm25_tokenizer.py`
+- `tests/retrieval/test_bm25_retriever.py`
+- `tests/unit/test_retrieval/test_bm25_persistence.py`
+
+Chức năng:
+
+- Chuẩn hóa và tách token tiếng Việt nhưng vẫn bảo toàn dấu, số điều/khoản/
+  điểm, số hiệu văn bản và các thuật ngữ pháp lý cần thiết cho truy hồi.
+- Xây dựng BM25 từ LegalChunk, truy vấn theo điểm sparse, rồi lưu/nạp index
+  mà không làm thay đổi kết quả truy hồi hoặc metadata chunk.
+- Regression tests khóa các trường hợp pháp lý thực tế để thay đổi regex hay
+  tokenizer sau này không âm thầm làm giảm chất lượng khớp.
 
 ## 5. Prompt 6 - Guard top-k và giữ citation metadata
 
@@ -115,26 +174,27 @@ Tác dụng sau khi làm xong:
 - Đây là thay đổi hành vi có chủ đích: lỗi vượt `top_k` không còn bị nuốt âm thầm.
 - Giảm rủi ro sai format khi đi tới bước submission.
 
-## 6. Các prompt TV2 chưa chạy
+File runtime chính:
 
-Các prompt sau chưa thể chạy vì phụ thuộc dữ liệu thật từ TV4:
-- Prompt 2 - `validate_chunk_mapping.py`
-- Prompt 5 - benchmark internal Recall@k / Precision@5
-- Prompt 7 - chạy end-to-end trên corpus BTC thật và chốt baseline
+- `src/udsc2026/retrieval/dense/dense_retriever.py`
+- `src/udsc2026/retrieval/sparse/bm25_retriever.py`
+- `src/udsc2026/retrieval/hybrid/hybrid_retriever.py`
+- `src/udsc2026/retrieval/hybrid/score_fusion.py`
 
-Lý do:
-- Chưa có `metadata.context_id` được TV4 xác nhận trên JSONL thật.
-- Nếu chưa có mapping này thì chưa thể đối chiếu ground truth LegalIR với chunk thật một cách chính xác.
+File test:
 
-## 7. Bức tranh tổng quát sau các prompt TV2 đã hoàn tất
+- `tests/retrieval/test_dense_retriever.py`
+- `tests/retrieval/test_bm25_retriever.py`
+- `tests/retrieval/test_hybrid_retriever.py`
+- `tests/retrieval/test_score_fusion.py`
+- `tests/unit/test_retrieval/test_hybrid_and_dense.py`
 
-Hiện tại TV2 đã có 4 lớp bảo vệ chính:
-- Index có manifest và versioning.
-- Embedding có benchmark và đường thoát khi batch lỗi.
-- BM25 có regression test cho tiếng Việt pháp lý.
-- Search có guard top-k và giữ citation metadata.
+Chức năng:
 
-Điều này có nghĩa:
-- Pipeline retrieval đã đủ nền để nhận corpus thật khi TV4 bàn giao đúng schema.
-- Rủi ro lớn nhất hiện nay không nằm ở retrieval core nữa, mà nằm ở khớp schema data thật và mapping context ID.
-- Các bước còn lại của TV2 chủ yếu là tích hợp dữ liệu thật, đo baseline, rồi khóa cấu hình trước khi submit.
+- Dense, sparse và hybrid trả tối đa đúng `top_k` `RetrievalHit`; số lượng vượt
+  giới hạn được xem là lỗi logic để phát hiện sớm trước tầng TV1/TV5.
+- Hybrid hợp nhất kết quả dense và BM25 theo score fusion/candidate policy,
+  đồng thời duy trì thứ hạng và điểm thành phần phục vụ debug.
+- Khi chuyển chunk thành `RetrievalHit`, các field citation như `chunk_id`,
+  `doc_id`, `text`, `source`, `law_name`, `article`, `clause` và `metadata`
+  phải giữ nguyên giá trị gốc nếu chunk có cung cấp.

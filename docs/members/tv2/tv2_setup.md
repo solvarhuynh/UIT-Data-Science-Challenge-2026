@@ -1,5 +1,5 @@
 # TV2 — Retrieval Pipeline: trạng thái, setup và vận hành
-
+## 25/07/2026
 Tài liệu này mô tả những gì TV2 đã hoàn thành, cách chạy lại và các điểm tích hợp
 với TV4/TV5. TV2 chỉ phụ trách retrieval; không chứa API route, frontend, QA generation
 hay cross-encoder reranking.
@@ -114,7 +114,7 @@ Script tạo:
 Chạy test:
 
 ```powershell
-python -m pytest tests/retrieval/ -v --basetemp .pytest_tmp -p no:cacheprovider
+python -m pytest tests/retrieval/ -v
 
 | Tasks | Phạm vi | Verify sau khi hoàn tất |
 |---|---|---|
@@ -175,99 +175,203 @@ udsc2026/
 ├── tests/unit/test_retrieval/     # Prompt 8
 └── docs
     └── tv2_setup.md               # chính là file bạn đang đọc
+```
 
-## 4. Quy tắc tích hợp
+# 06/08/2026
 
-`LegalChunk` phải khớp JSONL output của TV4. ## 4. Quy tắc tích hợp
-
-`LegalChunk` phải khớp JSONL output của TV4. Nếu TV4 đổi schema, cập nhật contract sau khi
-thống nhất với TV4. Không định nghĩa lại `RetrievalHit` trong retriever.
-
-`final_score` của TV2 là điểm hybrid dùng để xếp candidate; TV5 có thể bổ sung
-`rerank_score` theo pipeline của mình. Không đưa cross-encoder, QA generation, API route hoặc
-frontend vào TV2.
-
-## 5. Chạy thử sau khi có index
+## Hướng dẫn test dữ liệu chính thức
 
 ```powershell
-python scripts/index_chunks.py --vector-db-type faiss --chunks-dir data/processed/chunks
-python -c "from udsc2026.retrieval.hybrid import search; print(search('Điều 10 Bộ luật Lao động quy định gì?', 5))"
-python -m pytest tests/unit/test_retrieval -v --basetemp .pytest_tmp -p no:cacheprovider
+New-Item -ItemType Directory -Path D:\udsc2026\.pytest_runtime -Force
+.\.venv\Scripts\python.exe -m pytest tests/retrieval/ -v
 ```
 
-Nếu dùng Qdrant, khởi động Qdrant local rồi chạy:
+Các test logic nhỏ vẫn dùng mock để cô lập BM25/top-k/batch error. Khi kiểm tra
+integration với dữ liệu chính thức, dùng Docker/Qdrant theo lệnh sau:
 
 ```powershell
-python scripts/index_chunks.py --chunks-dir data/processed/chunks --vector-db-type qdrant
+docker compose up -d qdrant qdrant-ready
+docker compose run --rm backend-smoke
+docker compose logs --tail 200 qdrant qdrant-ready
 ```
 
-Các API module-level cho truy vấn nhanh:
+Lệnh `backend-smoke` dùng image backend và các volume đã khai báo trong
+`docker-compose.yml`; không dùng dữ liệu mock thay cho corpus chính thức.
 
-```python
-from udsc2026.retrieval.dense import search as dense_search
-from udsc2026.retrieval.sparse import search as sparse_search
-from udsc2026.retrieval.hybrid import search as hybrid_search
+## Hướng dẫn chạy trên Corpus thật (Data từ TV4)
 
-dense_hits = dense_search("Điều 10 Bộ luật Lao động quy định gì?", 5)
-sparse_hits = sparse_search("Điều 10 Bộ luật Lao động quy định gì?", 5)
-hybrid_hits = hybrid_search("Điều 10 Bộ luật Lao động quy định gì?", 5)
-```
+Chunks thật đã có sẵn tại `data/processed/chunks/`. Với dữ liệu chính thức,
+chạy toàn bộ chuỗi qua Docker/Qdrant theo đúng thứ tự:
 
-## 6. Phạm vi TV2 và các thành viên khác
-
-- TV1 gọi retrieval qua contract, không cần biết Qdrant/FAISS chi tiết.
-- TV4 cung cấp chunk JSONL và metadata pháp luật.
-- TV5 nhận candidate `RetrievalHit` để rerank/evaluate; TV5 cũng phụ trách Web UI/UX
-  theo phân công hiện tại.
-- TV3 phụ trách QA/LLM/prompt/citation generation.
-
-TV2 không train model trong bước indexing và không phụ trách frontend, API route hoặc QA.
-
-## 7. Git workflow và nhóm commit đề xuất
-
-Không commit thẳng vào `main`. Các lệnh dưới đây chỉ là nhóm lệnh để chạy trên nhánh
-`tv2`; kiểm tra `git status` trước mỗi nhóm và không add các file index/cache sinh tự động.
-
-### Nhóm 1 — dependency, config và embedding
+1. Đầu tiên chạy validate để kiểm tra mapping giữa chunk và ground-truth, đồng thời
+   tự tạo report audit về các file JSONL rỗng, không có record hoặc sai schema.
+   Lệnh này không sửa dữ liệu và không ảnh hưởng tới các bước sau; nó chỉ giúp bạn
+   biết còn những file nào cần TV4 sửa trước khi index.
 
 ```powershell
-git switch tv2
-git add requirements_dev.txt configs/base.yaml configs/development.yaml `
-  src/udsc2026/infrastructure/config.py `
-  src/udsc2026/infrastructure/embedding/bkai_client.py `
-  src/udsc2026/infrastructure/embedding/config.py scripts/verify_embedding.py
-git commit -m "chore(tv2): align retrieval dependencies and configuration"
-git pull origin tv2 --rebase
-git push origin tv2
+docker compose up -d qdrant qdrant-ready
+docker compose run --rm --volume "${PWD}/scripts:/app/scripts:ro" --volume "${PWD}/data/processed:/app/data/processed:ro" --volume "${PWD}/data/processed/metadata:/app/tv2_metadata" --volume "${PWD}/data/raw/btc:/app/data/raw/btc:ro" backend python /app/scripts/validate_chunk_mapping.py --chunks-dir /app/data/processed/chunks --ir-train-file /app/data/raw/btc/LegalIR/train.json --report /app/tv2_metadata/chunk_mapping_report.json
 ```
 
-### Nhóm 2 — VectorDB, retrieval và indexing
+Lệnh này dùng để khởi động Qdrant và chạy validate trên corpus TV4. Nó sẽ kiểm tra mapping giữa chunk và ground-truth, đồng thời tạo report audit về các file JSONL rỗng, không có record hoặc sai schema. Ý nghĩa của lệnh này là xác nhận dữ liệu chunk đã sẵn sàng cho bước index hay chưa, nhưng không sửa dữ liệu và không ảnh hưởng tới các bước sau.
+
+Lệnh này sẽ sinh hai report:
+- `data/processed/metadata/chunk_mapping_report.json`: kết quả mapping chunk ↔ ground-truth.
+- `data/processed/metadata/chunk_file_audit.json`: danh sách file rỗng, không có record,
+  JSON lỗi hoặc record không đúng schema.
+
+2. Chỉ khi exit code 0 mới chạy bước index để build vector index và BM25 index.
 
 ```powershell
-git add src/udsc2026/infrastructure/vector_db `
-  src/udsc2026/retrieval scripts/index_chunks.py
-git commit -m "feat(tv2): complete dense sparse hybrid retrieval pipeline"
-git pull origin tv2 --rebase
-git push origin tv2
+docker compose run --rm `
+  --volume "${PWD}/scripts:/app/scripts:ro" `
+  --volume "${PWD}/data/processed:/app/data/processed:ro" `
+  --volume "${PWD}/data/processed/metadata:/app/data/processed/metadata" `
+  --volume "${PWD}/data/vector_store:/app/data/vector_store" `
+  backend python /app/scripts/data_prep/index_chunks.py `
+  --chunks-dir /app/data/processed/chunks `
+  --vector-db-type qdrant
 ```
 
-### Nhóm 3 — tests và contract
+Lệnh này dùng để build index dense/sparse từ các chunk đã qua validate. Ý nghĩa của lệnh này là tạo vector index và BM25 index cho corpus, để các bước retrieval sau này có thể dùng được. Tác dụng chính là chuẩn bị dữ liệu truy vấn cho TV2.
+
+Sau khi manifest xác nhận:
 
 ```powershell
-git add src/udsc2026/contracts/chunk.py tests/retrieval
-git commit -m "test(tv2): cover retrieval contracts and adapters"
-git pull origin tv2 --rebase
-git push origin tv2
+docker compose run --rm `
+  --volume "${PWD}/scripts:/app/scripts:ro" `
+  --volume "${PWD}/data/processed:/app/data/processed:ro" `
+  --volume "${PWD}/data/raw/btc:/app/data/raw/btc:ro" `
+  --volume "${PWD}/data/reports:/app/data/reports" `
+  backend python /app/scripts/benchmark_retrieval_internal.py `
+  --chunks-dir /app/data/processed/chunks `
+  --ir-train-file /app/data/raw/btc/LegalIR/train.json `
+  --mode sparse `
+  --top-k 5
+
+  docker compose run --rm `
+  --volume "${PWD}/scripts:/app/scripts:ro" `
+  --volume "${PWD}/data/processed:/app/data/processed:ro" `
+  --volume "${PWD}/data/raw/btc:/app/data/raw/btc:ro" `
+  --volume "${PWD}/data/reports:/app/data/reports" `
+  --volume "${PWD}/data/vector_store:/app/data/vector_store:ro" `
+  backend python /app/scripts/benchmark_retrieval_internal.py `
+  --chunks-dir /app/data/processed/chunks `
+  --ir-train-file /app/data/raw/btc/LegalIR/train.json `
+  --mode dense `
+  --top-k 5
+
+  docker compose run --rm `
+  --volume "${PWD}/scripts:/app/scripts:ro" `
+  --volume "${PWD}/data/processed:/app/data/processed:ro" `
+  --volume "${PWD}/data/raw/btc:/app/data/raw/btc:ro" `
+  --volume "${PWD}/data/reports:/app/data/reports" `
+  --volume "${PWD}/data/vector_store:/app/data/vector_store:ro" `
+  backend python /app/scripts/benchmark_retrieval_internal.py `
+  --chunks-dir /app/data/processed/chunks `
+  --ir-train-file /app/data/raw/btc/LegalIR/train.json `
+  --mode hybrid `
+  --top-k 5
 ```
 
-### Nhóm 4 — tài liệu và phân công
+Ba lệnh này dùng để chạy benchmark retrieval ở ba mode: sparse, dense và hybrid. Ý nghĩa của chúng là đánh giá chất lượng tìm kiếm trên corpus thật sau khi index đã được build. Tác dụng chính là cho TV2/TV5 thấy mode nào hoạt động tốt hơn và có số liệu để so sánh.
 
-```powershell
-git add docs/tv2_setup.md README.md
-git commit -m "docs(tv2): document retrieval setup and team scope"
-git pull origin tv2 --rebase
-git push origin tv2
-```
+Nếu thiếu model/backend, giữ nguyên lỗi môi trường và báo cụ thể; không nới lỏng validation.
 
-Không add `.pytest_tmp*`, `.pytest_cache`, `data/vector_store/` hoặc model weights vào
-commit. Nếu các file này hiện trong VS Code Changes, bỏ qua hoặc thêm vào `.gitignore`.
+## Bức tranh bàn giao: Output của TV2 và Trách nhiệm của các thành viên tuyến sau
+
+Phần này bám theo Pipeline chuẩn trong `docs/udsc2026_plan.md`:
+
+`BTC files → TV4 ingestion/chunking → LegalChunk JSONL → TV2 indexes → TV5 rerank/evaluation → TV3 QA → TV1 API/submission orchestration`.
+
+### 1. Danh sách output chi tiết của TV2
+
+TV2 bàn giao các artifact sau:
+
+- **Corpus đầu vào đã được kiểm tra:** các file `chunks/*.jsonl` chứa
+  `LegalChunk` hợp lệ từ TV4. Mỗi chunk giữ `chunk_id`, `parent_id`, `doc_id`,
+  `text`, `source` và các trường cấu trúc pháp lý cần cho truy hồi/citation.
+
+- **Dense index:** index FAISS hoặc collection Qdrant được build từ toàn bộ
+  corpus đã nghiệm thu. Artifact dense phải có payload mapping để từ kết quả
+  vector truy ngược được chunk gốc và metadata của chunk.
+
+- **Sparse index:** BM25 index chứa các chunk và tokenization phục vụ tìm kiếm
+  theo từ khóa, số điều/khoản/điểm, số hiệu văn bản và thuật ngữ pháp lý.
+
+- **`manifest.json`:** manifest đi kèm index, ghi số lượng chunk, loại backend,
+  collection/index path, `corpus_hash`, `model_hash` hoặc model identity,
+  cấu hình liên quan và commit/config nếu có. Manifest dùng để xác nhận index
+  đang tương ứng với đúng corpus và model, tránh dùng index cũ hoặc stale.
+
+- **`payloads.json` và payload mapping:** với FAISS, `payloads.json` lưu payload
+  theo vị trí vector, gồm `chunk_id`, `doc_id`, `text`, `source`, các trường
+  `law_name/article/clause` và `metadata`; với Qdrant, cấu trúc tương đương nằm
+  trong payload của point. Dữ liệu này phải bảo toàn citation metadata, không
+  chỉ lưu vector và score.
+
+- **`list[RetrievalHit]`:** các retriever dense, sparse và hybrid trả về danh
+  sách đối tượng đúng contract `RetrievalHit`. Mỗi hit mang `chunk_id`, `doc_id`,
+  `text`, score phù hợp với backend, rank khi tầng đó gán rank, cùng citation
+  metadata như `source`, `law_name`, `article`, `clause` và `metadata` nguyên
+  vẹn. Đây là interface runtime để các thành viên tuyến sau dùng, không tự
+  đọc trực tiếp FAISS/Qdrant/BM25.
+
+### 2. Phân luồng bàn giao: ai nhận output và để làm gì?
+
+#### Đối với TV5 — Reranking & MLOps
+
+TV5 nhận `list[RetrievalHit]` từ TV2 làm candidate set cho Cross-encoder
+Reranker:
+
+- TV5 chạy Cross-encoder trên `text` của các candidate và query tương ứng.
+- Reranker gán `rerank_score` hoặc `final_score`, sau đó sắp xếp lại thứ tự
+  candidate và giới hạn về top-k cần bàn giao.
+- Mục tiêu là cải thiện chất lượng xếp hạng, đặc biệt Precision/Recall ở nhóm
+  kết quả đầu bảng so với thứ tự dense/sparse/hybrid ban đầu.
+- TV5 tuyệt đối không được làm mất `chunk_id`, `doc_id`, `text`, `source`,
+  `law_name`, `article`, `clause` hoặc metadata citation do TV2 truyền sang.
+  Điểm rerank chỉ bổ sung/chỉnh thứ tự; không được thay thế hoặc tự suy đoán
+  citation metadata.
+- TV5 dùng các hit đã bảo toàn citation để tạo evaluation report, validate
+  top-5 và bàn giao ordered `RetrievalHit` cho TV3/TV1.
+
+#### Đối với TV3 — QA & LLM Engine
+
+TV3 nhận các `RetrievalHit` đã được TV5 rerank; nếu pipeline baseline bypass
+TV5 thì TV3 nhận trực tiếp hit từ TV2:
+
+- TV3 bóc tách trường `text` của các hit để tạo Context đưa vào prompt cho
+  Qwen3 hoặc LLM được cấu hình.
+- TV3 dùng thứ tự, score và số lượng hit để chọn context trong giới hạn token,
+  nhưng không được làm thay đổi sai lệch identity của nguồn.
+- TV3 dùng `law_name`, `article`, `clause`, `source`, `chunk_id` và metadata để
+  tạo câu trả lời pháp lý có trích dẫn chính xác.
+- Citation parser phải ánh xạ citation về đúng `RetrievalHit`; nếu không xác
+  minh được thì trả warning/unverified theo contract QA, không tự bịa nguồn.
+- QA output của TV3 là `QAResponse` cùng answer, citations, warnings và thông
+  tin prompt/model version để TV1 tiếp tục orchestration.
+
+#### Đối với TV1 — API Orchestration & Submission
+
+TV1 là lớp điều phối và đóng gói, không truy cập trực tiếp database retrieval:
+
+- TV1 gọi hàm `search`/retrieval interface của TV2 thông qua dependency
+  injection hoặc orchestrator; TV1 không gọi trực tiếp FAISS, Qdrant hay BM25.
+- Với LegalIR, TV1 lấy các ID từ output `RetrievalHit`, ưu tiên identity đã
+  được pipeline xác nhận như `doc_id` hoặc `parent_id`/mapping tương ứng.
+- TV1 lọc các ID trùng nhưng giữ thứ tự xếp hạng, cắt tối đa đúng 5 ID theo
+  ràng buộc của BTC, rồi format thành `submission.json` cuối cùng.
+- TV1 phải bảo toàn đầy đủ question ID từ `public_official.json`, không làm mất,
+  lặp hoặc tự điền đáp án từ `train.json`.
+- TV1 giao artifact prediction cho TV5 validate exact schema/scorer và sau đó
+  Leader đóng gói/nộp `submission.zip` cho BTC.
+
+### Nguyên tắc bàn giao chung
+
+- TV2 giao artifact có manifest/hash và contract `RetrievalHit`, không giao
+  một index không truy được payload về chunk gốc.
+- TV5, TV3 và TV1 dùng output qua contract; không tự đoán field mới hoặc đọc
+  backend trực tiếp để sửa thiếu metadata.
+- Mọi thay đổi corpus, index, model hoặc mapping phải có report/hash tương ứng
+  để truy nguyên kết quả benchmark và submission.
