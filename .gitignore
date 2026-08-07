@@ -189,7 +189,7 @@ outputs/
 
 # Local TV2 verification artifacts
 .pytest_tmp*/
-pytest_runtime_tmp/
+.pytest_runtime/
 data/processed/metadata/index_errors.json
 
 # Ignore documentation files

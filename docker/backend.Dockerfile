@@ -87,19 +87,7 @@ RUN --mount=type=bind,from=wheel-builder,source=/wheels,target=/wheels \
 
 COPY --chown=app:app configs ./configs
 COPY --chown=app:app prompts ./prompts
-COPY --chown=app:app \
-    scripts/audit_legal_ir_warmup.py \
-    scripts/audit_legal_qa_warmup.py \
-    scripts/evaluate.py \
-    scripts/evaluate_legal_ir.py \
-    scripts/evaluate_legal_qa.py \
-    scripts/smoke_test.py \
-    scripts/validate_legal_ir_submission.py \
-    scripts/validate_legal_qa_submission.py \
-    scripts/write_legal_ir_submission.py \
-    scripts/write_legal_qa_submission.py \
-    scripts/write_submission.py \
-    ./scripts/
+COPY --chown=app:app scripts ./scripts
 
 USER app
 
