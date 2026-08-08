@@ -1,4 +1,4 @@
-# TV5 MLOps Runbook
+﻿# TV5 MLOps Runbook
 
 Tài liệu này mô tả cách đóng gói và kiểm tra backend LegalIR/LegalQA ở môi
 trường local hoặc CI. Cấu hình hiện tại ưu tiên khả năng tái lập, an toàn và
@@ -287,7 +287,7 @@ nhất được nhóm dưới đây.
 
 | Biến | Mặc định | Ý nghĩa |
 | --- | --- | --- |
-| `MODEL_EMBEDDER_PATH` | `/app/models/bkai-bi-encoder` | Checkpoint bi-encoder |
+| `MODEL_EMBEDDER_PATH` | `/app/models/hcmute-embedding-v2` | Checkpoint bi-encoder |
 | `MODEL_LLM_PATH` | `/app/models/qwen3-legal` | Checkpoint Qwen3 |
 | `EMBEDDING_DEVICE` | `cpu` | Device embedding |
 | `EMBEDDING_BATCH_SIZE` | `32` | Batch embedding |
@@ -437,3 +437,4 @@ hiện lúc backend startup.
 
 Đổi `BACKEND_PORT`, `QDRANT_HTTP_PORT` hoặc `REDIS_PORT` trong `.env`. URL nội
 bộ container vẫn giữ cổng `8000`, `6333` và `6379`.
+

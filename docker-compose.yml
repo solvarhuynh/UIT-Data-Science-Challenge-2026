@@ -1,4 +1,4 @@
-name: ${COMPOSE_PROJECT_NAME:-udsc2026}
+﻿name: ${COMPOSE_PROJECT_NAME:-udsc2026}
 
 x-backend-build: &backend-build
   context: .
@@ -27,7 +27,7 @@ services:
       UDSC2026_CONFIG_PATH: ${UDSC2026_CONFIG_PATH:-/app/configs/base.yaml}
       UDSC2026_PROMPTS_PATH: /app/prompts
       LOG_LEVEL: ${LOG_LEVEL:-info}
-      MODEL_EMBEDDER_PATH: ${MODEL_EMBEDDER_PATH:-/app/models/bkai-bi-encoder}
+      MODEL_EMBEDDER_PATH: ${MODEL_EMBEDDER_PATH:-/app/models/hcmute-embedding-v2}
       MODEL_LLM_PATH: ${MODEL_LLM_PATH:-/app/models/qwen3-legal}
       EMBEDDING_DEVICE: ${EMBEDDING_DEVICE:-cpu}
       EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-32}
@@ -213,3 +213,4 @@ volumes:
   qdrant-data:
   redis-data:
   submission-output:
+

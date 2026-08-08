@@ -1,4 +1,4 @@
-"""Write a TV2-only baseline submission for Task 1 (LegalIR).
+﻿"""Write a TV2-only baseline submission for Task 1 (LegalIR).
 
 This script intentionally does not import or call any reranker. It searches with
 HybridRetriever when dense and sparse indexes are available, and falls back to
@@ -59,7 +59,7 @@ def build_retriever(mode: str) -> Any:
 
     if mode == "dense":
         from udsc2026.config import load_project_config
-        from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient
+        from udsc2026.infrastructure.embedding.client import EmbeddingClient
         from udsc2026.infrastructure.embedding.config import load_embedding_config
         from udsc2026.infrastructure.vector_db.factory import get_vector_db_adapter
         from udsc2026.retrieval.dense.dense_retriever import DenseRetriever
@@ -76,7 +76,7 @@ def build_retriever(mode: str) -> Any:
         return DenseRetriever(client, get_vector_db_adapter(config))
 
     from udsc2026.config import load_project_config
-    from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient
+    from udsc2026.infrastructure.embedding.client import EmbeddingClient
     from udsc2026.infrastructure.embedding.config import load_embedding_config
     from udsc2026.infrastructure.vector_db.factory import get_vector_db_adapter
     from udsc2026.retrieval.dense.dense_retriever import DenseRetriever
@@ -171,3 +171,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+

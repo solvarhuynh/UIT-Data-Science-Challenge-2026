@@ -1,4 +1,4 @@
-# TV2 — Retrieval Pipeline: trạng thái, setup và vận hành
+﻿# TV2 — Retrieval Pipeline: trạng thái, setup và vận hành
 ## 25/07/2026
 Tài liệu này mô tả những gì TV2 đã hoàn thành, cách chạy lại và các điểm tích hợp
 với TV4/TV5. TV2 chỉ phụ trách retrieval; không chứa API route, frontend, QA generation
@@ -9,7 +9,7 @@ hay cross-encoder reranking.
 | Nhóm | File chính | Tác dụng |
 |---|---|---|
 | Contract | `src/udsc2026/contracts/chunk.py` | Định nghĩa `LegalChunk`, input chung từ ingestion TV4 vào indexing TV2. |
-| Embedding | `src/udsc2026/infrastructure/embedding/bkai_client.py` | Load BKAI bi-encoder từ local path, encode query hoặc batch document thành vector float đã normalize. |
+| Embedding | `src/udsc2026/infrastructure/embedding/client.py` | Load HCMUTE embedding v2 từ local path, encode query hoặc batch document thành vector float đã normalize. |
 | Embedding config | `src/udsc2026/infrastructure/embedding/config.py` | Compatibility wrapper cho config embedding cũ. |
 | Config chung | `src/udsc2026/infrastructure/config.py` | Deep-merge `base.yaml` và `development.yaml`, tránh mỗi module tự đọc YAML. |
 | VectorDB interface | `infrastructure/vector_db/base.py` | Interface chung, payload mapping và chuyển payload thành `RetrievalHit`. |
@@ -27,7 +27,7 @@ upsert 23/23 và không skip lỗi schema.
 
 ## 2. TV2 có cần
 
-TV2 hiện dùng BKAI bi-encoder đã pretrained và chỉ làm inference để tạo embedding.
+TV2 hiện dùng HCMUTE embedding v2 đã pretrained và chỉ làm inference để tạo embedding.
 Khi có dữ liệu TV4, quy trình cần chạy là:
 
 1. TV4 sinh JSONL chunk hợp lệ.
@@ -59,7 +59,7 @@ phải đối chiếu lại trước khi merge; không tự sửa một bên.
 
 ```yaml
 embedding:
-  model_path: ./models/bkai-bi-encoder
+  model_path: ./models/hcmute-embedding-v2
   device: cpu
   batch_size: 32
   max_length: 256
@@ -119,7 +119,7 @@ python -m pytest tests/retrieval/ -v
 | Tasks | Phạm vi | Verify sau khi hoàn tất |
 |---|---|---|
 | 0 | `LegalChunk` contract | `python -c "from udsc2026.contracts import LegalChunk, RetrievalHit; print('ok')"` |
-| 1 | `EmbeddingClient` BKAI local | `python -c "from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient; print('ok')"` |
+| 1 | `EmbeddingClient` HCMUTE Embedding v2 local | `python -c "from udsc2026.infrastructure.embedding import EmbeddingClient; print('ok')"` |
 | 2 | Qdrant/FAISS adapter | `python -c "from udsc2026.infrastructure.vector_db.factory import get_vector_db_adapter; print('ok')"` |
 | 3 | `DenseRetriever` | `python -c "from udsc2026.retrieval.dense.dense_retriever import DenseRetriever; print('ok')"` |
 | 4 | `BM25Retriever` + tokenizer | `python -c "from udsc2026.retrieval.sparse.tokenizer import tokenize_vi; print(tokenize_vi('Điều 10 Bộ luật Lao động'))"` |
@@ -135,7 +135,7 @@ tại còn fail.
 ## 3. Cấu trúc và trách nhiệm
 
 - `src/udsc2026/contracts/`: `LegalChunk` từ TV4 và `RetrievalHit` dùng chung.
-- `src/udsc2026/infrastructure/embedding/`: load BKAI bi-encoder local và encode query/chunks.
+- `src/udsc2026/infrastructure/embedding/`: load HCMUTE embedding v2 local và encode query/chunks.
 - `src/udsc2026/infrastructure/vector_db/`: interface backend-neutral, Qdrant và FAISS.
 - `src/udsc2026/retrieval/dense/`: query embedding và dense search.
 - `src/udsc2026/retrieval/sparse/`: tokenizer tiếng Việt và BM25 độc lập.
@@ -375,3 +375,4 @@ TV1 là lớp điều phối và đóng gói, không truy cập trực tiếp da
   backend trực tiếp để sửa thiếu metadata.
 - Mọi thay đổi corpus, index, model hoặc mapping phải có report/hash tương ứng
   để truy nguyên kết quả benchmark và submission.
+

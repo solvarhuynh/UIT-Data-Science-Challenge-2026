@@ -1,4 +1,4 @@
-"""Index TV4 JSONL chunks into dense and sparse retrieval backends."""
+﻿"""Index TV4 JSONL chunks into dense and sparse retrieval backends."""
 
 from __future__ import annotations
 
@@ -181,7 +181,7 @@ def main() -> int:
     from udsc2026.infrastructure.config import load_config
 
     config = load_config(args.config_env)
-    from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient
+    from udsc2026.infrastructure.embedding.client import EmbeddingClient
     from udsc2026.infrastructure.vector_db.factory import get_vector_db_adapter
     from udsc2026.retrieval.sparse.bm25_retriever import BM25Retriever
 
@@ -202,7 +202,7 @@ def main() -> int:
         return 1
     LOGGER.info("Found %d chunks to index", total_chunks)
 
-    model_path = str(embedding_config.get("model_path", "./models/bkai-bi-encoder"))
+    model_path = str(embedding_config.get("model_path", "./models/hcmute-embedding-v2"))
     vector_db_type = str(vector_config.get("type", "qdrant"))
     bm25_path = args.bm25_index_path or config.get("sparse", {}).get(
         "bm25_index_path", "data/vector_store/bm25/index.pkl"
@@ -312,3 +312,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

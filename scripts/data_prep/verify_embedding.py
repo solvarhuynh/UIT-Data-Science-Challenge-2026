@@ -1,4 +1,4 @@
-"""Manual smoke check for the local BKAI embedding client."""
+﻿"""Manual smoke check for the local HCMUTE Embedding v2 embedding client."""
 
 from udsc2026.infrastructure.config import load_config
 from udsc2026.infrastructure.embedding import EmbeddingClient
@@ -24,3 +24,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

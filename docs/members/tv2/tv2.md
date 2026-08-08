@@ -1,8 +1,8 @@
-# TV2 - Full Retrieval Specialist
+﻿# TV2 - Full Retrieval Specialist
 
 ## 1. Tổng quan vai trò
 
-TV2 phụ trách toàn bộ Retrieval Pipeline của hệ thống RAG Pháp luật DSC2026 trong `src/udsc2026/retrieval/`, bao gồm `dense/`, `sparse/` và `hybrid/`. Mục tiêu là cung cấp một lớp truy hồi thống nhất: Dense Retrieval bằng BKAI bi-encoder, Sparse Retrieval bằng BM25 tiếng Việt và Hybrid Fusion để trả về danh sách context tốt nhất cho reranker/QA.
+TV2 phụ trách toàn bộ Retrieval Pipeline của hệ thống RAG Pháp luật DSC2026 trong `src/udsc2026/retrieval/`, bao gồm `dense/`, `sparse/` và `hybrid/`. Mục tiêu là cung cấp một lớp truy hồi thống nhất: Dense Retrieval bằng HCMUTE embedding v2, Sparse Retrieval bằng BM25 tiếng Việt và Hybrid Fusion để trả về danh sách context tốt nhất cho reranker/QA.
 
 TV2 cũng quản lý các adapter hạ tầng liên quan trực tiếp đến retrieval như `src/udsc2026/infrastructure/embedding/` và `src/udsc2026/infrastructure/vector_db/`. TV2 không viết Web Frontend, không viết FastAPI router, không thiết kế prompt và không sinh câu trả lời bằng LLM.
 
@@ -10,7 +10,7 @@ Output chuẩn của TV2 là `list[RetrievalHit]` có score, metadata citation v
 
 ## 2. Nhiệm vụ kỹ thuật chi tiết
 
-- [ ] Viết `EmbeddingClient` trong `src/udsc2026/infrastructure/embedding/` để load local model `models/bkai-bi-encoder` hoặc path cấu hình tương ứng với `bkai-foundation-models/vietnamese-bi-encoder`.
+- [ ] Viết `EmbeddingClient` trong `src/udsc2026/infrastructure/embedding/` để load local model `models/hcmute-embedding-v2` hoặc path cấu hình tương ứng với `huyydangg/DEk21_hcmute_embedding_v2`.
 - [ ] Hỗ trợ encode query đơn lẻ và batch document/chunk với cấu hình `device`, `batch_size`, `max_length`, `normalize_embeddings`.
 - [ ] Chuẩn hóa output embedding về `list[float]` hoặc `numpy.ndarray` theo contract của VectorDB adapter.
 - [ ] Viết `DenseRetriever` trong `src/udsc2026/retrieval/dense/`, nhận `query`, `top_k`, `filters` và trả `list[RetrievalHit]`.
@@ -114,7 +114,7 @@ chunk_id, score, dense_score, sparse_score, hybrid_score, metadata
 
 ## 4. Tiêu chuẩn nghiệm thu (Definition of Done)
 
-- [ ] Model BKAI bi-encoder load được từ local path, không phụ thuộc cloud API.
+- [ ] Model HCMUTE embedding v2 load được từ local path, không phụ thuộc cloud API.
 - [ ] Encode query và encode batch document chạy ổn định trên dataset mẫu.
 - [ ] Script index đọc được JSONL từ `data/processed/chunks/`, upsert vào Qdrant/FAISS và build BM25 index.
 - [ ] BM25 chạy độc lập với tokenization tiếng Việt và query chứa tên luật, số điều, số khoản.
@@ -123,3 +123,4 @@ chunk_id, score, dense_score, sparse_score, hybrid_score, metadata
 - [ ] VectorDB adapter và BM25 retriever có thể mock trong unit test.
 - [ ] Retrieval pipeline có latency đo được và không làm mất dấu tiếng Việt.
 - [ ] Không còn bất kỳ task React/UI/API route/prompt/QA generation trong file giao việc của TV2.
+

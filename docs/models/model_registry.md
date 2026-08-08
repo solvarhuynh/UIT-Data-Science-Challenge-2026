@@ -1,4 +1,4 @@
-# Model Registry
+﻿# Model Registry
 
 ## Mục tiêu
 
@@ -20,7 +20,7 @@ Quản lý tập trung mọi phiên bản mô hình (Retriever, Generator, Reran
 
 | Checkpoint | Version | Params | Local path | Input format | Output format | Trạng thái |
 |---|---|---|---|---|---|---|
-| `bkai-foundation-models/vietnamese-bi-encoder` | HuggingFace (pinned commit khi tải) | ~135M | `./models/bkai-bi-encoder/` | `str` (câu hỏi hoặc đoạn văn bản tiếng Việt, đã qua cleaning) | `list[float]` — vector embedding đã normalize (dùng cosine distance) | Đang dùng (baseline dense) |
+| `huyydangg/DEk21_hcmute_embedding_v2` | HuggingFace (pinned commit khi tải) | ~135M | `./models/hcmute-embedding-v2/` | `str` (câu hỏi hoặc đoạn văn bản tiếng Việt, đã qua cleaning) | `list[float]` — vector embedding đã normalize (dùng cosine distance) | Đang dùng (baseline dense) |
 
 Ghi chú:
 - Encode query và encode chunk dùng chung 1 model (symmetric bi-encoder).
@@ -60,3 +60,4 @@ Ghi chú:
 - Log thí nghiệm dùng các model này: xem `docs/project/06_experiment_tracking.md`.
 - Kiến trúc và luồng dữ liệu: xem `docs/project/10_system_design.md`.
 - Chi tiết LoRA/QLoRA cho Qwen3: xem `docs/models/llm_optimization.md`.
+

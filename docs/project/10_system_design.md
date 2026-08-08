@@ -1,4 +1,4 @@
-# Thiết kế hệ thống LegalIR & LegalQA
+﻿# Thiết kế hệ thống LegalIR & LegalQA
 
 ## 1. Phạm vi
 
@@ -23,7 +23,7 @@ flowchart TB
         QP[QA Pipeline]
     end
     subgraph Local[Local Infrastructure]
-        BKAI[BKAI Vietnamese Bi-Encoder]
+        HCMUTE Embedding v2[HCMUTE Embedding v2]
         BM25[BM25 Index]
         Qdrant[(Vector Store)]
         Qwen[Qwen3 Vietnamese Legal]
@@ -31,7 +31,7 @@ flowchart TB
     React -->|JSON request / SSE stream| API
     API --> C
     C --> RP
-    RP --> BKAI
+    RP --> HCMUTE Embedding v2
     RP --> BM25
     RP --> Qdrant
     RP --> QP
@@ -47,7 +47,7 @@ sequenceDiagram
     participant F as React
     participant A as FastAPI
     participant R as Retrieval
-    participant B as BKAI/BM25/Qdrant
+    participant B as HCMUTE Embedding/BM25/Qdrant
     participant Q as QA/Qwen3
     F->>A: POST /api/v1/query {question, top_k}
     A->>R: RetrieveRequest
@@ -69,7 +69,7 @@ sequenceDiagram
 2. Làm sạch encoding, loại bỏ nội dung thừa và chuẩn hóa metadata.
 3. Nhận diện cấu trúc văn bản: luật, chương, mục, điều, khoản, điểm.
 4. Chunk theo ranh giới pháp lý, hạn chế cắt giữa các khoản liên quan.
-5. Dùng `bkai-foundation-models/vietnamese-bi-encoder` tạo vector cho từng chunk.
+5. Dùng `huyydangg/DEk21_hcmute_embedding_v2` tạo vector cho từng chunk.
 6. Lưu vector, text và metadata vào vector store; tạo BM25 index song song.
 
 ### 4.2 Online retrieval
@@ -77,7 +77,7 @@ sequenceDiagram
 Với mỗi query:
 
 1. Chuẩn hóa câu hỏi.
-2. BKAI encode query để dense search.
+2. HCMUTE Embedding v2 encode query để dense search.
 3. BM25 tìm các kết quả khớp thuật ngữ pháp lý.
 4. Hybrid fusion kết hợp sparse score và dense score.
 5. Rerank, lọc theo threshold và giới hạn `top_k`.
@@ -114,7 +114,7 @@ QAResponse       = answer, citations[], usage, latency
 
 ```text
 models/
-├── bkai-bi-encoder/  # bkai-foundation-models/vietnamese-bi-encoder
+├── hcmute-embedding-v2/  # huyydangg/DEk21_hcmute_embedding_v2
 └── qwen3-legal/      # thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2
 ```
 
@@ -160,3 +160,4 @@ api            chỉ orchestration, validation và transport
 ```
 
 Các ranh giới này giúp nhóm phát triển song song, benchmark riêng LegalIR/LegalQA và thay đổi model mà không phá vỡ API.
+

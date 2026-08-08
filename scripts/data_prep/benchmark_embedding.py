@@ -1,4 +1,4 @@
-"""Benchmark resilient document embedding over LegalChunk JSONL files."""
+﻿"""Benchmark resilient document embedding over LegalChunk JSONL files."""
 
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     from udsc2026.infrastructure.config import load_config
-    from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient
+    from udsc2026.infrastructure.embedding.client import EmbeddingClient
 
     config = load_config("development")
     embedding_config: dict[str, Any] = config.get("embedding", {})
@@ -60,7 +60,7 @@ def main() -> int:
     if not chunks:
         raise SystemExit(f"No valid chunks found in {args.chunks_dir}")
     client = EmbeddingClient(
-        model_path=str(embedding_config.get("model_path", "./models/bkai-bi-encoder")),
+        model_path=str(embedding_config.get("model_path", "./models/hcmute-embedding-v2")),
         device=str(embedding_config.get("device", "cpu")),
         batch_size=batch_size,
         max_length=int(embedding_config.get("max_length", 256)),
@@ -85,3 +85,5 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+

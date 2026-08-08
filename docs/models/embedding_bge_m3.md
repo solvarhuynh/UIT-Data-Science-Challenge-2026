@@ -1,10 +1,10 @@
-# BGE-M3 và vai trò trong Legal Retrieval
+﻿# BGE-M3 và vai trò trong Legal Retrieval
 
-[Legal Retrieval Model](https://huggingface.co/bkai-foundation-models/vietnamese-bi-encoder)
+[HCMUTE Embedding v2](https://huggingface.co/huyydangg/DEk21_hcmute_embedding_v2)
 
 ## Tổng quan
 
-BGE-M3 là embedding model của BAAI với ba đặc điểm chính: đa ngôn ngữ, đa chức năng và đa mức độ chi tiết. Dù baseline hiện tại của UDSC2026 dùng `bkai-foundation-models/vietnamese-bi-encoder`, kiến thức về BGE-M3 vẫn hữu ích để thiết kế retrieval enterprise, đặc biệt khi cần nâng cấp sang model hỗ trợ dense, sparse và multi-vector trong cùng một kiến trúc.
+Tài liệu này ghi chú cách tích hợp `huyydangg/DEk21_hcmute_embedding_v2` cho dense retrieval tiếng Việt. Các nguyên tắc về dense, sparse và hybrid retrieval vẫn áp dụng khi mở rộng kiến trúc.
 
 ## Ba đặc điểm chính
 
@@ -20,7 +20,7 @@ BGE-M3 hỗ trợ ba kiểu truy hồi:
 - Sparse retrieval: trọng số từ khóa dạng learnable sparse vector.
 - Multi-vector retrieval: nhiều vector cho một đoạn để so khớp chi tiết hơn.
 
-Trong dự án hiện tại, ta triển khai dense bằng BKAI và sparse bằng BM25. Thiết kế `retrieval/` nên giữ interface đủ rộng để sau này thay BM25 bằng sparse embedding nếu cần.
+Trong dự án hiện tại, ta triển khai dense bằng HCMUTE Embedding v2 và sparse bằng BM25. Thiết kế `retrieval/` nên giữ interface đủ rộng để sau này thay BM25 bằng sparse embedding nếu cần.
 
 ### Multi-Granularity
 
@@ -33,9 +33,9 @@ Model có thể biểu diễn văn bản ở nhiều cấp: câu, đoạn, passa
 - Citation cần metadata theo cấu trúc pháp luật, nên chunk phải giữ đơn vị pháp lý nhỏ.
 - Các điều khoản dài cần mô hình hóa passage tốt thay vì chỉ sentence-level.
 
-## Bài học áp dụng cho BKAI Bi-encoder
+## Bài học áp dụng cho HCMUTE embedding v2
 
-Khi dùng BKAI làm dense retriever, cần giữ các nguyên tắc sau:
+Khi dùng HCMUTE Embedding v2 làm dense retriever, cần giữ các nguyên tắc sau:
 
 - Chunk theo cấu trúc pháp luật, không cắt giữa điều/khoản nếu tránh được.
 - Lưu metadata giàu ngữ cảnh: `law_name`, `chapter`, `article`, `clause`, `point`.
@@ -51,3 +51,4 @@ class EmbeddingClient:
 ```
 
 Embedding client không phụ thuộc trực tiếp vào FastAPI. Backend chỉ gọi qua service/retriever để giữ khả năng thay model.
+

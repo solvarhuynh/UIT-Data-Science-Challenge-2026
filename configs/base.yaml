@@ -1,11 +1,11 @@
-# Shared RAG defaults. Environment-specific files override these values.
+﻿# Shared RAG defaults. Environment-specific files override these values.
 chunk_size: 512
 chunk_overlap: 80
 top_k: 10
 similarity_threshold: 0.5
 
 embedding:
-  model_path: ./models/bkai-bi-encoder
+  model_path: ./models/hcmute-embedding-v2
   device: cpu
   batch_size: 32
   max_length: 256
@@ -48,4 +48,4 @@ reranker:
   max_length: 512
   top_n: 10
   local_files_only: true
-  use_fp16: false
+

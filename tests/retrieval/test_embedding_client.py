@@ -1,16 +1,16 @@
-from unittest.mock import patch
+﻿from unittest.mock import patch
 
 import numpy as np
 import pytest
 
-from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient
+from udsc2026.infrastructure.embedding.client import EmbeddingClient
 from udsc2026.retrieval.sparse.tokenizer import tokenize_vi
 
 
 @pytest.fixture
 def client():
     with patch(
-        "udsc2026.infrastructure.embedding.bkai_client.SentenceTransformer"
+        "udsc2026.infrastructure.embedding.client.SentenceTransformer"
     ) as model:
         model.return_value.encode.side_effect = lambda texts, **kwargs: np.asarray(
             [0.1, 0.2, 0.3]
@@ -18,7 +18,7 @@ def client():
             else [[0.1, 0.2, 0.3] for _ in texts]
         )
         with patch(
-            "udsc2026.infrastructure.embedding.bkai_client.Path.is_dir",
+            "udsc2026.infrastructure.embedding.client.Path.is_dir",
             return_value=True,
         ):
             yield EmbeddingClient("local-model")
@@ -74,3 +74,5 @@ def test_resilient_embedding_skips_failed_batch_and_reports_chunk_ids(client):
 
     assert [chunk_id for chunk_id, _ in encoded] == ["c1", "c2"]
     assert errors == [{"chunk_id": "c3", "error": "max_length exceeded"}]
+
+
