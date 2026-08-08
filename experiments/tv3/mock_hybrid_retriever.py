@@ -247,7 +247,7 @@ class DiskBM25:
         doc_scores = defaultdict(float)
 
         for q in query_tokens:
-            cursor.execute("SELECT doc_id, tf FROM postings WHERE term = ?;", (q,))
+            cursor.execute("SELECT postings.doc_id, postings.tf, documents.doc_len FROM postings JOIN documents ON postings.doc_id = documents.id WHERE postings.term = ?;", (q,))
             postings = cursor.fetchall()
             n_q = len(postings)
             if n_q == 0:
@@ -256,10 +256,7 @@ class DiskBM25:
             if idf_val <= 0:
                 continue
 
-            for doc_id, tf in postings:
-                cursor.execute("SELECT doc_len FROM documents WHERE id = ?;", (doc_id,))
-                doc_len_row = cursor.fetchone()
-                doc_len = doc_len_row[0] if doc_len_row else self.avgdl
+            for doc_id, tf, doc_len in postings:
                 denom = tf + self.k1 * (1.0 - self.b + self.b * (doc_len / self.avgdl))
                 numer = tf * (self.k1 + 1.0)
                 doc_scores[doc_id] += idf_val * (numer / denom)
@@ -317,8 +314,6 @@ class MockHybridRetriever:
 
         db_path = self.cache_dir / "bm25_db.sqlite"
         self._disk_bm25 = DiskBM25(db_path=db_path, parents_dir=self.parents_dir, max_docs=self.max_docs)
-        self._docs: list[dict] = []
-        self._corpus_texts: list[str] = []
         self._doc_embeddings: Optional[np.ndarray] = None
         self._dense_model: Optional[SentenceTransformer] = None
 
@@ -326,15 +321,9 @@ class MockHybridRetriever:
         self._build_dense_index()
 
     def _load_corpus(self) -> None:
-        """Load document metadata lazily from SQLite to minimize RAM usage."""
-        cursor = self._disk_bm25.conn.cursor()
-        cursor.execute("SELECT json_str FROM documents;")
-        rows = cursor.fetchall()
-        for r in rows:
-            doc = json.loads(r[0])
-            self._docs.append(doc)
-            self._corpus_texts.append(doc.get("text", ""))
-        logger.info("Loaded %d documents from SQLite database into retriever.", len(self._docs))
+        """Lazily set corpus size N from SQLite disk index to keep RAM under 200MB."""
+        self.N = self._disk_bm25.N
+        logger.info("Loaded %d documents from SQLite database into retriever.", self.N)
 
     def _build_dense_index(self) -> None:
         """Load dense embedding model and compute or load cached embeddings."""
@@ -342,7 +331,7 @@ class MockHybridRetriever:
             logger.warning("sentence-transformers not installed. Dense vector search disabled.")
             return
 
-        cache_file = self.cache_dir / f"parent_embeddings_{len(self._docs)}.npy"
+        cache_file = self.cache_dir / f"parent_embeddings_{self.N}.npy"
 
         if cache_file.exists():
             logger.info("⚡ Đã tìm thấy cache embeddings: '%s'. Đang nạp cực nhanh...", cache_file)
@@ -357,8 +346,18 @@ class MockHybridRetriever:
             device=self.device,
         )
 
-        logger.info("Encoding %d documents into vector embeddings...", len(self._corpus_texts))
+        logger.info("Streaming %d documents for vector embeddings...", self.N)
         start = time.monotonic()
+        
+        cursor = self._disk_bm25.conn.cursor()
+        cursor.execute("SELECT json_str FROM documents;")
+        corpus_texts = []
+        for (json_str,) in cursor.fetchall():
+            try:
+                doc = json.loads(json_str)
+                corpus_texts.append(doc.get("text", ""))
+            except Exception:
+                corpus_texts.append("")
 
         # Tự động điều chỉnh batch_size theo VRAM khả dụng
         batch_sz = 32
@@ -370,14 +369,14 @@ class MockHybridRetriever:
         if _TORCH_AVAILABLE and "cuda" in str(self.device) and torch.cuda.is_available():
             with torch.cuda.amp.autocast():
                 embeddings = self._dense_model.encode(
-                    self._corpus_texts,
+                    corpus_texts,
                     batch_size=batch_sz,
                     show_progress_bar=True,
                     normalize_embeddings=True,
                 )
         else:
             embeddings = self._dense_model.encode(
-                self._corpus_texts,
+                corpus_texts,
                 batch_size=batch_sz,
                 show_progress_bar=True,
                 normalize_embeddings=True,
@@ -402,7 +401,7 @@ class MockHybridRetriever:
 
     def search(self, query: str, top_k: int = 3, mode: str = "hybrid") -> list[dict]:
         """Search for top_k documents using 'bm25', 'dense', or 'hybrid' with Dual Query Fusion."""
-        N = len(self._docs)
+        N = self.N
         if N == 0:
             return []
 
@@ -411,21 +410,25 @@ class MockHybridRetriever:
         clean_q = re.sub(r"\b(mới nhất|hiện hành|theo quy định mới)\b", "", clean_q, flags=re.IGNORECASE).strip()
         has_dual = (clean_q != query.strip()) and (len(clean_q) > 10)
 
-        # 1. BM25 Search (SQLite Disk Backend) - Chạy cho Query gốc + Clean Query
-        bm25_ranks = {i: N for i in range(N)}
+        candidate_ids = set()
+        bm25_ranks = {}
+        dense_ranks = {}
+
+        # 1. BM25 Search (SQLite Disk Backend)
         tokens_orig = _tokenize_query(query)
         bm25_hits_orig = self._disk_bm25.get_scores_and_docs(tokens_orig, top_k=200)
         for rank, (doc_id, score) in enumerate(bm25_hits_orig, start=1):
-            bm25_ranks[doc_id] = min(bm25_ranks[doc_id], rank)
+            bm25_ranks[doc_id] = min(bm25_ranks.get(doc_id, N), rank)
+            candidate_ids.add(doc_id)
 
         if has_dual:
             tokens_clean = _tokenize_query(clean_q)
             bm25_hits_clean = self._disk_bm25.get_scores_and_docs(tokens_clean, top_k=200)
             for rank, (doc_id, score) in enumerate(bm25_hits_clean, start=1):
-                bm25_ranks[doc_id] = min(bm25_ranks[doc_id], rank)
+                bm25_ranks[doc_id] = min(bm25_ranks.get(doc_id, N), rank)
+                candidate_ids.add(doc_id)
 
-        # 2. Dense Vector Search - Chạy cho Query gốc + Clean Query
-        dense_ranks = {i: N for i in range(N)}
+        # 2. Dense Vector Search
         if self._doc_embeddings is not None:
             if self._dense_model is None:
                 self._dense_model = SentenceTransformer(
@@ -435,38 +438,44 @@ class MockHybridRetriever:
 
             q_vec = self._dense_model.encode(query, normalize_embeddings=True)
             dense_scores = np.dot(self._doc_embeddings, q_vec)
-            sorted_dense = sorted(range(N), key=lambda i: dense_scores[i], reverse=True)
-            for rank, idx in enumerate(sorted_dense[:200]):
-                dense_ranks[idx] = min(dense_ranks[idx], rank + 1)
+            top_dense_indices = np.argpartition(-dense_scores, min(200, N - 1))[:200]
+            top_dense_sorted = sorted(top_dense_indices, key=lambda i: dense_scores[i], reverse=True)
+            for rank, idx in enumerate(top_dense_sorted, start=1):
+                dense_ranks[idx] = min(dense_ranks.get(idx, N), rank)
+                candidate_ids.add(idx)
 
             if has_dual:
                 q_vec_clean = self._dense_model.encode(clean_q, normalize_embeddings=True)
                 dense_scores_clean = np.dot(self._doc_embeddings, q_vec_clean)
-                sorted_dense_clean = sorted(range(N), key=lambda i: dense_scores_clean[i], reverse=True)
-                for rank, idx in enumerate(sorted_dense_clean[:200]):
-                    dense_ranks[idx] = min(dense_ranks[idx], rank + 1)
+                top_dense_clean_indices = np.argpartition(-dense_scores_clean, min(200, N - 1))[:200]
+                top_dense_clean_sorted = sorted(top_dense_clean_indices, key=lambda i: dense_scores_clean[i], reverse=True)
+                for rank, idx in enumerate(top_dense_clean_sorted, start=1):
+                    dense_ranks[idx] = min(dense_ranks.get(idx, N), rank)
+                    candidate_ids.add(idx)
 
-        # 3. Combine with RRF (Reciprocal Rank Fusion)
+        # 3. Combine with RRF over ONLY candidate_ids (tối đa ~400 items thay vì 1 triệu items!)
         final_scores = []
         k = self.rrf_k
         alpha = self.alpha
 
-        for i in range(N):
+        for doc_id in candidate_ids:
+            b_rank = bm25_ranks.get(doc_id, N)
+            d_rank = dense_ranks.get(doc_id, N)
             if mode == "bm25":
-                rrf = 1.0 / (k + bm25_ranks[i])
+                rrf = 1.0 / (k + b_rank)
             elif mode == "dense":
-                rrf = 1.0 / (k + dense_ranks[i])
+                rrf = 1.0 / (k + d_rank)
             else:  # hybrid
-                rrf = (1.0 - alpha) / (k + bm25_ranks[i]) + alpha / (k + dense_ranks[i])
-            final_scores.append((rrf, i))
+                rrf = (1.0 - alpha) / (k + b_rank) + alpha / (k + d_rank)
+            final_scores.append((rrf, doc_id))
 
         final_scores.sort(key=lambda x: x[0], reverse=True)
-        top_indices = [idx for _, idx in final_scores[:top_k]]
+        top_hits = final_scores[:top_k]
 
         results = []
-        for idx in top_indices:
-            doc = dict(self._docs[idx])
-            doc["retrieval_score"] = float(final_scores[top_indices.index(idx)][0])
-            results.append(doc)
-
+        for rrf_score, doc_id in top_hits:
+            doc = self._disk_bm25.get_doc(doc_id)
+            if doc:
+                doc["retrieval_score"] = float(rrf_score)
+                results.append(doc)
         return results
