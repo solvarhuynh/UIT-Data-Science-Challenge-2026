@@ -136,9 +136,26 @@ class DiskBM25:
 
     def _build_disk_index(self) -> None:
         if not self.parents_dir.exists() or not list(self.parents_dir.glob("*.jsonl")):
-            hdd_parents = Path("/run/media/quan/New Volume/uit_data/processed/parents")
-            if hdd_parents.exists():
-                self.parents_dir = hdd_parents
+            candidate_paths = [
+                Path("/run/media/quan/New Volume/uit_data/processed/chunks"),
+                Path("/run/media/quan/New Volume/uit_data/processed/parents"),
+                Path("/kaggle/input/uit-data-processed/chunks"),
+                Path("/kaggle/input/uit-data-processed/parents"),
+                self.parents_dir.parent / "chunks",
+            ]
+            # Tự động tìm thư mục chunks hoặc parents trong /kaggle/input
+            kaggle_input = Path("/kaggle/input")
+            if kaggle_input.exists():
+                for chunk_match in kaggle_input.glob("**/chunks"):
+                    candidate_paths.insert(0, chunk_match)
+                for parent_match in kaggle_input.glob("**/parents"):
+                    candidate_paths.append(parent_match)
+
+            for cand in candidate_paths:
+                if cand.exists() and list(cand.glob("*.jsonl")):
+                    self.parents_dir = cand
+                    logger.info("🎯 Tìm thấy thư mục corpus processed phù hợp: '%s'", cand)
+                    break
 
         logger.info("💾 Đang xây dựng Disk BM25 Index từ '%s' lưu vào SQLite '%s'...", self.parents_dir, self.db_path.name)
         files = sorted(self.parents_dir.glob("*.jsonl"))

@@ -255,8 +255,24 @@ async def main():
 
         output_path = args.output_json
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        details = {}
+        for qid in qids:
+            if qid in predictions:
+                pred_str = str(predictions[qid])
+                gold_str = str(references.get(qid, ""))
+                is_refused = "không có đủ căn cứ" in pred_str.lower() or len(pred_str.strip()) <= 85
+                details[qid] = {
+                    "question": raw_data[qid]["question"] if isinstance(raw_data[qid], dict) else raw_data[qid],
+                    "prediction": pred_str,
+                    "reference": gold_str,
+                    "is_refused": is_refused,
+                }
+
         report = {
             "num_samples": success_count,
+            "answered_count": answered_count,
+            "refused_count": refused_count,
             "elapsed_seconds": elapsed,
             "avg_seconds_per_sample": elapsed / max(1, success_count),
             "metrics": scores,
@@ -266,10 +282,11 @@ async def main():
             "prompt_version": args.prompt_version,
             "rag_template": args.rag_template,
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+            "details": details,
         }
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(report, f, ensure_ascii=False, indent=2)
-        print(f"🎉 Đã lưu báo cáo chi tiết vào: {output_path}\n")
+        print(f"🎉 Đã lưu báo cáo chi tiết + câu trả lời đầy đủ ({len(details)} câu) vào file: {output_path}\n")
 
 
 if __name__ == "__main__":
