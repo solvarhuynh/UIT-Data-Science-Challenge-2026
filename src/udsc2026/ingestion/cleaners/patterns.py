@@ -2,9 +2,18 @@
 
 import re
 
+_STRUCTURE_PREFIX = (
+    r"^\s*(?:(?:\d+(?:\.\d+)*|[IVXLCDM]+|[a-zđ])[.):\-–—]?\s*|"
+    r"[•‣▪◦●◆◇➢➤\-–—]+\s*){0,3}"
+)
+
 LEGAL_STRUCTURE_LINE = re.compile(
-    r"^\s*(?:Chương\s+(?:[IVXLCDM]+|\d+)|Mục\s+\d+|Điều\s+\d+|"
-    r"Khoản\s+\d+|Điểm\s+[a-zđ]|\d+[.)]|[a-zđ][.)])(?:[.:)]\s*|\s|$)",
+    rf"{_STRUCTURE_PREFIX}(?:Chương|Chuong|CHUONG)\s+(?:[IVXLCDM]+|\d+)|"
+    rf"{_STRUCTURE_PREFIX}(?:Mục|Muc|MUC)\s+\d+|"
+    rf"{_STRUCTURE_PREFIX}(?:Điều|Dieu|DIEU)\s+\d+|"
+    rf"{_STRUCTURE_PREFIX}(?:Khoản|Khoan|KHOAN)\s+\d+|"
+    rf"{_STRUCTURE_PREFIX}(?:Điểm|Diem|DIEM)\s+[a-zđ]|"
+    r"^\s*\d+[.)]|^\s*[a-zđ][.)]",
     re.IGNORECASE | re.UNICODE,
 )
 PAGE_NUMBER_LINE = re.compile(
