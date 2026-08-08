@@ -43,6 +43,7 @@ $env:RERANKER_BATCH_SIZE = "16"
 $env:RERANKER_MAX_LENGTH = "512"
 $env:RERANKER_TOP_N = "10"
 $env:RERANKER_LOCAL_FILES_ONLY = "true"
+$env:RERANKER_USE_FP16 = "false"
 ```
 
 `RERANKER_LOCAL_FILES_ONLY=true` bảo đảm runtime không tự tải model. Chỉ chuyển
@@ -198,6 +199,75 @@ Khi có `--after`, evaluator còn kiểm tra output rerank chỉ là subset củ
 candidate pool ban đầu, không sửa text/citation/metadata/score gốc, có
 `rerank_score == final_score`, rank liên tiếp, score giảm dần và giữ thứ tự gốc
 khi score bằng nhau.
+
+### 3.1. Chạy Cross-Encoder thật cho TV5
+
+TV5 **chưa cần train hoặc fine-tune model** ở baseline đầu tiên. Dùng trực tiếp
+checkpoint pretrained `BAAI/bge-reranker-v2-m3`, đo before/after trên cùng candidate
+pool, rồi chỉ cân nhắc fine-tune khi metric cho thấy baseline chưa đạt yêu cầu.
+
+Có thể kiểm tra model và toàn bộ luồng trên fixture 12 câu trước, không cần chờ TV2:
+
+```powershell
+python scripts/evaluation/benchmark_reranker.py `
+  --benchmark tests/fixtures/tv5/dev_benchmark.jsonl `
+  --candidates tests/fixtures/tv5/predictions_before.json `
+  --model BAAI/bge-reranker-v2-m3 `
+  --allow-remote-model `
+  --device cuda:0 `
+  --fp16 `
+  --batch-size 8 `
+  --candidate-k 3 `
+  --top-n 3 `
+  --k 1 3 `
+  --output-dir artifacts/tv5/smoke-bge-reranker-v2-m3
+```
+
+`--allow-remote-model` chỉ cần ở lần đầu nếu truyền model ID và máy chưa có model
+trong Hugging Face cache. Sau khi tải xong có thể bỏ cờ này, hoặc tải checkpoint vào
+`models/reranker/` và đổi `--model models/reranker`. `--fp16` chỉ dùng trên CUDA; nếu
+chạy CPU thì bỏ cả `--device cuda:0` và `--fp16`.
+
+Khi TV2 bàn giao prediction thật, file đó phải theo contract `PredictionSample`: mỗi
+`question_id` có một mảng `hits`, mỗi hit tối thiểu chứa `chunk_id`, `doc_id`, `text`.
+ID phải khớp chính xác với benchmark. Lệnh chạy chính:
+
+```powershell
+python scripts/evaluation/benchmark_reranker.py `
+  --benchmark data/processed/benchmarks/synthetic_qa.jsonl `
+  --candidates artifacts/tv2/hybrid_predictions.jsonl `
+  --model BAAI/bge-reranker-v2-m3 `
+  --allow-remote-model `
+  --device cuda:0 `
+  --fp16 `
+  --batch-size 8 `
+  --candidate-k 50 `
+  --top-n 5 `
+  --k 1 3 5 `
+  --output-dir artifacts/tv5/bge-reranker-v2-m3
+```
+
+Tên `artifacts/tv2/hybrid_predictions.jsonl` là contract bàn giao đề xuất; thay bằng
+đường dẫn thật TV2 cung cấp. Script không cần index và không tự chạy retrieval: nó
+chỉ đọc candidate đã có, rerank, kiểm tra không làm mất/sửa provenance, rồi sinh:
+
+```text
+artifacts/tv5/bge-reranker-v2-m3/
+├── predictions_before.json
+├── predictions_after.jsonl
+├── run_manifest.json
+└── evaluation/
+    ├── before.json
+    ├── before.md
+    ├── after.json
+    ├── after.md
+    ├── comparison.json
+    └── comparison.md
+```
+
+`run_manifest.json` lưu SHA-256 input, model/config, số query–candidate pair,
+reranker latency và delta metric. Vì vậy đây là artifact cần gửi nhóm trưởng sau mỗi
+run thật, cùng với `evaluation/comparison.md`.
 
 ## 4. Tạo BM25 index từ output ingestion
 

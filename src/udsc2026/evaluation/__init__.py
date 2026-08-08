@@ -114,6 +114,12 @@ from udsc2026.evaluation.models import (
     PredictionSample,
 )
 from udsc2026.evaluation.reporting import write_report, write_report_bundle
+from udsc2026.evaluation.reranker_batch import (
+    BatchRerankResult,
+    rerank_prediction_samples,
+    write_predictions,
+    write_run_manifest,
+)
 from udsc2026.evaluation.submission import (
     SubmissionColumn,
     SubmissionRow,
@@ -129,6 +135,7 @@ from udsc2026.evaluation.synthetic_generator import (
 
 __all__ = [
     "BenchmarkSample",
+    "BatchRerankResult",
     "EvaluationComparison",
     "EvaluationReport",
     "EmptyAnswerPolicy",
@@ -214,6 +221,7 @@ __all__ = [
     "package_legal_qa_submission",
     "recall_at_k",
     "reciprocal_rank",
+    "rerank_prediction_samples",
     "rouge_l_score",
     "rouge_l_diagnostic",
     "rouge_l_f1_score",
@@ -231,6 +239,8 @@ __all__ = [
     "write_legal_qa_submission_zip",
     "write_report",
     "write_report_bundle",
+    "write_predictions",
+    "write_run_manifest",
     "write_submission",
     "write_synthetic_benchmark",
 ]

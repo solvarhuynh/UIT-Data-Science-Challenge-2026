@@ -60,6 +60,7 @@ class CrossEncoderClient:
         batch_size: int = 32,
         max_length: int = 512,
         local_files_only: bool = True,
+        use_fp16: bool = False,
     ) -> None:
         """Initialize a local cross-encoder reranking model."""
         if not isinstance(model_name_or_path, str) or not model_name_or_path.strip():
@@ -70,12 +71,21 @@ class CrossEncoderClient:
         _validate_positive_integer(max_length, "max_length")
         if not isinstance(local_files_only, bool):
             raise ValueError("local_files_only must be a boolean")
+        if not isinstance(use_fp16, bool):
+            raise ValueError("use_fp16 must be a boolean")
+        if (
+            use_fp16
+            and device is not None
+            and not device.strip().casefold().startswith("cuda")
+        ):
+            raise ValueError("use_fp16 requires a CUDA device or automatic selection")
 
         self.model_name_or_path = model_name_or_path.strip()
         self.device = device.strip() if device is not None else None
         self.batch_size = batch_size
         self.max_length = max_length
         self.local_files_only = local_files_only
+        self.use_fp16 = use_fp16
         self._model: Any | None = None
         self._load_lock = Lock()
 
@@ -154,12 +164,23 @@ class CrossEncoderClient:
                 "CrossEncoder. Upgrade it to a compatible version."
             ) from exc
 
+        automodel_args: dict[str, Any] = {}
+        if self.use_fp16:
+            try:
+                torch = import_module("torch")
+                automodel_args["torch_dtype"] = torch.float16
+            except (AttributeError, ImportError) as exc:
+                raise RerankerDependencyError(
+                    "FP16 reranking requires a compatible PyTorch installation"
+                ) from exc
+
         try:
             return cross_encoder_class(
                 self.model_name_or_path,
                 device=self.device,
                 max_length=self.max_length,
                 local_files_only=self.local_files_only,
+                automodel_args=automodel_args,
             )
         except Exception as exc:
             raise RerankerModelLoadError(

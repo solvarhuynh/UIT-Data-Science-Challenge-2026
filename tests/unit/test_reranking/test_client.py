@@ -28,11 +28,13 @@ class FakeCrossEncoder:
         device: str | None,
         max_length: int,
         local_files_only: bool,
+        automodel_args: dict[str, Any],
     ) -> None:
         self.model_name_or_path = model_name_or_path
         self.device = device
         self.max_length = max_length
         self.local_files_only = local_files_only
+        self.automodel_args = automodel_args
         self.predict_calls: list[dict[str, Any]] = []
         type(self).instances.append(self)
 
@@ -51,7 +53,12 @@ def _install_fake_sentence_transformers(
     cross_encoder_class: type[Any] = FakeCrossEncoder,
 ) -> None:
     fake_module = SimpleNamespace(CrossEncoder=cross_encoder_class)
-    monkeypatch.setattr(client_module, "import_module", lambda _: fake_module)
+    fake_torch = SimpleNamespace(float16="fake-float16")
+
+    def fake_import(name: str) -> object:
+        return fake_torch if name == "torch" else fake_module
+
+    monkeypatch.setattr(client_module, "import_module", fake_import)
 
 
 @pytest.mark.unit
@@ -101,6 +108,7 @@ def test_loads_once_and_forwards_runtime_configuration(
     assert model.device == "cuda:0"
     assert model.max_length == 384
     assert model.local_files_only is True
+    assert model.automodel_args == {}
     assert model.predict_calls[0] == {
         "pairs": [
             ("quyền nghỉ phép?", "văn bản 1"),
@@ -112,6 +120,23 @@ def test_loads_once_and_forwards_runtime_configuration(
     }
     assert model.predict_calls[1]["batch_size"] == 4
     assert client.is_loaded is True
+
+
+@pytest.mark.unit
+def test_fp16_is_forwarded_to_transformer_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _install_fake_sentence_transformers(monkeypatch)
+    client = CrossEncoderClient(
+        "org/legal-cross-encoder",
+        device="cuda:0",
+        use_fp16=True,
+    )
+
+    assert client.score("cau hoi", ["van ban"]) == [0.1]
+    assert FakeCrossEncoder.instances[0].automodel_args == {
+        "torch_dtype": "fake-float16"
+    }
 
 
 @pytest.mark.unit
@@ -196,6 +221,8 @@ def test_rejects_invalid_model_outputs(
         {"model_name_or_path": "model", "batch_size": True},
         {"model_name_or_path": "model", "max_length": -1},
         {"model_name_or_path": "model", "local_files_only": "yes"},
+        {"model_name_or_path": "model", "use_fp16": "yes"},
+        {"model_name_or_path": "model", "device": "cpu", "use_fp16": True},
     ],
 )
 def test_rejects_invalid_configuration(kwargs: dict[str, Any]) -> None:
