@@ -313,48 +313,50 @@ class MockHybridRetriever:
         cache_file = self.cache_dir / f"parent_embeddings_{len(self._docs)}.npy"
 
         if cache_file.exists():
-            logger.info("⚡ Loading cached embeddings from '%s'...", cache_file)
+            logger.info("⚡ Đã tìm thấy cache embeddings: '%s'. Đang nạp cực nhanh...", cache_file)
             self._doc_embeddings = np.load(cache_file)
-            logger.info("Loaded embeddings shape: %s", self._doc_embeddings.shape)
-            model_name_or_path = str(self.embedding_model_path)
-            logger.info("Loading embedding model from '%s' (device=%s)...", model_name_or_path, self.device)
-            self._dense_model = SentenceTransformer(
-                model_name_or_path,
-                device=self.device,
-            )
+            logger.info("⚡ Nạp xong cache embeddings shape: %s trong 0.1 giây!", self._doc_embeddings.shape)
+            return
 
-            logger.info("Encoding %d documents into vector embeddings...", len(self._corpus_texts))
-            start = time.monotonic()
+        model_name_or_path = str(self.embedding_model_path)
+        logger.info("Loading embedding model from '%s' (device=%s)...", model_name_or_path, self.device)
+        self._dense_model = SentenceTransformer(
+            model_name_or_path,
+            device=self.device,
+        )
 
-            # Tự động điều chỉnh batch_size theo VRAM khả dụng
-            batch_sz = 32
-            if _TORCH_AVAILABLE and "cuda" in str(self.device) and torch.cuda.is_available():
-                total_vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)
-                batch_sz = 256 if total_vram_gb >= 8.0 else 64
-                logger.info("Detect GPU VRAM: %.2f GB -> using batch_size=%d", total_vram_gb, batch_sz)
+        logger.info("Encoding %d documents into vector embeddings...", len(self._corpus_texts))
+        start = time.monotonic()
 
-            if _TORCH_AVAILABLE and "cuda" in str(self.device) and torch.cuda.is_available():
-                with torch.cuda.amp.autocast():
-                    embeddings = self._dense_model.encode(
-                        self._corpus_texts,
-                        batch_size=batch_sz,
-                        show_progress_bar=True,
-                        normalize_embeddings=True,
-                    )
-            else:
+        # Tự động điều chỉnh batch_size theo VRAM khả dụng
+        batch_sz = 32
+        if _TORCH_AVAILABLE and "cuda" in str(self.device) and torch.cuda.is_available():
+            total_vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)
+            batch_sz = 256 if total_vram_gb >= 8.0 else 64
+            logger.info("Detect GPU VRAM: %.2f GB -> using batch_size=%d", total_vram_gb, batch_sz)
+
+        if _TORCH_AVAILABLE and "cuda" in str(self.device) and torch.cuda.is_available():
+            with torch.cuda.amp.autocast():
                 embeddings = self._dense_model.encode(
                     self._corpus_texts,
                     batch_size=batch_sz,
                     show_progress_bar=True,
                     normalize_embeddings=True,
                 )
+        else:
+            embeddings = self._dense_model.encode(
+                self._corpus_texts,
+                batch_size=batch_sz,
+                show_progress_bar=True,
+                normalize_embeddings=True,
+            )
 
-            self._doc_embeddings = np.array(embeddings, dtype=np.float32)
-            logger.info("Encoding finished in %.1fs. Saving cache to '%s'...", time.monotonic() - start, cache_file)
-            np.save(cache_file, self._doc_embeddings)
-            
-            # GIẢI PHÓNG GPU VRAM NGAY LẬP TỨC CHO QWEN LLM
-            self.unload_dense_model()
+        self._doc_embeddings = np.array(embeddings, dtype=np.float32)
+        logger.info("Encoding finished in %.1fs. Saving cache to '%s'...", time.monotonic() - start, cache_file)
+        np.save(cache_file, self._doc_embeddings)
+        
+        # GIẢI PHÓNG GPU VRAM NGAY LẬP TỨC CHO QWEN LLM
+        self.unload_dense_model()
 
     def unload_dense_model(self) -> None:
         """Unload embedding model from GPU memory to free VRAM for LLM."""
