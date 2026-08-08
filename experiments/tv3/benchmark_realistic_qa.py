@@ -92,6 +92,24 @@ async def main():
     parser.add_argument("--embedding_model", type=str, default="huyydangg/DEk21_hcmute_embedding_v2", help="Tên model trên HuggingFace (ví dụ: huyydangg/DEk21_hcmute_embedding_v2) hoặc đường dẫn local")
     parser.add_argument("--quantization", type=str, default="none", choices=["4bit", "8bit", "none"], help="Mức nén quantization (Kaggle T4 x2 khuyên dùng 'none')")
     parser.add_argument("--device", type=str, default="cuda", help="cuda hoặc cpu")
+    parser.add_argument(
+        "--prompt-version",
+        type=str,
+        default="legal_qa_v1",
+        help="System prompt version (file under prompts/system/ without .md).",
+    )
+    parser.add_argument(
+        "--rag-template",
+        type=str,
+        default="default_rag_v1",
+        help="RAG template name (file under prompts/rag_templates/ without .md).",
+    )
+    parser.add_argument(
+        "--output-json",
+        type=Path,
+        default=BASE_DIR / "experiments/tv3/hybrid_benchmark_report.json",
+        help="Đường dẫn báo cáo JSON; đặt tên riêng cho mỗi prompt để so sánh.",
+    )
     args = parser.parse_args()
 
     # 1. Load train dataset
@@ -147,7 +165,11 @@ async def main():
 
     print("\n" + "=" * 70)
     print("🚀 BENCHMARK THỰC TẾ HYBRID (BM25 + Dense BKAI Vector + Qwen3)")
-    print(f"   mode={args.mode} | top_k={args.top_k} | quantization={args.quantization} | limit={args.limit}")
+    print(
+        f"   mode={args.mode} | top_k={args.top_k} | "
+        f"prompt={args.prompt_version}/{args.rag_template} | "
+        f"quantization={args.quantization} | limit={args.limit}"
+    )
     print("=" * 70)
 
     for idx, qid in enumerate(qids, start=1):
@@ -196,6 +218,8 @@ async def main():
             qa_response = await qa_engine.generate_answer(
                 question=question,
                 contexts=contexts,
+                prompt_version=args.prompt_version,
+                rag_template=args.rag_template,
                 trace_id=f"hybrid_{qid}",
             )
             pred_answer = qa_response.answer
@@ -222,7 +246,8 @@ async def main():
         print(f"⏱️  Thời gian trung bình:    {elapsed / max(1, success_count):.2f} giây/câu")
         print("=" * 70)
 
-        output_path = BASE_DIR / "experiments/tv3/hybrid_benchmark_report.json"
+        output_path = args.output_json
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         report = {
             "num_samples": success_count,
             "elapsed_seconds": elapsed,
@@ -231,6 +256,8 @@ async def main():
             "mode": args.mode,
             "top_k": args.top_k,
             "quantization": args.quantization,
+            "prompt_version": args.prompt_version,
+            "rag_template": args.rag_template,
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
         }
         with open(output_path, "w", encoding="utf-8") as f:
