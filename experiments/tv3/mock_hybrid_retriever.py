@@ -11,6 +11,7 @@ Supports CPU and CUDA (e.g. for Kaggle 2x T4 or local GPU).
 NOT FOR PRODUCTION USE. This is a mock retriever for TV3 benchmark experiments.
 """
 
+import gc
 import json
 import logging
 import math
@@ -326,7 +327,7 @@ class MockHybridRetriever:
         logger.info("Loaded %d documents from SQLite database into retriever.", self.N)
 
     def _build_dense_index(self) -> None:
-        """Load dense embedding model and compute or load cached embeddings."""
+        """Load dense embedding model and compute cached embeddings with streaming to keep RAM under 300MB."""
         if not _SENTENCE_TRANSFORMERS_AVAILABLE:
             logger.warning("sentence-transformers not installed. Dense vector search disabled.")
             return
@@ -334,9 +335,9 @@ class MockHybridRetriever:
         cache_file = self.cache_dir / f"parent_embeddings_{self.N}.npy"
 
         if cache_file.exists():
-            logger.info("⚡ Đã tìm thấy cache embeddings: '%s'. Đang nạp cực nhanh...", cache_file)
-            self._doc_embeddings = np.load(cache_file)
-            logger.info("⚡ Nạp xong cache embeddings shape: %s trong 0.1 giây!", self._doc_embeddings.shape)
+            logger.info("⚡ Đã tìm thấy cache embeddings: '%s'. Đang nạp memory-mapped cực nhanh...", cache_file)
+            self._doc_embeddings = np.load(cache_file, mmap_mode="r")
+            logger.info("⚡ Nạp xong cache embeddings shape: %s trong 0.01 giây!", self._doc_embeddings.shape)
             return
 
         model_name_or_path = str(self.embedding_model_path)
@@ -346,45 +347,62 @@ class MockHybridRetriever:
             device=self.device,
         )
 
-        logger.info("Streaming %d documents for vector embeddings...", self.N)
+        logger.info("Encoding %d documents in streaming batches of 5,000 to prevent RAM OOM...", self.N)
         start = time.monotonic()
         
+        sample_vec = self._dense_model.encode(["test"], normalize_embeddings=True)
+        emb_dim = sample_vec.shape[1]
+
+        tmp_cache_file = self.cache_dir / f"parent_embeddings_{self.N}.tmp.npy"
+        mmap_arr = np.memmap(tmp_cache_file, dtype="float32", mode="w+", shape=(self.N, emb_dim))
+
+        batch_sz = 256 if (_TORCH_AVAILABLE and "cuda" in str(self.device) and torch.cuda.is_available()) else 64
+        chunk_size = 5000
         cursor = self._disk_bm25.conn.cursor()
-        cursor.execute("SELECT json_str FROM documents;")
-        corpus_texts = []
-        for (json_str,) in cursor.fetchall():
-            try:
-                doc = json.loads(json_str)
-                corpus_texts.append(doc.get("text", ""))
-            except Exception:
-                corpus_texts.append("")
 
-        # Tự động điều chỉnh batch_size theo VRAM khả dụng
-        batch_sz = 32
-        if _TORCH_AVAILABLE and "cuda" in str(self.device) and torch.cuda.is_available():
-            total_vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024 ** 3)
-            batch_sz = 256 if total_vram_gb >= 8.0 else 64
-            logger.info("Detect GPU VRAM: %.2f GB -> using batch_size=%d", total_vram_gb, batch_sz)
-
-        if _TORCH_AVAILABLE and "cuda" in str(self.device) and torch.cuda.is_available():
-            with torch.cuda.amp.autocast():
-                embeddings = self._dense_model.encode(
-                    corpus_texts,
+        for offset in range(0, self.N, chunk_size):
+            cursor.execute("SELECT json_str FROM documents LIMIT ? OFFSET ?;", (chunk_size, offset))
+            rows = cursor.fetchall()
+            chunk_texts = []
+            for (json_str,) in rows:
+                try:
+                    doc = json.loads(json_str)
+                    chunk_texts.append(doc.get("text", ""))
+                except Exception:
+                    chunk_texts.append("")
+            
+            if _TORCH_AVAILABLE and "cuda" in str(self.device) and torch.cuda.is_available():
+                with torch.cuda.amp.autocast():
+                    vecs = self._dense_model.encode(
+                        chunk_texts,
+                        batch_size=batch_sz,
+                        show_progress_bar=False,
+                        normalize_embeddings=True,
+                    )
+            else:
+                vecs = self._dense_model.encode(
+                    chunk_texts,
                     batch_size=batch_sz,
-                    show_progress_bar=True,
+                    show_progress_bar=False,
                     normalize_embeddings=True,
                 )
-        else:
-            embeddings = self._dense_model.encode(
-                corpus_texts,
-                batch_size=batch_sz,
-                show_progress_bar=True,
-                normalize_embeddings=True,
-            )
 
-        self._doc_embeddings = np.array(embeddings, dtype=np.float32)
-        logger.info("Encoding finished in %.1fs. Saving cache to '%s'...", time.monotonic() - start, cache_file)
-        np.save(cache_file, self._doc_embeddings)
+            mmap_arr[offset : offset + len(vecs)] = np.array(vecs, dtype=np.float32)
+            del chunk_texts, vecs, rows
+            gc.collect()
+            if (offset + chunk_size) % 50000 < chunk_size or (offset + chunk_size) >= self.N:
+                logger.info("Progress: %d / %d documents encoded into vector embeddings...", min(offset + chunk_size, self.N), self.N)
+
+        mmap_arr.flush()
+        del mmap_arr
+
+        # Đổi tên file tạm thành file cache chính thức
+        if cache_file.exists():
+            cache_file.unlink()
+        tmp_cache_file.rename(cache_file)
+
+        self._doc_embeddings = np.load(cache_file, mmap_mode="r")
+        logger.info("🎉 Encoding finished in %.1fs. Saved memory-mapped cache to '%s'!", time.monotonic() - start, cache_file)
         
         # GIẢI PHÓNG GPU VRAM NGAY LẬP TỨC CHO QWEN LLM
         self.unload_dense_model()
