@@ -1,7 +1,7 @@
 # TV5 — Báo cáo tiến độ Reranking, Evaluation và MLOps
 
 > Thành viên phụ trách: Nguyên Khang
-> Ngày cập nhật: 02/08/2026
+> Ngày cập nhật: 08/08/2026
 > Phạm vi: Reranking, Evaluation Benchmark, Submission adapter, MLOps và
 > quality gates
 
@@ -20,7 +20,7 @@ inference thực tế còn phụ thuộc bàn giao từ TV2/TV3/TV4.
 
 | Hạng mục | Trạng thái | Kết quả |
 | --- | --- | --- |
-| Reranker client và cấu hình | Hoàn thành | Lazy-load, offline-first, hỗ trợ batch/device/max length |
+| Reranker client và cấu hình | Hoàn thành | Lazy-load, offline-first, hỗ trợ batch/device/max length/FP16 |
 | Cross-Encoder reranking | Hoàn thành | Có `rerank_score`, `final_score`, `rank`, giữ score gốc |
 | Hybrid → Reranker wiring | Hoàn thành | Có thể bật/tắt bằng cấu hình, kiểm tra candidate pool |
 | Bảo toàn citation metadata | Hoàn thành | Giữ chunk, văn bản, điều, khoản, điểm, nguồn và parent |
@@ -34,7 +34,7 @@ inference thực tế còn phụ thuộc bàn giao từ TV2/TV3/TV4.
 | Docker và Compose | Hoàn thành cấu hình | Chờ Docker daemon để build/run image thực tế |
 | Smoke test và quality gates | Hoàn thành | Backend, frontend, security và config đều có lệnh kiểm tra |
 | Warm-up local evaluation | Hoàn thành pipeline | Chờ ranking thật; 37 câu multi-gold được tính trực tiếp theo contract mới |
-| Cross-Encoder inference thật | Chưa thể chạy | Chờ checkpoint/model artifact chính thức |
+| Cross-Encoder inference thật | Sẵn sàng chạy | Đã có batch CLI cho `BAAI/bge-reranker-v2-m3`; chưa chạy model thật trên máy local không có GPU |
 
 ## 2. Những task đã hoàn thành
 
@@ -43,6 +43,8 @@ inference thực tế còn phụ thuộc bàn giao từ TV2/TV3/TV4.
 - Viết client Cross-Encoder có cơ chế lazy-load, không tải model khi import.
 - Hỗ trợ `batch_size`, `device`, `max_length` và chế độ
   `local_files_only`.
+- Hỗ trợ FP16 trên CUDA qua `use_fp16`/`RERANKER_USE_FP16` để giảm VRAM và tăng
+  tốc độ inference.
 - Tách lỗi dependency, lỗi load checkpoint và lỗi inference để dễ debug.
 - Chuẩn hóa cấu hình từ YAML và biến môi trường.
 - Từ chối giá trị cấu hình không hợp lệ thay vì âm thầm dùng mặc định.
@@ -98,6 +100,9 @@ nguồn khác.
 - Kiểm tra output rerank là subset hợp lệ của candidate pool ban đầu.
 - Từ chối trường hợp reranker sửa text, citation, metadata hoặc score gốc.
 - Xuất report JSON và Markdown bằng thao tác ghi file atomic.
+- Có `scripts/evaluation/benchmark_reranker.py` để nhận candidate của TV2, chạy
+  model thật, lưu prediction trước/sau, report so sánh và `run_manifest.json` chứa
+  checksum/config/latency.
 - Bổ sung evaluator Task 1 ở cấp `document_id`, tách khỏi metric chunk-level cũ.
 - Tính macro Recall là metric chính và macro Precision là metric phụ/tiebreak.
 - Hỗ trợ trực tiếp nhiều gold document cho một câu; không tự lấy `answer[0]`.

@@ -20,6 +20,7 @@ reranker:
   max_length: 256
   top_n: 5
   local_files_only: true
+  use_fp16: false
 """.lstrip(),
         encoding="utf-8",
     )
@@ -31,6 +32,7 @@ reranker:
             "RERANKER_DEVICE": "cuda:0",
             "RERANKER_BATCH_SIZE": "16",
             "RERANKER_LOCAL_FILES_ONLY": "false",
+            "RERANKER_USE_FP16": "true",
         },
     )
 
@@ -40,6 +42,7 @@ reranker:
     assert settings.max_length == 256
     assert settings.top_n == 5
     assert settings.local_files_only is False
+    assert settings.use_fp16 is True
 
 
 def test_settings_create_lazy_configured_client() -> None:
@@ -49,6 +52,7 @@ def test_settings_create_lazy_configured_client() -> None:
         batch_size=4,
         max_length=128,
         top_n=3,
+        use_fp16=False,
     )
 
     client = settings.create_client()
@@ -58,6 +62,7 @@ def test_settings_create_lazy_configured_client() -> None:
     assert client.batch_size == 4
     assert client.max_length == 128
     assert client.local_files_only is True
+    assert client.use_fp16 is False
     assert client.is_loaded is False
 
 
@@ -88,6 +93,7 @@ def test_rejects_invalid_environment_value(tmp_path: Path) -> None:
         "reranker:\n  top_n: true\n",
         "reranker:\n  enabled: 1\n",
         "reranker:\n  local_files_only: 1\n",
+        "reranker:\n  use_fp16: 1\n",
     ],
 )
 def test_rejects_yaml_boolean_integer_coercion(
