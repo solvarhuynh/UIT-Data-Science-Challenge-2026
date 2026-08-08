@@ -14,6 +14,7 @@ NOT FOR PRODUCTION USE. This is a mock retriever for TV3 benchmark experiments.
 import json
 import logging
 import math
+import re
 import time
 from collections import Counter, defaultdict
 from pathlib import Path

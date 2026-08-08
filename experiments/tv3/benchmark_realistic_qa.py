@@ -95,13 +95,13 @@ async def main():
     parser.add_argument(
         "--prompt-version",
         type=str,
-        default="legal_qa_v1",
+        default="legal_qa_v2",
         help="System prompt version (file under prompts/system/ without .md).",
     )
     parser.add_argument(
         "--rag-template",
         type=str,
-        default="default_rag_v1",
+        default="default_rag_v2",
         help="RAG template name (file under prompts/rag_templates/ without .md).",
     )
     parser.add_argument(
@@ -164,7 +164,7 @@ async def main():
     success_count = 0
 
     print("\n" + "=" * 70)
-    print("🚀 BENCHMARK THỰC TẾ HYBRID (BM25 + Dense BKAI Vector + Qwen3)")
+    print(f"🚀 BENCHMARK THỰC TẾ HYBRID (BM25 + Dense {args.embedding_model} + LLM)")
     print(
         f"   mode={args.mode} | top_k={args.top_k} | "
         f"prompt={args.prompt_version}/{args.rag_template} | "
@@ -236,7 +236,7 @@ async def main():
         scores = calculate_btc_scores(predictions, references)
 
         print("\n" + "=" * 70)
-        print("📊 KẾT QUẢ BENCHMARK HYBRID (BM25 + DENSE BKAI + QWEN3)")
+        print(f"📊 KẾT QUẢ BENCHMARK HYBRID (BM25 + DENSE {args.embedding_model} + LLM)")
         print("=" * 70)
         print(f"🔹 Số câu test thành công: {success_count} / {len(qids)}")
         print(f"🔥 ROUGE-L Score:           {scores['rougeL']:.4f}")
