@@ -180,7 +180,11 @@ TV1 gọi pipeline hoặc đọc các output chuẩn để tích hợp backend e
 
 *Lưu ý quan trọng: Không chạy script sinh dữ liệu giả lập (`generate_mock_btc_data.py`) nữa. Hãy giải nén `selected-contexts.zip` cùng các file BTC vào đúng cấu trúc `data/raw/btc/LegalIR` và `data/raw/btc/LegalQA`. Nếu trước đó đã chạy mock data thì dọn sạch `data/raw/btc/mock/` và các thư mục trong `data/processed/`.*
 
+<<<<<<< HEAD
 ### Bước 2 - Chạy ETL
+=======
+AE giải nén gói dữ liệu `selected-contexts.zip` cùng các file của Ban tổ chức (BTC) vào đúng cấu trúc data/raw/btc/LegalIR và data/raw/btc/LegalQA như trong group Zalo nhé
+>>>>>>> 6d4ca2b712a75aff644c002171ad1c23e137e4aa
 
 Pipeline hiện tại đã được tích hợp BTC Adapter mới. Hệ thống sẽ tự động quét đệ quy cả 2 thư mục `LegalIR` và `LegalQA` để trực tiếp đọc các file `context_<id>.json` mà không cần cấu hình thêm.
 
