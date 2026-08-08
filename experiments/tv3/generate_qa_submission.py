@@ -45,7 +45,7 @@ logger = logging.getLogger("generate_qa_submission")
 async def main():
     parser = argparse.ArgumentParser(description="Generate Task 2 Submission Zip")
     parser.add_argument("--limit", type=int, default=10, help="Số lượng câu hỏi cần sinh (0 = tất cả câu trong public test)")
-    parser.add_argument("--top_k", type=int, default=3, help="Số đoạn luật truyền cho LLM")
+    parser.add_argument("--top_k", type=int, default=5, help="Số đoạn luật truyền cho LLM")
     parser.add_argument("--max_docs", type=int, default=0, help="Số parent docs tối đa để nạp (0 = nạp tất cả)")
     parser.add_argument("--test_file", type=str, default="", help="Đường dẫn file public_official.json")
     parser.add_argument("--parents_dir", type=str, default="", help="Đường dẫn thư mục parents")
