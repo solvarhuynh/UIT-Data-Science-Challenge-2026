@@ -112,13 +112,27 @@ class DiskBM25:
         self.b = b
         self.max_docs = max_docs
         
-        self.conn = sqlite3.connect(str(self.db_path))
-        self.conn.execute("PRAGMA journal_mode = OFF;")
-        self.conn.execute("PRAGMA synchronous = OFF;")
-        self.conn.execute("PRAGMA temp_store = MEMORY;")
-        self.conn.execute("PRAGMA page_size = 65536;")
-        
-        self._init_db()
+        try:
+            self.conn = sqlite3.connect(str(self.db_path))
+            self.conn.execute("PRAGMA journal_mode = OFF;")
+            self.conn.execute("PRAGMA synchronous = OFF;")
+            self.conn.execute("PRAGMA temp_store = MEMORY;")
+            self.conn.execute("PRAGMA page_size = 65536;")
+            self._init_db()
+        except sqlite3.DatabaseError:
+            logger.warning("⚠️ File DB '%s' bị malformed do đĩa đầy trước đó. Đang xóa và tạo lại DB mới...", self.db_path)
+            try:
+                self.conn.close()
+            except Exception:
+                pass
+            if self.db_path.exists():
+                self.db_path.unlink()
+            self.conn = sqlite3.connect(str(self.db_path))
+            self.conn.execute("PRAGMA journal_mode = OFF;")
+            self.conn.execute("PRAGMA synchronous = OFF;")
+            self.conn.execute("PRAGMA temp_store = MEMORY;")
+            self.conn.execute("PRAGMA page_size = 65536;")
+            self._init_db()
 
     def _init_db(self) -> None:
         cursor = self.conn.cursor()
@@ -139,18 +153,19 @@ class DiskBM25:
     def _build_disk_index(self) -> None:
         if not self.parents_dir.exists() or not list(self.parents_dir.glob("*.jsonl")):
             candidate_paths = [
-                Path("/run/media/quan/New Volume/uit_data/processed/chunks"),
                 Path("/run/media/quan/New Volume/uit_data/processed/parents"),
-                Path("/kaggle/input/uit-data-processed/chunks"),
+                Path("/run/media/quan/New Volume/uit_data/processed/chunks"),
                 Path("/kaggle/input/uit-data-processed/parents"),
+                Path("/kaggle/input/uit-data-processed/chunks"),
+                self.parents_dir.parent / "parents",
                 self.parents_dir.parent / "chunks",
             ]
             kaggle_input = Path("/kaggle/input")
             if kaggle_input.exists():
-                for chunk_match in kaggle_input.glob("**/chunks"):
-                    candidate_paths.insert(0, chunk_match)
                 for parent_match in kaggle_input.glob("**/parents"):
-                    candidate_paths.append(parent_match)
+                    candidate_paths.insert(0, parent_match)
+                for chunk_match in kaggle_input.glob("**/chunks"):
+                    candidate_paths.append(chunk_match)
 
             for cand in candidate_paths:
                 if cand.exists() and list(cand.glob("*.jsonl")):
