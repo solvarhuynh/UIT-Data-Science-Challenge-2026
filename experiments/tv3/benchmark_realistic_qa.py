@@ -113,7 +113,27 @@ async def main():
     args = parser.parse_args()
 
     # 1. Load train dataset
-    train_path = Path(args.dataset) if args.dataset else BASE_DIR / "data/task2/public/train.json"
+    train_path = Path(args.dataset) if args.dataset else None
+    if not train_path or not train_path.exists():
+        candidates = [
+            BASE_DIR / "data/task2/public/train.json",
+            BASE_DIR / "data/task2/warmup.json",
+            Path("/kaggle/input/datasets/phamthequan/uit-ds-task2-test/train.json"),
+        ]
+        kaggle_input = Path("/kaggle/input")
+        if kaggle_input.exists():
+            for train_match in kaggle_input.glob("**/train.json"):
+                candidates.insert(0, train_match)
+            for warmup_match in kaggle_input.glob("**/warmup.json"):
+                candidates.append(warmup_match)
+        for cand in candidates:
+            if cand and cand.exists():
+                train_path = cand
+                break
+
+    if not train_path or not train_path.exists():
+        raise FileNotFoundError(f"Không tìm thấy file train.json hoặc warmup.json! Vui lòng truyền --dataset <đường_dẫn_file>")
+
     logger.info("Đang đọc dữ liệu tham chiếu từ: %s", train_path)
     with open(train_path, "r", encoding="utf-8") as f:
         raw_data = json.load(f)
