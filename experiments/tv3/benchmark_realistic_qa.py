@@ -183,8 +183,8 @@ async def main():
         # 4. Tìm kiếm Hybrid
         retrieved_docs = retriever.search(question, top_k=args.top_k, mode=args.mode)
 
-        # 5. Chuyển đổi thành RetrievalHit với chiến lược Context Budget
-        TOTAL_CHAR_BUDGET = 8000 if args.max_context_len == 1200 else args.max_context_len * len(retrieved_docs)
+        # 5. Chuyển đổi thành RetrievalHit với chiến lược Context Budget (Mở rộng 10000 chars cho Kaggle GPU)
+        TOTAL_CHAR_BUDGET = 10000 if args.max_context_len == 1200 else args.max_context_len * len(retrieved_docs)
         n_docs = len(retrieved_docs)
         contexts = []
         for rank, doc in enumerate(retrieved_docs):
@@ -234,16 +234,23 @@ async def main():
 
     if predictions:
         scores = calculate_btc_scores(predictions, references)
+        refused_count = sum(
+            1 for pred in predictions.values() 
+            if "không có đủ căn cứ" in pred.lower() or len(pred.strip()) <= 85
+        )
+        answered_count = len(predictions) - refused_count
 
         print("\n" + "=" * 70)
         print(f"📊 KẾT QUẢ BENCHMARK HYBRID (BM25 + DENSE {args.embedding_model} + LLM)")
         print("=" * 70)
-        print(f"🔹 Số câu test thành công: {success_count} / {len(qids)}")
-        print(f"🔥 ROUGE-L Score:           {scores['rougeL']:.4f}")
-        print(f"🎯 METEOR Score:            {scores['meteor']:.4f}")
-        print(f"⚙️  Retrieval Mode:         {args.mode}")
-        print(f"📚 Top-K Retrieval:         {args.top_k}")
-        print(f"⏱️  Thời gian trung bình:    {elapsed / max(1, success_count):.2f} giây/câu")
+        print(f"🔹 Tổng số câu hỏi test:         {len(qids)}")
+        print(f"✅ Trả lời đầy đủ (Chi tiết ý):  {answered_count} / {len(qids)} ({answered_count / len(qids) * 100:.1f}%)")
+        print(f"⚠️ Từ chối ('Không đủ căn cứ'):  {refused_count} / {len(qids)} ({refused_count / len(qids) * 100:.1f}%)")
+        print(f"🔥 ROUGE-L Score:                {scores['rougeL']:.4f}")
+        print(f"🎯 METEOR Score:                 {scores['meteor']:.4f}")
+        print(f"⚙️  Retrieval Mode:              {args.mode}")
+        print(f"📚 Top-K Retrieval:              {args.top_k}")
+        print(f"⏱️  Thời gian trung bình:         {elapsed / max(1, success_count):.2f} giây/câu")
         print("=" * 70)
 
         output_path = args.output_json

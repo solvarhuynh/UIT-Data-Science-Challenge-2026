@@ -179,9 +179,9 @@ async def main():
         if not contexts:
             retrieved_docs = retriever.search(question, top_k=args.top_k, mode="hybrid")
             # Áp dụng chiến lược Context Budget (Dense X Retrieval paper):
-            # Tổng ngân sách ký tự = 8000, phân bổ ưu tiên cho context xếp hạng cao hơn.
-            # Giúp GPU 4GB xử lý được mà vẫn cung cấp đủ nội dung cho AI.
-            TOTAL_CHAR_BUDGET = 8000
+            # Tổng ngân sách ký tự = 10000, phân bổ ưu tiên cho context xếp hạng cao hơn.
+            # Tối ưu cho Kaggle T4 GPU 16GB VRAM.
+            TOTAL_CHAR_BUDGET = 10000
             n_docs = len(retrieved_docs)
             contexts = []
             for rank, doc in enumerate(retrieved_docs):

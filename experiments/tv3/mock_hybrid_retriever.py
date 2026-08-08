@@ -64,12 +64,19 @@ def _fast_corpus_tokenize(text: str) -> list[str]:
 
 
 def _tokenize_query(query: str) -> list[str]:
-    """Tokenize query using PyVi (fast 0.001s for 1 query) + 1-grams."""
+    """Tokenize query using PyVi + 1-grams + Law Code Identifiers (e.g. 08/ck-tncn)."""
     if not query:
         return []
     q_clean = query.lower()
     words = [w for w in q_clean.split() if w not in _STOPWORDS]
     tokens = set(words)
+
+    # Trích xuất các mã văn bản/biểu mẫu đặc biệt (ví dụ: 08/ck-tncn, 80/2021/tt-btc)
+    code_matches = re.findall(r"\b\d+[a-z0-9/\-_]*[a-z0-9]\b", q_clean)
+    for code in code_matches:
+        tokens.add(code)
+        tokens.add(code.replace("/", "_").replace("-", "_"))
+
     if _PYVI_AVAILABLE:
         try:
             vi_tokens = ViTokenizer.tokenize(q_clean).split()
