@@ -35,8 +35,8 @@ class IngestionPipelineResult(BaseModel):
 def run_ingestion_pipeline(
     raw_directory: Union[str, Path] = "data/raw/btc",
     processed_root: Union[str, Path] = "data/processed",
-    chunk_size: int = 512,
-    chunk_overlap: int = 80,
+    chunk_size: int = 192,
+    chunk_overlap: int = 32,
 ) -> IngestionPipelineResult:
     """Run extract, clean, structure-aware chunking, and validation in order.
 
@@ -48,8 +48,8 @@ def run_ingestion_pipeline(
     root = Path(processed_root)
     metadata_dir = root / "metadata"
     source_root = Path(raw_directory)
-    manifest_path = metadata_dir / "manifest.json"
-    orphan_report_path = metadata_dir / "orphan_contexts.json"
+    manifest_path: Optional[Path] = metadata_dir / "manifest.json"
+    orphan_report_path: Optional[Path] = metadata_dir / "orphan_contexts.json"
 
     if discover_btc_context_files(source_root) or discover_btc_qa_files(source_root):
         extraction_result = extract_btc_context_documents(
@@ -58,6 +58,8 @@ def run_ingestion_pipeline(
         raw_documents = extraction_result.raw_documents
         manifest = build_btc_manifest(extraction_result, source_root)
         orphan_report = build_btc_orphan_report(extraction_result)
+        assert manifest_path is not None
+        assert orphan_report_path is not None
         _write_json(manifest_path, manifest.model_dump())
         _write_json(orphan_report_path, orphan_report.model_dump())
         corpus_hash = manifest.corpus_hash

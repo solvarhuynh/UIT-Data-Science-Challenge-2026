@@ -3,6 +3,7 @@
 import re
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Tuple
+from urllib.parse import unquote, urlparse
 
 from udsc2026.contracts import LegalChunk, LegalParent
 from udsc2026.ingestion.chunking.models import ChunkingResult
@@ -32,7 +33,7 @@ def token_len(text: str) -> int:
 
 
 def split_by_sentence_with_overlap(
-    text: str, chunk_size: int = 512, chunk_overlap: int = 80
+    text: str, chunk_size: int = 192, chunk_overlap: int = 32
 ) -> List[str]:
     """Split only at sentence boundaries and retain a small preceding context.
 
@@ -104,15 +105,53 @@ def _tail_tokens(text: str, count: int) -> str:
 
 def chunk_clean_document(
     document: CleanDocument,
-    chunk_size: int = 512,
-    chunk_overlap: int = 80,
+    chunk_size: int = 192,
+    chunk_overlap: int = 32,
 ) -> ChunkingResult:
-    """Parse and chunk one cleaned document without changing original text."""
+    """Parse and chunk one cleaned document without silently dropping fallbacks."""
     parsed = parse_legal_document(document)
+    if parsed.law_name is None:
+        parsed.law_name = _law_name_from_source_link(document.metadata)
     effective_date = document.metadata.get("effective_date")
+    normalized_effective_date = str(effective_date) if effective_date else None
+    if parsed.requires_manual_review and document.cleaned_text.strip():
+        return _chunk_unstructured_document(
+            document,
+            parsed,
+            effective_date=normalized_effective_date,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+        )
     return chunk_legal_structure(
         parsed,
         abbreviations=document.abbreviations,
+        effective_date=normalized_effective_date,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+    )
+
+
+def chunk_unstructured_document(
+    document: CleanDocument,
+    chunk_size: int = 192,
+    chunk_overlap: int = 32,
+    *,
+    law_name: Optional[str] = None,
+    review_reasons: Optional[List[str]] = None,
+) -> ChunkingResult:
+    """Chunk a known parser miss directly, without reparsing a large document."""
+
+    effective_date = document.metadata.get("effective_date")
+    structure = LegalStructureDocument(
+        doc_id=document.doc_id,
+        source_path=document.source_path,
+        law_name=law_name or _law_name_from_source_link(document.metadata),
+        requires_manual_review=True,
+        review_reasons=list(review_reasons or ["recovered_from_empty_chunk_file"]),
+    )
+    return _chunk_unstructured_document(
+        document,
+        structure,
         effective_date=str(effective_date) if effective_date else None,
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
@@ -124,8 +163,8 @@ def chunk_legal_structure(
     *,
     abbreviations: Optional[Dict[str, str]] = None,
     effective_date: Optional[str] = None,
-    chunk_size: int = 512,
-    chunk_overlap: int = 80,
+    chunk_size: int = 192,
+    chunk_overlap: int = 32,
 ) -> ChunkingResult:
     """Create article parents and legal-unit children from a parsed document."""
     if not structure.doc_id:
@@ -183,8 +222,8 @@ def chunk_legal_article(
     source: Optional[str],
     abbreviations: Dict[str, str],
     effective_date: Optional[str] = None,
-    chunk_size: int = 512,
-    chunk_overlap: int = 80,
+    chunk_size: int = 192,
+    chunk_overlap: int = 32,
     seen_chunk_ids: Optional[Dict[str, int]] = None,
 ) -> List[LegalChunk]:
     """Create search children from one article without crossing clause borders."""
@@ -309,7 +348,9 @@ def _build_chunk(
         parent_id=parent.parent_id,
         doc_id=doc_id,
         text=text.strip(),
-        parent_text=parent.text,
+        # Parent content is written once to data/processed/parents. Repeating it
+        # in every child made the BTC processed corpus grow to tens of GB.
+        parent_text=None,
         law_name=law_name,
         chapter=context.chapter,
         section=context.section,
@@ -365,6 +406,98 @@ def _iter_articles(
             context = _ArticleContext(chapter_label, _label("Mục", section.identifier))
             for article in section.articles:
                 yield article, context
+
+
+def _chunk_unstructured_document(
+    document: CleanDocument,
+    structure: LegalStructureDocument,
+    *,
+    effective_date: Optional[str],
+    chunk_size: int,
+    chunk_overlap: int,
+) -> ChunkingResult:
+    """Create searchable fallback chunks for appendices and non-article texts.
+
+    These documents stay flagged for manual review, but retrieval no longer
+    loses their complete text. IDs retain the source ``doc_id`` prefix so an
+    official LegalIR context ID can still be mapped back to every fallback hit.
+    """
+
+    context = _ArticleContext(None, None)
+    parent_id = "{0}_document".format(_safe_id(document.doc_id))
+    parent_metadata = _metadata(
+        document.cleaned_text,
+        structure.law_name,
+        context,
+        None,
+        None,
+        None,
+        structure.source_path,
+        document.abbreviations,
+        effective_date,
+    )
+    parent_metadata["fallback_chunking"] = True
+    parent_metadata["review_reasons"] = list(structure.review_reasons)
+    parent = LegalParent(
+        parent_id=parent_id,
+        doc_id=document.doc_id,
+        text=document.cleaned_text.strip(),
+        law_name=structure.law_name,
+        source=structure.source_path,
+        metadata=parent_metadata,
+    )
+    parts = split_by_sentence_with_overlap(
+        document.cleaned_text,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap,
+    )
+    chunks: List[LegalChunk] = []
+    for index, part in enumerate(parts, start=1):
+        metadata = _metadata(
+            part,
+            structure.law_name,
+            context,
+            None,
+            None,
+            None,
+            structure.source_path,
+            document.abbreviations,
+            effective_date,
+        )
+        metadata["fallback_chunking"] = True
+        metadata["review_reasons"] = list(structure.review_reasons)
+        chunks.append(
+            LegalChunk(
+                chunk_id="{0}_part_{1}".format(parent_id, index),
+                parent_id=parent_id,
+                doc_id=document.doc_id,
+                text=part,
+                law_name=structure.law_name,
+                effective_date=effective_date,
+                source=structure.source_path,
+                metadata=metadata,
+            )
+        )
+    return ChunkingResult(
+        doc_id=document.doc_id,
+        chunks=chunks,
+        parents=[parent],
+        requires_manual_review=True,
+        review_reasons=list(structure.review_reasons),
+    )
+
+
+def _law_name_from_source_link(metadata: Dict[str, object]) -> Optional[str]:
+    """Use a public legal-document URL slug when the source omitted a title."""
+
+    raw_link = metadata.get("source_link")
+    if not isinstance(raw_link, str) or not raw_link.strip():
+        return None
+    path_name = unquote(urlparse(raw_link).path.rsplit("/", 1)[-1])
+    stem = re.sub(r"\.(?:aspx?|html?)$", "", path_name, flags=re.IGNORECASE)
+    stem = re.sub(r"-\d{5,}$", "", stem)
+    inferred = " ".join(stem.replace("_", "-").split("-")).strip()
+    return inferred or None
 
 
 def _article_parent_id(doc_id: str, article_id: str) -> str:

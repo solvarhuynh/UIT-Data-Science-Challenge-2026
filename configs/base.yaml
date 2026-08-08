@@ -1,15 +1,19 @@
 # Shared RAG defaults. Environment-specific files override these values.
-chunk_size: 512
-chunk_overlap: 80
+chunk_size: 192
+chunk_overlap: 32
 top_k: 10
 similarity_threshold: 0.5
 
 embedding:
-  model_path: ./models/bkai-bi-encoder
+  model_path: ./models/dek21-v2
+  model_id: huyydangg/DEk21_hcmute_embedding_v2
   device: cpu
   batch_size: 32
   max_length: 256
+  output_dimension: 768
   normalize_embeddings: true
+  window_long_texts: true
+  window_overlap_tokens: 32
 
 llm:
   model_path: "./models/qwen3-legal"

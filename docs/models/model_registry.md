@@ -20,7 +20,7 @@ Quản lý tập trung mọi phiên bản mô hình (Retriever, Generator, Reran
 
 | Checkpoint | Version | Params | Local path | Input format | Output format | Trạng thái |
 |---|---|---|---|---|---|---|
-| `bkai-foundation-models/vietnamese-bi-encoder` | HuggingFace (pinned commit khi tải) | ~135M | `./models/bkai-bi-encoder/` | `str` (câu hỏi hoặc đoạn văn bản tiếng Việt, đã qua cleaning) | `list[float]` — vector embedding đã normalize (dùng cosine distance) | Đang dùng (baseline dense) |
+| `huyydangg/DEk21_hcmute_embedding_v2` | HuggingFace (resolved SHA được ghi khi tải) | ~135M | `./models/dek21-v2/` | Văn bản tiếng Việt đã word-segment bằng PyVi | Vector 768 chiều đã normalize, cosine similarity | Đang dùng (dense v2) |
 
 Ghi chú:
 - Encode query và encode chunk dùng chung 1 model (symmetric bi-encoder).

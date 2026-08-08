@@ -76,9 +76,13 @@ def test_pipeline_accepts_btc_contexts_and_writes_manifest_and_orphan_reports(tm
     assert (processed_root / "chunks" / "21.jsonl").exists()
     assert (processed_root / "parents" / "21.jsonl").exists()
 
-    manifest = json.loads((processed_root / "metadata" / "manifest.json").read_text(encoding="utf-8"))
+    manifest = json.loads(
+        (processed_root / "metadata" / "manifest.json").read_text(encoding="utf-8")
+    )
     orphan_report = json.loads(
-        (processed_root / "metadata" / "orphan_contexts.json").read_text(encoding="utf-8")
+        (processed_root / "metadata" / "orphan_contexts.json").read_text(
+            encoding="utf-8"
+        )
     )
 
     assert manifest["schema_version"] == "btc-context-v1"

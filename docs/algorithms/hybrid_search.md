@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-Hybrid Search kết hợp truy hồi ngữ nghĩa bằng Dense Retrieval và truy hồi từ khóa bằng Sparse Retrieval để tăng độ chính xác cho văn bản pháp luật. Với dự án UDSC2026, Dense dùng `bkai-foundation-models/vietnamese-bi-encoder`, Sparse dùng BM25, kết quả cuối có thể đi qua Reranker trước khi chuyển sang QA.
+Hybrid Search kết hợp truy hồi ngữ nghĩa bằng Dense Retrieval và truy hồi từ khóa bằng Sparse Retrieval để tăng độ chính xác cho văn bản pháp luật. Với dự án UDSC2026, Dense dùng `huyydangg/DEk21_hcmute_embedding_v2`, Sparse dùng BM25, kết quả cuối có thể đi qua Reranker trước khi chuyển sang QA.
 
 ## Thành phần
 

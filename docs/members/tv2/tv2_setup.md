@@ -59,7 +59,8 @@ phải đối chiếu lại trước khi merge; không tự sửa một bên.
 
 ```yaml
 embedding:
-  model_path: ./models/bkai-bi-encoder
+  model_path: ./models/dek21-v2
+  model_id: huyydangg/DEk21_hcmute_embedding_v2
   device: cpu
   batch_size: 32
   max_length: 256

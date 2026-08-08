@@ -93,7 +93,9 @@ def extract_btc_context_documents(
         context_id = _context_id_from_path(file_path)
         try:
             extracted = extract_raw_document(str(file_path))
-            candidates = (extracted,) if isinstance(extracted, RawDocument) else extracted
+            candidates = (
+                (extracted,) if isinstance(extracted, RawDocument) else extracted
+            )
             for document in candidates:
                 if document.doc_id in seen_doc_ids:
                     raise ValueError("Trùng context_id: {0}".format(document.doc_id))
@@ -122,9 +124,7 @@ def build_btc_manifest(
     """Build a deterministic manifest for the accepted BTC corpus."""
     root = Path(raw_directory)
     qa_files = discover_btc_qa_files(root)
-    qa_fixtures = [
-        _build_qa_fixture_manifest(file_path) for file_path in qa_files
-    ]
+    qa_fixtures = [_build_qa_fixture_manifest(file_path) for file_path in qa_files]
     corpus_hash = _corpus_hash(result.raw_documents, qa_files)
     return BTCManifest(
         source_root=str(root),
@@ -185,9 +185,9 @@ def _stable_json_hash(payload: Any) -> str:
 
 
 def _stable_json_bytes(payload: Any) -> bytes:
-    return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode(
-        "utf-8"
-    )
+    return json.dumps(
+        payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
 
 
 def _context_id_from_path(file_path: Path) -> str:
@@ -204,7 +204,9 @@ def _error_record(file_path: Path, error: Exception, context_id: str) -> Dict[st
     }
 
 
-def _write_errors(errors: List[Dict[str, str]], errors_path: Optional[str | Path]) -> None:
+def _write_errors(
+    errors: List[Dict[str, str]], errors_path: Optional[str | Path]
+) -> None:
     if not errors_path:
         return
     target = Path(errors_path)

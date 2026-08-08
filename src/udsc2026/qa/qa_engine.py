@@ -146,8 +146,15 @@ class QAEngine:
                 trace_id=tid,
             )
 
-        #  2. Build prompt
+        #  2. Build both compatibility text and native chat turns. The real
+        # Qwen client consumes messages; lightweight mocks keep using text.
         prompt = self._prompt_builder.build_prompt(
+            question=question,
+            contexts=contexts,
+            prompt_version=prompt_version,
+            rag_template=rag_template,
+        )
+        messages = self._prompt_builder.build_messages(
             question=question,
             contexts=contexts,
             prompt_version=prompt_version,
@@ -156,7 +163,11 @@ class QAEngine:
         logger.debug("trace_id=%s | Prompt length: %d chars.", tid, len(prompt))
 
         #  3. Call LLM
-        raw_answer = await asyncio.to_thread(self._llm.generate, prompt)
+        generate_messages = getattr(self._llm, "generate_messages", None)
+        if callable(generate_messages):
+            raw_answer = await asyncio.to_thread(generate_messages, messages)
+        else:
+            raw_answer = await asyncio.to_thread(self._llm.generate, prompt)
         logger.debug("trace_id=%s | Raw answer length: %d chars.", tid, len(raw_answer))
 
         #  3.5 Post-process: trim LLM continuation artifacts

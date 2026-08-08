@@ -596,7 +596,13 @@ def _atomic_output(path: Path) -> Iterator[BinaryIO]:
             raise LegalIRSubmissionError(
                 "submission output target is no longer a regular file"
             )
-        os.replace(temporary_name, path)
+        temporary_path = Path(temporary_name)
+        # Deterministic reruns need no replacement. On Windows, antivirus or a
+        # just-closed ZIP reader can briefly deny replacing the destination.
+        if path.is_file() and _files_equal(temporary_path, path):
+            temporary_path.unlink()
+        else:
+            os.replace(temporary_name, path)
         replaced = True
     finally:
         if descriptor >= 0:
@@ -609,6 +615,23 @@ def _atomic_output(path: Path) -> Iterator[BinaryIO]:
                 os.unlink(temporary_name)
             except OSError:
                 pass
+
+
+def _files_equal(left: Path, right: Path) -> bool:
+    """Compare bounded artifact files without loading both into memory."""
+    try:
+        if left.stat().st_size != right.stat().st_size:
+            return False
+        with left.open("rb") as left_stream, right.open("rb") as right_stream:
+            while True:
+                left_block = left_stream.read(1024 * 1024)
+                right_block = right_stream.read(1024 * 1024)
+                if left_block != right_block:
+                    return False
+                if not left_block:
+                    return True
+    except OSError:
+        return False
 
 
 def _validated_for_write(

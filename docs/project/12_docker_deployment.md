@@ -287,7 +287,7 @@ nhất được nhóm dưới đây.
 
 | Biến | Mặc định | Ý nghĩa |
 | --- | --- | --- |
-| `MODEL_EMBEDDER_PATH` | `/app/models/bkai-bi-encoder` | Checkpoint bi-encoder |
+| `MODEL_EMBEDDER_PATH` | `/app/models/dek21-v2` | Checkpoint DEk21 v2 |
 | `MODEL_LLM_PATH` | `/app/models/qwen3-legal` | Checkpoint Qwen3 |
 | `EMBEDDING_DEVICE` | `cpu` | Device embedding |
 | `EMBEDDING_BATCH_SIZE` | `32` | Batch embedding |

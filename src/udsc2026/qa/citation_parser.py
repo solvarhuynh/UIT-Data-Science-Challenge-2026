@@ -355,7 +355,7 @@ def _extract_inline_citations(text: str) -> list[Citation]:
         Deduplicated list of ``Citation`` objects with ``is_verified=False``.
     """
     citations: list[Citation] = []
-    seen: set[tuple[str, str]] = set()
+    seen: set[tuple[str, str, str]] = set()
 
     # ── Format A: "Điều X, khoản Y" ─────────────────────────────────────
     for match in _INLINE_PATTERN.finditer(text):
@@ -393,7 +393,7 @@ def _extract_inline_citations(text: str) -> list[Citation]:
     return citations
 
 
-def _build_inline_citation(text: str, match: re.Match) -> Optional[Citation]:  # type: ignore[type-arg]
+def _build_inline_citation(text: str, match: re.Match[str]) -> Optional[Citation]:
     """Build a ``Citation`` from a single ``_INLINE_PATTERN`` match.
 
     Args:
@@ -429,9 +429,7 @@ def _build_inline_citation(text: str, match: re.Match) -> Optional[Citation]:  #
     )
 
 
-def _extract_law_name_around(
-    text: str, start_pos: int, end_pos: int
-) -> Optional[str]:
+def _extract_law_name_around(text: str, start_pos: int, end_pos: int) -> Optional[str]:
     """Extract the law name from text immediately before or after a citation match.
 
     Searches up to 90 characters before the match for a law name prefix

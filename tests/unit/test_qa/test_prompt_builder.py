@@ -115,6 +115,21 @@ class TestBuildPrompt:
             )
 
     @pytest.mark.unit
+    def test_build_messages_keeps_system_and_user_turns_separate(
+        self,
+        builder: PromptBuilder,
+        sample_hits: list[RetrievalHit],
+    ) -> None:
+        messages = builder.build_messages(
+            question="Câu hỏi?",
+            contexts=sample_hits,
+        )
+
+        assert [message["role"] for message in messages] == ["system", "user"]
+        assert "Chỉ dùng CONTEXT" in messages[0]["content"]
+        assert "Câu hỏi?" in messages[1]["content"]
+
+    @pytest.mark.unit
     @pytest.mark.parametrize(
         "unsafe_name",
         [

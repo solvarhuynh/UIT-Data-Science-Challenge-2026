@@ -6,7 +6,7 @@
 
 Hai mô hình local chính:
 
-- Embedder: `bkai-foundation-models/vietnamese-bi-encoder` cho dense retrieval tiếng Việt.
+- Embedder: `huyydangg/DEk21_hcmute_embedding_v2` cho dense retrieval tiếng Việt.
 - LLM: Qwen3 legal local checkpoint trong `models/qwen3-legal/` cho sinh câu trả lời pháp lý.
 
 Không yêu cầu dịch vụ LLM bên ngoài trong baseline.
@@ -97,7 +97,7 @@ npm run dev
 Model được tải vào:
 
 ```text
-models/bkai-bi-encoder/
+models/dek21-v2/
 models/qwen3-legal/
 ```
 
@@ -168,7 +168,7 @@ udsc2026/
 │   └── tv5/                         # Thử nghiệm rerank, evaluation, Docker, submission
 ├── frontend/                        # Web frontend do nhân sự riêng phụ trách
 ├── models/
-│   ├── bkai-bi-encoder/             # Local embedder
+│   ├── dek21-v2/                    # DEk21 v2 local embedder
 │   └── qwen3-legal/                 # Local generator
 ├── prompts/
 │   ├── README.md                    # Prompt registry

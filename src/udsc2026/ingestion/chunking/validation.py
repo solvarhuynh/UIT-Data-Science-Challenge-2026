@@ -14,7 +14,7 @@ _REQUIRED_METADATA = ("law_name", "article", "source")
 
 
 def validate_chunking_results(
-    results: Iterable[ChunkingResult], chunk_size: int = 512
+    results: Iterable[ChunkingResult], chunk_size: int = 192
 ) -> ValidationReport:
     """Return auditable counts; validation never silently drops a bad chunk."""
     result_list = list(results)

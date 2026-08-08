@@ -205,9 +205,7 @@ class BM25Retriever:
             _to_hit(self._chunks[index], score) for index, score in eligible[:top_k]
         ]
         if len(results) > top_k:
-            raise RuntimeError(
-                f"BM25 returned {len(results)} hits for top_k={top_k}"
-            )
+            raise RuntimeError(f"BM25 returned {len(results)} hits for top_k={top_k}")
         return results
 
     @property

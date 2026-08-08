@@ -24,7 +24,10 @@ def test_embedding_environment_overrides_yaml(tmp_path: Path) -> None:
             "MODEL_EMBEDDER_PATH": "/app/models/embedder",
             "EMBEDDING_DEVICE": "cuda:0",
             "EMBEDDING_BATCH_SIZE": "8",
+            "EMBEDDING_OUTPUT_DIMENSION": "512",
             "EMBEDDING_NORMALIZE_EMBEDDINGS": "false",
+            "EMBEDDING_WINDOW_LONG_TEXTS": "true",
+            "EMBEDDING_WINDOW_OVERLAP_TOKENS": "24",
         },
     )
 
@@ -32,7 +35,10 @@ def test_embedding_environment_overrides_yaml(tmp_path: Path) -> None:
     assert config["device"] == "cuda:0"
     assert config["batch_size"] == 8
     assert config["max_length"] == 256
+    assert config["output_dimension"] == 512
     assert config["normalize_embeddings"] is False
+    assert config["window_long_texts"] is True
+    assert config["window_overlap_tokens"] == 24
 
 
 def test_embedding_rejects_invalid_integer_override(tmp_path: Path) -> None:

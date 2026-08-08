@@ -41,7 +41,11 @@ def test_embed_query_applies_vietnamese_segmentation_before_encoding(client):
 
     def encode(texts, **kwargs):
         seen["texts"] = texts
-        return np.asarray([0.1, 0.2, 0.3] if isinstance(texts, str) else [[0.1, 0.2, 0.3] for _ in texts])
+        return np.asarray(
+            [0.1, 0.2, 0.3]
+            if isinstance(texts, str)
+            else [[0.1, 0.2, 0.3] for _ in texts]
+        )
 
     client.model.encode.side_effect = encode
 
@@ -74,3 +78,23 @@ def test_resilient_embedding_skips_failed_batch_and_reports_chunk_ids(client):
 
     assert [chunk_id for chunk_id, _ in encoded] == ["c1", "c2"]
     assert errors == [{"chunk_id": "c3", "error": "max_length exceeded"}]
+
+
+def test_long_documents_are_windowed_and_aggregated(client):
+    client.window_long_texts = True
+    client.max_length = 6
+    client.window_overlap_tokens = 1
+    client.model.tokenizer.encode.return_value = list(range(10))
+    client.model.tokenizer.num_special_tokens_to_add.return_value = 2
+    client.model.tokenizer.decode.side_effect = lambda ids, **kwargs: " ".join(
+        str(token_id) for token_id in ids
+    )
+    client.model.encode.side_effect = lambda texts, **kwargs: np.asarray(
+        [[1.0, 0.0, 0.0] for _ in texts]
+    )
+
+    vectors = client.embed_documents(["Ä‘iá»u luáº­t rất dĂ i"])
+
+    assert vectors == [[1.0, 0.0, 0.0]]
+    assert client.windowed_document_count == 1
+    assert client.encoded_window_count == 3

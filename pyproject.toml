@@ -16,11 +16,11 @@ dependencies = [
 [project.optional-dependencies]
 llm = [
     "accelerate>=0.33,<2.0",
-    "torch>=2.2,<3.0",
-    "transformers>=4.44,<5.0",
+    "torch>=2.7,<3.0",
+    "transformers>=4.51,<5.0",
 ]
 rerank = [
-    "sentence-transformers>=3.0,<4.0",
+    "sentence-transformers>=3.0,<6.0",
 ]
 retrieval = [
     "faiss-cpu>=1.8,<2.0",
@@ -28,7 +28,22 @@ retrieval = [
     "pyvi>=0.1,<1.0",
     "qdrant-client>=1.10,<2.0",
     "rank-bm25>=0.2,<1.0",
-    "sentence-transformers>=3.0,<4.0",
+    "sentence-transformers>=3.0,<6.0",
+    "tqdm>=4.66,<5.0",
+]
+models = [
+    "huggingface-hub>=0.24,<2.0",
+]
+gpu = [
+    "accelerate>=0.33,<2.0",
+    "faiss-cpu>=1.8,<2.0",
+    "huggingface-hub>=0.24,<2.0",
+    "numpy>=1.26,<2.0",
+    "pyvi>=0.1,<1.0",
+    "sentence-transformers>=3.0,<6.0",
+    "torch>=2.7,<3.0",
+    "tqdm>=4.66,<5.0",
+    "transformers>=4.51,<5.0",
 ]
 
 [tool.setuptools.package-data]
@@ -105,14 +120,17 @@ ignore_errors = true
 module = [
     "cohere.*",
     "faiss.*",
+    "huggingface_hub.*",
     "llama_index.*",
     "pdfplumber.*",
     "pyvi.*",
     "qdrant_client.*",
     "rank_bm25.*",
     "sentence_transformers.*",
+    "bitsandbytes.*",
     "tavily.*",
     "transformers.*",
+    "tqdm.*",
     "vllm.*",
 ]
 ignore_missing_imports = true

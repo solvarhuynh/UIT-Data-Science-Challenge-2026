@@ -4,7 +4,7 @@ import logging
 import queue
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any, Generator, Optional, TypeVar, cast
 
 from udsc2026.infrastructure.llm.config import LLMConfig
@@ -153,7 +153,7 @@ class LLMClient:
         )
 
         load_kwargs: dict[str, Any] = {
-            "device_map": device,
+            "device_map": "auto" if device == "cuda" else device,
             "trust_remote_code": True,
         }
         if quantization != "none":
@@ -176,7 +176,7 @@ class LLMClient:
                     load_in_8bit=True
                 )
         else:
-            load_kwargs["dtype"] = dtype
+            load_kwargs["torch_dtype"] = dtype
 
         logger.info(
             "Loading model from '%s' (dtype=%s, device=%s, quantization=%s)…",
@@ -204,6 +204,11 @@ class LLMClient:
                 dtype=self._config.dtype,
                 trust_remote_code=True,
             )
+            if _TRANSFORMERS_AVAILABLE:
+                self._tokenizer = AutoTokenizer.from_pretrained(
+                    self._config.model_path,
+                    trust_remote_code=True,
+                )
             logger.info("vLLM engine initialised for '%s'.", self._config.model_path)
         except ImportError as exc:
             raise ImportError(
@@ -232,6 +237,41 @@ class LLMClient:
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
+
+    def _render_chat_messages(
+        self,
+        messages: Sequence[Mapping[str, str]],
+    ) -> str:
+        """Apply the checkpoint's native Qwen chat template."""
+
+        if not messages:
+            raise ValueError("messages must not be empty")
+        normalized: list[dict[str, str]] = []
+        for index, message in enumerate(messages):
+            role = message.get("role", "").strip()
+            content = message.get("content", "").strip()
+            if role not in {"system", "user", "assistant"}:
+                raise ValueError(f"messages[{index}] has an unsupported role")
+            if not content:
+                raise ValueError(f"messages[{index}].content must not be empty")
+            normalized.append({"role": role, "content": content})
+        tokenizer = self._require_tokenizer()
+        rendered = tokenizer.apply_chat_template(
+            normalized,
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+        if not isinstance(rendered, str) or not rendered.strip():
+            raise RuntimeError("tokenizer returned an empty chat prompt")
+        return rendered
+
+    def generate_messages(
+        self,
+        messages: Sequence[Mapping[str, str]],
+    ) -> str:
+        """Generate from explicit system/user turns using the model template."""
+
+        return self.generate(self._render_chat_messages(messages))
 
     def generate(self, prompt: str) -> str:
         """Generate a completion for the given prompt string.
@@ -392,6 +432,14 @@ class LLMClient:
             raise RuntimeError("LLM streaming generation failed") from (
                 generation_errors.get_nowait()
             )
+
+    def generate_stream_messages(
+        self,
+        messages: Sequence[Mapping[str, str]],
+    ) -> Generator[str, None, None]:
+        """Stream from chat turns after applying the checkpoint template."""
+
+        yield from self.generate_stream(self._render_chat_messages(messages))
 
     def _deadline_stopping_criteria(self) -> dict[str, Any]:
         """Build a transformers deadline criterion when a timeout is configured."""

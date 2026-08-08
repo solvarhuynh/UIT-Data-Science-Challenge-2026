@@ -1,0 +1,45 @@
+# RTX 5060 Ti 16 GB profile used for offline indexing, reranking, and QA.
+environment: gpu
+
+embedding:
+  model_path: ./models/dek21-v2
+  model_id: huyydangg/DEk21_hcmute_embedding_v2
+  device: cuda
+  batch_size: 128
+  max_length: 256
+  output_dimension: 768
+  normalize_embeddings: true
+  window_long_texts: true
+  window_overlap_tokens: 32
+
+llm:
+  model_path: ./models/qwen3-legal
+  backend: transformers
+  device: cuda
+  dtype: bfloat16
+  quantization: none
+  max_new_tokens: 1024
+  temperature: 0.1
+  top_p: 0.9
+  repetition_penalty: 1.05
+  stream: false
+  timeout_seconds: 180.0
+
+vector_db:
+  type: faiss
+  faiss_index_path: data/vector_store/faiss
+  collection_name: legal_chunks_dek21_v2_768
+
+hybrid:
+  candidate_k: 50
+  top_k: 10
+
+reranker:
+  enabled: true
+  model_name_or_path: ./models/reranker
+  device: cuda
+  batch_size: 8
+  max_length: 1024
+  top_n: 5
+  local_files_only: true
+  use_fp16: true

@@ -113,6 +113,9 @@ def _default_retriever() -> SearchRetriever:
         batch_size=embedding.get("batch_size", 32),
         max_length=embedding.get("max_length", 256),
         normalize_embeddings=embedding.get("normalize_embeddings", True),
+        output_dimension=embedding.get("output_dimension"),
+        window_long_texts=embedding.get("window_long_texts", False),
+        window_overlap_tokens=embedding.get("window_overlap_tokens", 32),
     )
     dense = DenseRetriever(client, get_vector_db_adapter(config))
     sparse = BM25Retriever(hybrid_settings.bm25_index_path)

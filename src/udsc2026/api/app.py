@@ -89,6 +89,9 @@ def _build_orchestrator() -> RAGOrchestrator:
         batch_size=embedding_config.get("batch_size", 32),
         max_length=embedding_config.get("max_length", 256),
         normalize_embeddings=embedding_config.get("normalize_embeddings", True),
+        output_dimension=embedding_config.get("output_dimension"),
+        window_long_texts=embedding_config.get("window_long_texts", False),
+        window_overlap_tokens=embedding_config.get("window_overlap_tokens", 32),
     )
     dense = DenseRetriever(embedding_client, get_vector_db_adapter(config))
     hybrid_settings = load_hybrid_settings()

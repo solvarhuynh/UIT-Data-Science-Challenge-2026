@@ -40,7 +40,7 @@ def test_chunking_links_legal_children_to_full_article_parent():
     assert result.parents[0].parent_id == "doc001_article_10"
     assert len(result.chunks) == 4
     assert {chunk.parent_id for chunk in result.chunks} == {"doc001_article_10"}
-    assert all(chunk.parent_text == result.parents[0].text for chunk in result.chunks)
+    assert all(chunk.parent_text is None for chunk in result.chunks)
     point_chunk = next(chunk for chunk in result.chunks if chunk.point == "Điểm a")
     assert point_chunk.chunk_id == "doc001_article_10_clause_1_point_a"
     assert point_chunk.metadata["expanded_terms"] == {}
@@ -121,7 +121,7 @@ def test_writer_emits_jsonl_and_validation_report(tmp_path):
     assert report_payload["invalid_json_record_count"] == 0
 
 
-def test_manual_review_document_is_not_blindly_chunked():
+def test_manual_review_document_gets_auditable_fallback_chunks():
     document = CleanDocument(
         doc_id="review",
         source_path="data/raw/review.txt",
@@ -133,7 +133,10 @@ def test_manual_review_document_is_not_blindly_chunked():
     result = chunk_clean_document(document)
     report = validate_chunking_results([result])
 
-    assert result.chunks == []
+    assert len(result.chunks) == 1
+    assert result.chunks[0].chunk_id.startswith("review_document_part_")
+    assert result.chunks[0].metadata["fallback_chunking"] is True
+    assert result.requires_manual_review is True
     assert report.manual_review_documents == ["review"]
 
 

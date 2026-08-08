@@ -24,8 +24,8 @@ def write_chunking_outputs(
     parents_dir: Optional[Union[str, Path]] = None,
     report_path: Optional[Union[str, Path]] = None,
     review_path: Optional[Union[str, Path]] = None,
-    chunk_size: int = 512,
-    chunk_overlap: int = 80,
+    chunk_size: int = 192,
+    chunk_overlap: int = 32,
 ) -> Tuple[List[ChunkingResult], ValidationReport]:
     """Chunk documents, save one JSONL pair per document, and write a report."""
     document_list = list(documents)

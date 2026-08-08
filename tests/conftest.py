@@ -26,7 +26,7 @@ def mock_database():
 def test_config():
     return {
         "QDRANT_URL": "http://localhost:6333",
-        "MODEL_EMBEDDER_PATH": "./models/bkai-bi-encoder",
+        "MODEL_EMBEDDER_PATH": "./models/dek21-v2",
         "MODEL_LLM_PATH": "./models/qwen3-legal",
         "DEBUG": True,
     }
@@ -37,7 +37,7 @@ def setup_test_env():
     os.environ.update(
         {
             "QDRANT_URL": "http://localhost:6333",
-            "MODEL_EMBEDDER_PATH": "./models/bkai-bi-encoder",
+            "MODEL_EMBEDDER_PATH": "./models/dek21-v2",
             "MODEL_LLM_PATH": "./models/qwen3-legal",
             "DEBUG": "true",
         }

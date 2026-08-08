@@ -69,7 +69,7 @@ sequenceDiagram
 2. Làm sạch encoding, loại bỏ nội dung thừa và chuẩn hóa metadata.
 3. Nhận diện cấu trúc văn bản: luật, chương, mục, điều, khoản, điểm.
 4. Chunk theo ranh giới pháp lý, hạn chế cắt giữa các khoản liên quan.
-5. Dùng `bkai-foundation-models/vietnamese-bi-encoder` tạo vector cho từng chunk.
+5. Dùng `huyydangg/DEk21_hcmute_embedding_v2` tạo vector cho từng chunk.
 6. Lưu vector, text và metadata vào vector store; tạo BM25 index song song.
 
 ### 4.2 Online retrieval
@@ -114,7 +114,7 @@ QAResponse       = answer, citations[], usage, latency
 
 ```text
 models/
-├── bkai-bi-encoder/  # bkai-foundation-models/vietnamese-bi-encoder
+├── dek21-v2/         # huyydangg/DEk21_hcmute_embedding_v2
 └── qwen3-legal/      # thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2
 ```
 

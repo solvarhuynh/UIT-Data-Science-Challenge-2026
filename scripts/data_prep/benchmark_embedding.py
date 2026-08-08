@@ -24,7 +24,9 @@ def read_chunks(chunks_dir: Path) -> list[dict[str, str]]:
 
     result: list[dict[str, str]] = []
     for path in sorted(chunks_dir.glob("*.jsonl")):
-        for line_number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        for line_number, raw in enumerate(
+            path.read_text(encoding="utf-8").splitlines(), 1
+        ):
             if not raw.strip() or raw.lstrip().startswith("#"):
                 continue
             try:
@@ -41,7 +43,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--chunks-dir", default="data/processed/chunks", type=Path)
     parser.add_argument("--batch-size", type=int)
     parser.add_argument(
-        "--error-report", type=Path, default=Path("data/processed/metadata/embedding_errors.json")
+        "--error-report",
+        type=Path,
+        default=Path("data/processed/metadata/embedding_errors.json"),
     )
     return parser.parse_args()
 
@@ -60,11 +64,14 @@ def main() -> int:
     if not chunks:
         raise SystemExit(f"No valid chunks found in {args.chunks_dir}")
     client = EmbeddingClient(
-        model_path=str(embedding_config.get("model_path", "./models/bkai-bi-encoder")),
+        model_path=str(embedding_config.get("model_path", "./models/dek21-v2")),
         device=str(embedding_config.get("device", "cpu")),
         batch_size=batch_size,
         max_length=int(embedding_config.get("max_length", 256)),
         normalize_embeddings=bool(embedding_config.get("normalize_embeddings", True)),
+        output_dimension=embedding_config.get("output_dimension"),
+        window_long_texts=bool(embedding_config.get("window_long_texts", False)),
+        window_overlap_tokens=int(embedding_config.get("window_overlap_tokens", 32)),
     )
     started = time.perf_counter()
     encoded, errors = client.embed_documents_resilient(
@@ -72,14 +79,20 @@ def main() -> int:
     )
     elapsed = time.perf_counter() - started
     args.error_report.parent.mkdir(parents=True, exist_ok=True)
-    args.error_report.write_text(json.dumps(errors, ensure_ascii=False, indent=2), encoding="utf-8")
+    args.error_report.write_text(
+        json.dumps(errors, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     batches = (len(chunks) + batch_size - 1) // batch_size
     print(f"Chunks: {len(chunks)}")
     print(f"Encoded: {len(encoded)}")
     print(f"Failed: {len(errors)}")
     print(f"Elapsed seconds: {elapsed:.2f}")
     print(f"Average seconds/batch: {elapsed / batches:.4f}")
-    print(f"Chunks/second: {len(encoded) / elapsed:.2f}" if elapsed else "Chunks/second: inf")
+    print(
+        f"Chunks/second: {len(encoded) / elapsed:.2f}"
+        if elapsed
+        else "Chunks/second: inf"
+    )
     return 0
 
 

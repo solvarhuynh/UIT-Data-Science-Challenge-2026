@@ -10,7 +10,7 @@ Output chuẩn của TV2 là `list[RetrievalHit]` có score, metadata citation v
 
 ## 2. Nhiệm vụ kỹ thuật chi tiết
 
-- [ ] Viết `EmbeddingClient` trong `src/udsc2026/infrastructure/embedding/` để load local model `models/bkai-bi-encoder` hoặc path cấu hình tương ứng với `bkai-foundation-models/vietnamese-bi-encoder`.
+- [ ] Dùng `EmbeddingClient` để load `models/dek21-v2`, checkpoint `huyydangg/DEk21_hcmute_embedding_v2` đã được nhóm chốt.
 - [ ] Hỗ trợ encode query đơn lẻ và batch document/chunk với cấu hình `device`, `batch_size`, `max_length`, `normalize_embeddings`.
 - [ ] Chuẩn hóa output embedding về `list[float]` hoặc `numpy.ndarray` theo contract của VectorDB adapter.
 - [ ] Viết `DenseRetriever` trong `src/udsc2026/retrieval/dense/`, nhận `query`, `top_k`, `filters` và trả `list[RetrievalHit]`.

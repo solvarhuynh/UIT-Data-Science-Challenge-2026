@@ -24,6 +24,7 @@ Dependencies (install once)::
 from __future__ import annotations
 
 import argparse
+import asyncio
 import json
 import logging
 import random
@@ -60,6 +61,7 @@ _DEV_RATIO = 0.8  # 80% dev, 20% held-out test
 # Metric helpers
 # ---------------------------------------------------------------------------
 
+
 def _compute_meteor(hypothesis: str, reference: str) -> float:
     """Compute METEOR score between hypothesis and reference strings.
 
@@ -73,8 +75,8 @@ def _compute_meteor(hypothesis: str, reference: str) -> float:
     if not hypothesis or not reference:
         return 0.0
     try:
-        from nltk.translate.meteor_score import single_meteor_score
         import nltk
+        from nltk.translate.meteor_score import single_meteor_score
 
         try:
             hyp_tokens = nltk.word_tokenize(hypothesis.lower())
@@ -108,15 +110,14 @@ def _compute_rouge_l(hypothesis: str, reference: str) -> float:
         result = scorer.score(reference, hypothesis)
         return float(result["rougeL"].fmeasure)
     except ImportError:
-        logger.error(
-            "rouge-score is not installed. Run: pip install rouge-score"
-        )
+        logger.error("rouge-score is not installed. Run: pip install rouge-score")
         return 0.0
 
 
 # ---------------------------------------------------------------------------
 # Data loading helpers
 # ---------------------------------------------------------------------------
+
 
 def _load_warmup(path: Path) -> list[dict]:
     """Load warmup_task2.json and return a flat list of samples.
@@ -166,15 +167,14 @@ def _split_warmup(
     rng.shuffle(shuffled)
     cut = int(len(shuffled) * dev_ratio)
     dev, test = shuffled[:cut], shuffled[cut:]
-    logger.info(
-        "Split: %d DEV (tuning) | %d TEST (held-out).", len(dev), len(test)
-    )
+    logger.info("Split: %d DEV (tuning) | %d TEST (held-out).", len(dev), len(test))
     return dev, test
 
 
 # ---------------------------------------------------------------------------
 # Mock LLM for fast offline evaluation
 # ---------------------------------------------------------------------------
+
 
 class _MockLLM:
     """Lightweight mock that returns the question back as a 'no-context' answer.
@@ -184,7 +184,10 @@ class _MockLLM:
     """
 
     def generate(self, prompt: str) -> str:  # noqa: ARG002
-        return "Dựa trên dữ liệu pháp lý được cung cấp, không có đủ căn cứ để trả lời câu hỏi này."
+        return (
+            "Dựa trên dữ liệu pháp lý được cung cấp, không có đủ căn cứ để "
+            "trả lời câu hỏi này."
+        )
 
 
 def _build_mock_context(question: str) -> list[RetrievalHit]:
@@ -212,7 +215,6 @@ def _build_mock_context(question: str) -> list[RetrievalHit]:
 # Evaluation core
 # ---------------------------------------------------------------------------
 
-import asyncio
 
 def evaluate(
     samples: list[dict],
@@ -356,9 +358,7 @@ def evaluate(
             else 0.0
         ),
         "rouge_l_mean_success": (
-            round(sum(success_rouge) / len(success_rouge), 4)
-            if success_rouge
-            else 0.0
+            round(sum(success_rouge) / len(success_rouge), 4) if success_rouge else 0.0
         ),
         "prompt_version": prompt_version,
         "rag_template": rag_template,
@@ -369,6 +369,7 @@ def evaluate(
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
+
 
 def _classify_error(exc: BaseException) -> str:
     """Bucket a generation exception into a coarse category for reporting."""
@@ -424,7 +425,7 @@ def _print_score_zero_hint(report: dict) -> None:
         print("     nltk/rouge-score đã cài nhưng thiếu dữ liệu nltk sau:")
         print(f"       {', '.join(missing)}")
         print(
-            '     Chạy: python -c "import nltk; nltk.download(\'punkt\'); '
+            "     Chạy: python -c \"import nltk; nltk.download('punkt'); "
             "nltk.download('wordnet')\""
         )
     else:
@@ -562,6 +563,7 @@ def main() -> None:
     else:
         llm = _MockLLM()  # type: ignore[assignment]
         from udsc2026.qa.citation_parser import CitationParser
+
         logger.info("Using MockLLM (pass --use-real-model to use real weights).")
 
     from udsc2026.qa.citation_parser import CitationParser
