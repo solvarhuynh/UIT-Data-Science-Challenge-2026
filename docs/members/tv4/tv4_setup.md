@@ -114,6 +114,7 @@ Vị trí: `src/udsc2026/ingestion/chunking/`
 - Validation kiểm tra chunk rỗng/quá dài, metadata thiếu, Unicode, ID trùng,
   child không có parent và khả năng ghi JSONL.
 - Khi corpus BTC được đưa vào, `context_id` được giữ nhất quán qua `doc_id`, `parent_id` và `chunk_id` để TV2/TV5 khớp scorer mà không cần sửa tay.
+- Với văn bản không có `Điều/Khoản` nhưng có nội dung pháp lý quan trọng như `Lời nói đầu`, `Phạm vi điều chỉnh` hoặc `Giải thích từ ngữ`, chunker dùng fallback chunking theo đoạn/câu và gắn nhãn `Phần mở đầu` hoặc heading tương ứng thay vì bỏ rơi toàn bộ tài liệu.
 
 ### BTC manifest và orphan report — kiểm kê corpus chính thức
 
@@ -122,6 +123,8 @@ Vị trí: `src/udsc2026/ingestion/btc.py`
 - TV4 quét đệ quy `LegalIR` và `LegalQA`, chỉ chunk các `context_*.json`.
 - Sinh `data/processed/metadata/manifest.json` chứa `schema_version`, `corpus_hash`, danh sách context đã nhận và tổng quan các fixture `train.json` / `public-official.json`.
 - Sinh `data/processed/metadata/orphan_contexts.json` để ghi nhận các `context_id` bị rớt, lỗi schema hoặc trùng ID trong lúc extract.
+- Sinh `data/processed/metadata/manual_review_breakdown.json` để phân nhóm manual review thành `cleaner_cleared_text`, `ocr_noise`, `regex_recoverable`, `fallback_chunkable_no_article` và `no_article_structure`.
+- Sinh thêm `data/processed/metadata/manual_review_regex_candidates.json` để TV4 tinh chỉnh regex cho nhóm còn cứu được, cùng `data/processed/metadata/manual_review_cleaner_cleared_text.json` và `data/processed/metadata/manual_review_ocr_noise.json` để đánh giá phần cần fallback hoặc cleanup tiếp.
 - TV4 chỉ kiểm tra schema và manifest của `train.json` / `public-official.json`; không sinh prediction cho LegalQA.
 
 ### Synthetic benchmark generator — dữ liệu đánh giá
@@ -171,31 +174,30 @@ TV3 dùng `parent_id` hoặc `parent_text` khi cần context Điều đầy đ�
 TV5 dùng benchmark của TV4 để đo Recall@K, MRR, chất lượng rerank và latency.
 TV1 gọi pipeline hoặc đọc các output chuẩn để tích hợp backend end-to-end.
 
-
 ## 5. Chạy thử ETL và benchmark
 
-### Bước 1 — Chuẩn bị dữ liệu BTC thật
+### Bước 1 - Chuẩn bị dữ liệu BTC thật
 
-*Lưu ý quan trọng: Không chạy script sinh dữ liệu giả lập (`generate_mock_btc_data.py`) nữa. Hãy dọn sạch thư mục `data/raw/btc/mock/` và làm trống các thư mục bên trong `data/processed/` nếu trước đó đã chạy mock data.*
+*Lưu ý quan trọng: Không chạy script sinh dữ liệu giả lập (`generate_mock_btc_data.py`) nữa. Hãy giải nén `selected-contexts.zip` cùng các file BTC vào đúng cấu trúc `data/raw/btc/LegalIR` và `data/raw/btc/LegalQA`. Nếu trước đó đã chạy mock data thì dọn sạch `data/raw/btc/mock/` và các thư mục trong `data/processed/`.*
 
+<<<<<<< HEAD
+### Bước 2 - Chạy ETL
+=======
 AE giải nén gói dữ liệu `selected-contexts.zip` cùng các file của Ban tổ chức (BTC) vào đúng cấu trúc data/raw/btc/LegalIR và data/raw/btc/LegalQA như trong group Zalo nhé
+>>>>>>> 6d4ca2b712a75aff644c002171ad1c23e137e4aa
 
-### Bước 2 — Chạy ETL
-
-Pipeline hiện tại đã được tích hợp BTC Adapter mới. Hệ thống sẽ tự động quét đệ quy vào cả 2 thư mục `LegalIR` và `LegalQA` để trực tiếp đọc các file `context_<id>.json` mà không cần cấu hình thêm.
-
-Chạy virtual environment: .\.venv\Scripts\Activate.ps1
+Pipeline hiện tại đã được tích hợp BTC Adapter mới. Hệ thống sẽ tự động quét đệ quy cả 2 thư mục `LegalIR` và `LegalQA` để trực tiếp đọc các file `context_<id>.json` mà không cần cấu hình thêm.
 
 ```powershell
 $env:PYTHONPATH = "src"
 py -3.10 -c "from udsc2026.ingestion import run_ingestion_pipeline; print(run_ingestion_pipeline())"
+```
 
-Sau bước này kiểm tra `chunks/`, `parents/`, `documents/`, `metadata/validation_report.json`, `metadata/manifest.json` và `metadata/orphan_contexts.json` trong `data/processed/`.
+Sau bước này kiểm tra `chunks/`, `parents/`, `documents/`, `metadata/validation_report.json`, `metadata/manifest.json`, `metadata/orphan_contexts.json` và `metadata/manual_review_breakdown.json` trong `data/processed/`.
 
-### Bước 3 — sinh benchmark 100 Q&A
+### Bước 3 - Sinh benchmark 100 Q&A
 
-Corpus chuẩn cần có căn cứ cho đủ bảy nhóm câu hỏi. Generator sẽ báo rõ nhóm
-thiếu thay vì tạo câu hỏi không có căn cứ.
+Corpus chuẩn cần có căn cứ cho đủ bảy nhóm câu hỏi. Generator sẽ báo rõ nhóm thiếu thay vì tạo câu hỏi không có căn cứ.
 
 ```powershell
 $env:PYTHONPATH = "src"
@@ -205,11 +207,9 @@ py -3.10 -m udsc2026.evaluation.synthetic_generator `
   --count 100
 ```
 
-Với corpus nhỏ chỉ để khám phá module, có thể dùng `--allow-missing-types`.
-Không dùng chế độ này làm benchmark nghiệm thu vì có thể thiếu một số nhóm câu
-hỏi pháp lý.
+Với corpus nhỏ chỉ để khám phá module, có thể dùng `--allow-missing-types`. Không dùng chế độ này làm benchmark nghiệm thu vì có thể thiếu một số nhóm câu hỏi pháp lý.
 
-### Bước 4 — chạy test
+### Bước 4 - Chạy test
 
 ```powershell
 $env:PYTHONPATH = "src"
@@ -217,7 +217,5 @@ py -3.10 -m pytest -q -o addopts=''
 ```
 
 ## 6. Ranh giới trách nhiệm TV4
-TV4 cung cấp dữ liệu, schema và benchmark có thể tái lập. TV4 không phụ trách
-Web Frontend, FastAPI endpoint, embedding model, VectorDB indexing, retrieval,
-reranking hay sinh câu trả lời LLM. Các module đó thuộc lần lượt TV1, TV2, TV5
-và TV3; TV4 chỉ bảo đảm input cho họ sạch, có cấu trúc và truy vết được.
+
+TV4 cung cấp dữ liệu, schema và benchmark có thể tái lập. TV4 không phụ trách Web Frontend, FastAPI endpoint, embedding model, VectorDB indexing, retrieval, reranking hay sinh câu trả lời LLM. Các module đó thuộc lần lượt TV1, TV2, TV5 và TV3; TV4 chỉ bảo đảm input cho họ sạch, có cấu trúc và truy vết được.

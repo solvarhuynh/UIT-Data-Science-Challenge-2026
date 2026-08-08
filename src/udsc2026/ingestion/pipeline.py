@@ -16,6 +16,12 @@ from udsc2026.ingestion.btc import (
 from udsc2026.ingestion.chunking import ValidationReport, write_chunking_outputs
 from udsc2026.ingestion.cleaners import clean_raw_documents
 from udsc2026.ingestion.readers import extract_raw_documents
+from udsc2026.ingestion.reviewing import (
+    build_manual_review_breakdown,
+    build_manual_review_document_report,
+    write_manual_review_breakdown,
+    write_manual_review_document_report,
+)
 
 
 class IngestionPipelineResult(BaseModel):
@@ -29,7 +35,11 @@ class IngestionPipelineResult(BaseModel):
     processed_root: str
     manifest_path: Optional[str] = None
     orphan_report_path: Optional[str] = None
+    manual_review_breakdown_path: Optional[str] = None
     corpus_hash: Optional[str] = None
+    regex_candidate_report_path: Optional[str] = None
+    cleaner_cleared_report_path: Optional[str] = None
+    ocr_noise_report_path: Optional[str] = None
 
 
 def run_ingestion_pipeline(
@@ -82,6 +92,33 @@ def run_ingestion_pipeline(
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
     )
+    breakdown_path = metadata_dir / "manual_review_breakdown.json"
+    breakdown = build_manual_review_breakdown(
+        clean_documents, report.manual_review_documents
+    )
+    write_manual_review_breakdown(breakdown, breakdown_path)
+
+    regex_report_path = metadata_dir / "manual_review_regex_candidates.json"
+    cleaner_report_path = metadata_dir / "manual_review_cleaner_cleared_text.json"
+    ocr_report_path = metadata_dir / "manual_review_ocr_noise.json"
+    write_manual_review_document_report(
+        build_manual_review_document_report(
+            clean_documents, report.manual_review_documents, "regex_recoverable"
+        ),
+        regex_report_path,
+    )
+    write_manual_review_document_report(
+        build_manual_review_document_report(
+            clean_documents, report.manual_review_documents, "cleaner_cleared_text"
+        ),
+        cleaner_report_path,
+    )
+    write_manual_review_document_report(
+        build_manual_review_document_report(
+            clean_documents, report.manual_review_documents, "ocr_noise"
+        ),
+        ocr_report_path,
+    )
     return IngestionPipelineResult(
         raw_document_count=len(raw_documents),
         cleaned_document_count=len(clean_documents),
@@ -91,6 +128,10 @@ def run_ingestion_pipeline(
         processed_root=str(root),
         manifest_path=str(manifest_path) if manifest_path else None,
         orphan_report_path=str(orphan_report_path) if orphan_report_path else None,
+        manual_review_breakdown_path=str(breakdown_path),
+        regex_candidate_report_path=str(regex_report_path),
+        cleaner_cleared_report_path=str(cleaner_report_path),
+        ocr_noise_report_path=str(ocr_report_path),
         corpus_hash=corpus_hash,
     )
 

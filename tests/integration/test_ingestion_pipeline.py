@@ -71,6 +71,10 @@ def test_pipeline_accepts_btc_contexts_and_writes_manifest_and_orphan_reports(tm
     assert result.chunked_document_count == 1
     assert result.manifest_path is not None
     assert result.orphan_report_path is not None
+    assert result.manual_review_breakdown_path is not None
+    assert result.regex_candidate_report_path is not None
+    assert result.cleaner_cleared_report_path is not None
+    assert result.ocr_noise_report_path is not None
     assert result.corpus_hash
     assert (processed_root / "documents" / "21.json").exists()
     assert (processed_root / "chunks" / "21.jsonl").exists()
@@ -93,3 +97,10 @@ def test_pipeline_accepts_btc_contexts_and_writes_manifest_and_orphan_reports(tm
     }
     assert orphan_report["orphan_context_count"] == 0
     assert orphan_report["errors"] == []
+
+    breakdown = json.loads(
+        (processed_root / "metadata" / "manual_review_breakdown.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert breakdown["schema_version"] == "manual-review-breakdown-v1"

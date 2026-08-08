@@ -110,6 +110,16 @@ def chunk_clean_document(
     """Parse and chunk one cleaned document without changing original text."""
     parsed = parse_legal_document(document)
     effective_date = document.metadata.get("effective_date")
+    if parsed.requires_manual_review:
+        fallback_result = _chunk_manual_review_document(
+            document,
+            parsed.review_reasons,
+            effective_date=str(effective_date) if effective_date else None,
+            chunk_size=chunk_size,
+            chunk_overlap=chunk_overlap,
+        )
+        if fallback_result is not None:
+            return fallback_result
     return chunk_legal_structure(
         parsed,
         abbreviations=document.abbreviations,
@@ -384,3 +394,134 @@ def _unique_id(candidate: str, occurrences: Dict[str, int]) -> str:
 
 def _label(prefix: str, identifier: str) -> str:
     return "{0} {1}".format(prefix, identifier)
+
+
+def _chunk_manual_review_document(
+    document: CleanDocument,
+    review_reasons: List[str],
+    *,
+    effective_date: Optional[str],
+    chunk_size: int,
+    chunk_overlap: int,
+) -> Optional[ChunkingResult]:
+    """Fallback chunking for legal documents without explicit Điều/Khoản markers."""
+    text = document.cleaned_text.strip()
+    if not text or not _looks_like_fallback_source(document):
+        return None
+
+    article_label = _fallback_article_label(document)
+    parent_id = "{0}_fallback".format(_safe_id(document.doc_id))
+    parent = LegalParent(
+        parent_id=parent_id,
+        doc_id=document.doc_id,
+        text=text,
+        law_name=document.title or document.metadata.get("law_name") or None,
+        chapter=None,
+        section=None,
+        article=article_label,
+        source=document.source_path,
+        metadata={
+            "source": document.source_path,
+            "fallback_mode": "manual_review_no_article",
+            "review_reasons": list(review_reasons),
+            "effective_date": effective_date,
+        },
+    )
+    result = ChunkingResult(
+        doc_id=document.doc_id,
+        article_count=1,
+        chunks=[],
+        parents=[parent],
+        requires_manual_review=False,
+        review_reasons=["fallback_chunked_no_article"],
+    )
+
+    for index, part in enumerate(_fallback_text_parts(text, chunk_size, chunk_overlap), start=1):
+        chunk_id = "{0}_part_{1}".format(parent_id, index)
+        result.chunks.append(
+            LegalChunk(
+                chunk_id=chunk_id,
+                parent_id=parent_id,
+                doc_id=document.doc_id,
+                text=part,
+                parent_text=parent.text,
+                law_name=parent.law_name,
+                chapter=None,
+                section=None,
+                article=article_label,
+                clause=None,
+                point=None,
+                effective_date=effective_date,
+                source=document.source_path,
+                metadata={
+                    "law_name": parent.law_name,
+                    "chapter": None,
+                    "section": None,
+                    "article": article_label,
+                    "clause": None,
+                    "point": None,
+                    "effective_date": effective_date,
+                    "source": document.source_path,
+                    "expanded_terms": expanded_terms_in_text(part, document.abbreviations),
+                    "char_count": len(part),
+                    "token_count": token_len(part),
+                    "fallback_mode": "manual_review_no_article",
+                },
+            )
+        )
+    return result
+
+
+def _looks_like_fallback_source(document: CleanDocument) -> bool:
+    text = document.cleaned_text
+    fallback_markers = (
+        "lời nói đầu",
+        "phạm vi điều chỉnh",
+        "đối tượng áp dụng",
+        "giải thích từ ngữ",
+        "quy định chung",
+        "điều khoản thi hành",
+    )
+    lowered = text.casefold()
+    if any(marker in lowered for marker in fallback_markers):
+        return True
+    if document.title:
+        title = document.title.casefold()
+        legal_title_keywords = (
+            "luat",
+            "nghi dinh",
+            "nghi-quyet",
+            "thong tu",
+            "quyet dinh",
+            "huong dan",
+        )
+        if any(keyword in title for keyword in legal_title_keywords):
+            return any(marker in lowered for marker in fallback_markers)
+    return False
+
+
+def _fallback_article_label(document: CleanDocument) -> str:
+    lowered = document.cleaned_text.casefold()
+    for candidate in (
+        "Lời nói đầu",
+        "Phạm vi điều chỉnh",
+        "Đối tượng áp dụng",
+        "Giải thích từ ngữ",
+        "Quy định chung",
+        "Điều khoản thi hành",
+    ):
+        if candidate.casefold() in lowered:
+            return candidate
+    return "Phần mở đầu"
+
+
+def _fallback_text_parts(text: str, chunk_size: int, chunk_overlap: int) -> List[str]:
+    paragraphs = [part.strip() for part in re.split(r"\n\s*\n+", text) if part.strip()]
+    source_parts = paragraphs if paragraphs else [text]
+    chunks: List[str] = []
+    for part in source_parts:
+        if token_len(part) <= chunk_size:
+            chunks.append(part)
+        else:
+            chunks.extend(split_by_sentence_with_overlap(part, chunk_size, chunk_overlap))
+    return chunks

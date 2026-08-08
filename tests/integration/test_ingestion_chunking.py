@@ -137,6 +137,34 @@ def test_manual_review_document_is_not_blindly_chunked():
     assert report.manual_review_documents == ["review"]
 
 
+def test_fallback_chunking_handles_no_article_preamble_documents():
+    document = CleanDocument(
+        doc_id="fallback",
+        source_path="data/raw/fallback.txt",
+        title="Luật mẫu",
+        cleaned_text=(
+            "Lời nói đầu\n"
+            "Văn bản này quy định nguyên tắc chung.\n\n"
+            "Phạm vi điều chỉnh\n"
+            "Nội dung điều chỉnh của luật được áp dụng trên toàn quốc."
+        ),
+        file_format="txt",
+    )
+
+    result = chunk_clean_document(document)
+
+    assert result.parents
+    assert result.chunks
+    assert result.review_reasons == ["fallback_chunked_no_article"]
+    assert result.requires_manual_review is False
+    assert result.parents[0].article in {
+        "Lời nói đầu",
+        "Phạm vi điều chỉnh",
+        "Phần mở đầu",
+    }
+    assert all(chunk.article == result.parents[0].article for chunk in result.chunks)
+
+
 def test_validation_reports_orphan_child_parent_link():
     result = chunk_clean_document(_document())
     result.chunks[0].parent_id = "missing_parent"

@@ -88,3 +88,18 @@ def test_parser_accepts_missing_space_in_explicit_lower_level_labels():
     assert [clause.identifier for clause in article.clauses] == ["1"]
     assert [point.identifier for point in article.clauses[0].points] == ["a"]
     assert "Tài khoản 1" in article.clauses[0].points[0].content
+
+
+def test_parser_accepts_mid_line_prefixes_and_accentless_headings():
+    parsed = parse_legal_structure(
+        "BỘ LUẬT MINH HỌA\n"
+        "1. Dieu 1. Pham vi dieu chinh\n"
+        "2. Khoan 1. Quy dinh chung\n"
+        "3. Diem a) Noi dung diem a."
+    )
+
+    article = parsed.articles[0]
+    assert article.identifier == "1"
+    assert article.title == "Pham vi dieu chinh"
+    assert [clause.identifier for clause in article.clauses] == ["1"]
+    assert [point.identifier for point in article.clauses[0].points] == ["a"]
