@@ -1,0 +1,11 @@
+{
+  "num_samples": 3,
+  "elapsed_seconds": 46.667806793000636,
+  "avg_seconds_per_sample": 15.55593559766688,
+  "metrics": {
+    "rougeL": 0.30612076095947066,
+    "meteor": 0.21819153984113085
+  },
+  "quantization": "4bit",
+  "timestamp": "2026-08-07 17:20:15"
+}

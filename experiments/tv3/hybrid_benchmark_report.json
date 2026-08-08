@@ -1,0 +1,13 @@
+{
+  "num_samples": 3,
+  "elapsed_seconds": 106.62193235000086,
+  "avg_seconds_per_sample": 35.540644116666954,
+  "metrics": {
+    "rougeL": 0.10368663594470046,
+    "meteor": 0.07095135513658186
+  },
+  "mode": "hybrid",
+  "top_k": 2,
+  "quantization": "4bit",
+  "timestamp": "2026-08-07 18:42:22"
+}

@@ -324,9 +324,12 @@ def _law_matches(citation_law: Optional[str], hit_law: Optional[str]) -> bool:
 
 
 def _normalize_text(value: str) -> str:
-    """Case-fold and collapse whitespace for stable legal-label comparison."""
-
-    return " ".join(value.casefold().split())
+    """Case-fold, strip markdown formatting, and collapse whitespace for stable legal comparison."""
+    if not value:
+        return ""
+    # Strip markdown symbols (*, _, #, `, ~) and replace hyphens with space
+    clean = re.sub(r"[\*\_`#~\\-]+", " ", value)
+    return " ".join(clean.casefold().split())
 
 
 def _citation_display(citation: Citation) -> str:
