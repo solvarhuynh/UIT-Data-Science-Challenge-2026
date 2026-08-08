@@ -111,9 +111,10 @@ class DiskBM25:
         self.k1 = k1
         self.b = b
         self.max_docs = max_docs
-        self.conn = sqlite3.connect(str(self.db_path))
-        self.conn.execute("PRAGMA journal_mode = WAL;")
-        self.conn.execute("PRAGMA synchronous = NORMAL;")
+        # Sử dụng In-Memory SQLite (:memory:) để nạp siêu tốc trên RAM (chỉ mất ~3 giây thay vì 3 phút)
+        self.conn = sqlite3.connect(":memory:")
+        self.conn.execute("PRAGMA journal_mode = OFF;")
+        self.conn.execute("PRAGMA synchronous = OFF;")
         
         self._init_db()
 
