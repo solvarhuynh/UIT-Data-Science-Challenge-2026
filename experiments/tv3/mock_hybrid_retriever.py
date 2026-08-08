@@ -341,36 +341,50 @@ class MockHybridRetriever:
             logger.info("🧹 Đã giải phóng hoàn toàn VRAM của model Embedding cho LLM!")
 
     def search(self, query: str, top_k: int = 3, mode: str = "hybrid") -> list[dict]:
-        """Search for top_k documents using 'bm25', 'dense', or 'hybrid'."""
+        """Search for top_k documents using 'bm25', 'dense', or 'hybrid' with Dual Query Fusion."""
         N = len(self._docs)
         if N == 0:
             return []
 
-        # 1. BM25 Search (SQLite Disk Backend - 0.001s, 0MB RAM)
-        bm25_ranks = {i: N for i in range(N)}
-        tokens = _tokenize_query(query)
-        bm25_hits = self._disk_bm25.get_scores_and_docs(tokens, top_k=200)
-        for rank, (doc_id, score) in enumerate(bm25_hits, start=1):
-            bm25_ranks[doc_id] = rank
+        # 0. Tạo Clean Query (Chuẩn hóa câu hỏi loại bỏ mốc thời gian nhiễu)
+        clean_q = re.sub(r"\bnăm\s+(?:19|20)\d{2}\b", "", query, flags=re.IGNORECASE)
+        clean_q = re.sub(r"\b(mới nhất|hiện hành|theo quy định mới)\b", "", clean_q, flags=re.IGNORECASE).strip()
+        has_dual = (clean_q != query.strip()) and (len(clean_q) > 10)
 
-        # 2. Dense Vector Search (Encode query on CPU to keep GPU VRAM 100% free for LLM)
+        # 1. BM25 Search (SQLite Disk Backend) - Chạy cho Query gốc + Clean Query
+        bm25_ranks = {i: N for i in range(N)}
+        tokens_orig = _tokenize_query(query)
+        bm25_hits_orig = self._disk_bm25.get_scores_and_docs(tokens_orig, top_k=200)
+        for rank, (doc_id, score) in enumerate(bm25_hits_orig, start=1):
+            bm25_ranks[doc_id] = min(bm25_ranks[doc_id], rank)
+
+        if has_dual:
+            tokens_clean = _tokenize_query(clean_q)
+            bm25_hits_clean = self._disk_bm25.get_scores_and_docs(tokens_clean, top_k=200)
+            for rank, (doc_id, score) in enumerate(bm25_hits_clean, start=1):
+                bm25_ranks[doc_id] = min(bm25_ranks[doc_id], rank)
+
+        # 2. Dense Vector Search - Chạy cho Query gốc + Clean Query
         dense_ranks = {i: N for i in range(N)}
         if self._doc_embeddings is not None:
             if self._dense_model is None:
-                # Load embedding model on CPU for instant query encoding (takes 0.005s)
                 self._dense_model = SentenceTransformer(
                     str(self.embedding_model_path),
                     device="cpu",
                 )
 
-            q_vec = self._dense_model.encode(
-                query,
-                normalize_embeddings=True,
-            )
+            q_vec = self._dense_model.encode(query, normalize_embeddings=True)
             dense_scores = np.dot(self._doc_embeddings, q_vec)
             sorted_dense = sorted(range(N), key=lambda i: dense_scores[i], reverse=True)
-            for rank, idx in enumerate(sorted_dense):
-                dense_ranks[idx] = rank + 1
+            for rank, idx in enumerate(sorted_dense[:200]):
+                dense_ranks[idx] = min(dense_ranks[idx], rank + 1)
+
+            if has_dual:
+                q_vec_clean = self._dense_model.encode(clean_q, normalize_embeddings=True)
+                dense_scores_clean = np.dot(self._doc_embeddings, q_vec_clean)
+                sorted_dense_clean = sorted(range(N), key=lambda i: dense_scores_clean[i], reverse=True)
+                for rank, idx in enumerate(sorted_dense_clean[:200]):
+                    dense_ranks[idx] = min(dense_ranks[idx], rank + 1)
 
         # 3. Combine with RRF (Reciprocal Rank Fusion)
         final_scores = []
