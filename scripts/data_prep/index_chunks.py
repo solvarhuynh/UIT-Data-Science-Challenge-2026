@@ -28,6 +28,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--vector-db-type", choices=("qdrant", "faiss"))
     parser.add_argument("--bm25-index-path")
     parser.add_argument(
+        "--batch-size",
+        type=int,
+        help="Override embedding and Qdrant upsert batch size from configuration.",
+    )
+    parser.add_argument(
         "--force",
         action="store_true",
         help="Rebuild indexes even when a matching manifest already exists.",
@@ -190,7 +195,14 @@ def main() -> int:
     if args.vector_db_type:
         vector_config["type"] = args.vector_db_type
     config["vector_db"] = vector_config
-    batch_size = int(embedding_config.get("batch_size", 32))
+    batch_size = (
+        args.batch_size
+        if args.batch_size is not None
+        else int(embedding_config.get("batch_size", 32))
+    )
+    if batch_size <= 0:
+        raise ValueError("--batch-size must be a positive integer")
+    LOGGER.info("Embedding and upsert batch size: %d", batch_size)
 
     error_path = Path("data/processed/metadata/index_errors.json")
     errors: list[dict[str, Any]] = []
@@ -242,6 +254,7 @@ def main() -> int:
     running_hash = RunningCorpusHash()
     collection_created = False
     processed = 0
+    progress_log_interval = max(batch_size * 100, 10_000)
     progress = tqdm(total=total_chunks, desc="Embedding + upserting", unit="chunk")
     for batch in iter_batches(iter_chunks(args.chunks_dir, errors), batch_size):
         batch_texts = [chunk.text for chunk in batch]
@@ -261,7 +274,8 @@ def main() -> int:
 
         processed += len(batch)
         progress.update(len(batch))
-        LOGGER.info("Embedded+upserted %d/%d chunks", processed, total_chunks)
+        if processed % progress_log_interval < len(batch) or processed == total_chunks:
+            LOGGER.info("Embedded+upserted %d/%d chunks", processed, total_chunks)
     progress.close()
 
     if processed == 0:
@@ -312,4 +326,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

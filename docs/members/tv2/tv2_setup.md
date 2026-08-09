@@ -66,6 +66,11 @@ embedding:
   normalize_embeddings: true
 ```
 
+Model `hcmute-embedding-v2` được export bằng `sentence-transformers 5.4.1`
+và `transformers 5.0.0`. Các thành viên phải cài đúng runtime contract này;
+không dùng bản `sentence-transformers 3.x`/`transformers 4.x` cũ vì model sẽ
+tham chiếu module `sentence_transformers.base` không tồn tại trong bản cũ.
+
 FAISS dùng NumPy 1.x trong môi trường hiện tại, nên `requirements_dev.txt` pin:
 `numpy==1.26.4`, `scipy<1.1Từ thư mục gốc repository, dùng Python 3.10-3.12 (chưa hỗ trợ Python 3.13+):
 
@@ -90,7 +95,7 @@ Kiểm tra model local:
 
 ```powershell
 python scripts/verify_embedding.py
-python -m pip install -c requirements_runtime.txt sentence-transformers torch --index-url https://download.pytorch.org/whl/cpu
+python -m pip install -c requirements_runtime.txt sentence-transformers==5.4.1 transformers==5.0.0 torch --index-url https://download.pytorch.org/whl/cpu
 python -m pip install -c requirements_runtime.txt qdrant-client faiss-cpu
 python -m pip install -c requirements_runtime.txt rank-bm25 pyvi
 python -m pip install -c requirements_runtime.txt pyyaml
@@ -198,19 +203,57 @@ docker compose logs --tail 200 qdrant qdrant-ready
 Lệnh `backend-smoke` dùng image backend và các volume đã khai báo trong
 `docker-compose.yml`; không dùng dữ liệu mock thay cho corpus chính thức.
 
-## Hướng dẫn chạy trên Corpus thật (Data từ TV4)
+## Chạy toàn bộ tasks TV2 trên Corpus thật (Data từ TV4)
+
+Đây là luồng end-to-end của TV2 sau khi TV4 bàn giao corpus. Nếu TV4 vừa tái
+tạo chunks, bước index phải dùng `--force` để không bị manifest cache bỏ qua.
+
+### A. Tạo lại chunks và metadata — bước TV4 (không chạy cùng index)
+
+Lệnh này extract, clean, parse và ghi lại `chunks/`, `parents/` cùng metadata
+ingestion. Nó có thể chạy lâu trên corpus thật và chỉ hoàn tất khi terminal in
+JSON `IngestionPipelineResult`. **Không chạy lệnh index TV2 trong lúc này** vì
+index có thể đọc tập JSONL đang được ghi dở.
+
+```powershell
+$env:PYTHONPATH = "src"
+python -c "from udsc2026.ingestion import run_ingestion_pipeline; result=run_ingestion_pipeline(raw_directory='data/raw/btc', processed_root='data/processed', force_overwrite=True, clear_cache=True); print(result.model_dump_json(indent=2))"
+```
+
+Sau khi lệnh trên xong, chạy validate để tạo lại hai metadata kiểm tra mapping:
+`chunk_mapping_report.json` và `chunk_file_audit.json`. Chỉ khi validate đạt
+exit code `0` mới bắt đầu index TV2.
+
+### B. Kiểm tra và index — bước TV2
+
+1. Preflight trước khi chạy corpus:
+
+```powershell
+$ErrorActionPreference = "Stop"
+$env:PYTHONPATH = "src"
+python -c "from udsc2026.contracts import LegalChunk, RetrievalHit; from udsc2026.retrieval.sparse.tokenizer import tokenize_vi; print('TV2 imports: OK', tokenize_vi('Điều 10'))"
+python -m pytest tests/retrieval tests/unit/test_retrieval -q -o addopts=''
+```
 
 Chunks thật đã có sẵn tại `data/processed/chunks/`. Với dữ liệu chính thức,
 chạy toàn bộ chuỗi qua Docker/Qdrant theo đúng thứ tự:
 
-1. Đầu tiên chạy validate để kiểm tra mapping giữa chunk và ground-truth, đồng thời
+Nếu vừa thay đổi source trong `src/` hoặc dependency, build lại image trước khi
+chạy index. Container chỉ mount `scripts/` và dữ liệu runtime, không mount
+source package `src/`.
+
+```powershell
+docker compose build --no-cache backend
+```
+
+2. Đầu tiên chạy validate để kiểm tra mapping giữa chunk và ground-truth, đồng thời
    tự tạo report audit về các file JSONL rỗng, không có record hoặc sai schema.
    Lệnh này không sửa dữ liệu và không ảnh hưởng tới các bước sau; nó chỉ giúp bạn
    biết còn những file nào cần TV4 sửa trước khi index.
 
 ```powershell
 docker compose up -d qdrant qdrant-ready
-docker compose run --rm --volume "${PWD}/scripts:/app/scripts:ro" --volume "${PWD}/data/processed:/app/data/processed:ro" --volume "${PWD}/data/processed/metadata:/app/tv2_metadata" --volume "${PWD}/data/raw/btc:/app/data/raw/btc:ro" backend python /app/scripts/validate_chunk_mapping.py --chunks-dir /app/data/processed/chunks --ir-train-file /app/data/raw/btc/LegalIR/train.json --report /app/tv2_metadata/chunk_mapping_report.json
+docker compose run --rm --volume "${PWD}/scripts:/app/scripts:ro" --volume "${PWD}/data/processed:/app/data/processed:ro" --volume "${PWD}/data/processed/metadata:/app/tv2_metadata" --volume "${PWD}/data/raw/btc:/app/data/raw/btc:ro" backend python /app/scripts/validate_chunk_mapping.py --chunks-dir /app/data/processed/chunks --ir-train-file /app/data/raw/btc/LegalIR/train.json --report /app/tv2_metadata/chunk_mapping_report.json --audit-report /app/tv2_metadata/chunk_file_audit.json
 ```
 
 Lệnh này dùng để khởi động Qdrant và chạy validate trên corpus TV4. Nó sẽ kiểm tra mapping giữa chunk và ground-truth, đồng thời tạo report audit về các file JSONL rỗng, không có record hoặc sai schema. Ý nghĩa của lệnh này là xác nhận dữ liệu chunk đã sẵn sàng cho bước index hay chưa, nhưng không sửa dữ liệu và không ảnh hưởng tới các bước sau.
@@ -220,7 +263,7 @@ Lệnh này sẽ sinh hai report:
 - `data/processed/metadata/chunk_file_audit.json`: danh sách file rỗng, không có record,
   JSON lỗi hoặc record không đúng schema.
 
-2. Chỉ khi exit code 0 mới chạy bước index để build vector index và BM25 index.
+3. Chỉ khi exit code 0 mới chạy bước index để build vector index và BM25 index.
 
 ```powershell
 docker compose run --rm `
@@ -230,12 +273,18 @@ docker compose run --rm `
   --volume "${PWD}/data/vector_store:/app/data/vector_store" `
   backend python /app/scripts/data_prep/index_chunks.py `
   --chunks-dir /app/data/processed/chunks `
-  --vector-db-type qdrant
+  --vector-db-type qdrant `
+  --batch-size 128 `
+  --force
 ```
 
 Lệnh này dùng để build index dense/sparse từ các chunk đã qua validate. Ý nghĩa của lệnh này là tạo vector index và BM25 index cho corpus, để các bước retrieval sau này có thể dùng được. Tác dụng chính là chuẩn bị dữ liệu truy vấn cho TV2.
 
-Sau khi manifest xác nhận:
+`--batch-size 128` là mức khởi đầu an toàn cho CPU. Nếu container còn dư RAM và
+không có lỗi out-of-memory, tăng lần lượt lên `256` rồi `512`; không chạy nhiều
+process embedding song song vì mỗi process sẽ nạp một bản model vào RAM.
+
+4. Sau khi manifest xác nhận, chạy benchmark sparse:
 
 ```powershell
 docker compose run --rm `
@@ -249,34 +298,19 @@ docker compose run --rm `
   --mode sparse `
   --top-k 5
 
-  docker compose run --rm `
-  --volume "${PWD}/scripts:/app/scripts:ro" `
-  --volume "${PWD}/data/processed:/app/data/processed:ro" `
-  --volume "${PWD}/data/raw/btc:/app/data/raw/btc:ro" `
-  --volume "${PWD}/data/reports:/app/data/reports" `
-  --volume "${PWD}/data/vector_store:/app/data/vector_store:ro" `
-  backend python /app/scripts/benchmark_retrieval_internal.py `
-  --chunks-dir /app/data/processed/chunks `
-  --ir-train-file /app/data/raw/btc/LegalIR/train.json `
-  --mode dense `
-  --top-k 5
-
-  docker compose run --rm `
-  --volume "${PWD}/scripts:/app/scripts:ro" `
-  --volume "${PWD}/data/processed:/app/data/processed:ro" `
-  --volume "${PWD}/data/raw/btc:/app/data/raw/btc:ro" `
-  --volume "${PWD}/data/reports:/app/data/reports" `
-  --volume "${PWD}/data/vector_store:/app/data/vector_store:ro" `
-  backend python /app/scripts/benchmark_retrieval_internal.py `
-  --chunks-dir /app/data/processed/chunks `
-  --ir-train-file /app/data/raw/btc/LegalIR/train.json `
-  --mode hybrid `
-  --top-k 5
 ```
 
-Ba lệnh này dùng để chạy benchmark retrieval ở ba mode: sparse, dense và hybrid. Ý nghĩa của chúng là đánh giá chất lượng tìm kiếm trên corpus thật sau khi index đã được build. Tác dụng chính là cho TV2/TV5 thấy mode nào hoạt động tốt hơn và có số liệu để so sánh.
+`benchmark_retrieval_internal.py` hiện chỉ triển khai `sparse`; không chạy
+`--mode dense` hoặc `--mode hybrid` vì script sẽ chủ động báo lỗi. Hai benchmark
+này chỉ được thêm vào hướng dẫn khi đã có implementation dùng configured vector
+index và hybrid retriever.
 
 Nếu thiếu model/backend, giữ nguyên lỗi môi trường và báo cụ thể; không nới lỏng validation.
+
+TV2 được xem là hoàn tất khi preflight, validate, indexing, sparse benchmark
+và dense/hybrid benchmark đã được triển khai đều pass. Artifact bàn giao gồm
+dense index/collection, BM25 index, manifest, payload mapping,
+`index_errors.json` và các report benchmark.
 
 ## Bức tranh bàn giao: Output của TV2 và Trách nhiệm của các thành viên tuyến sau
 
@@ -375,4 +409,3 @@ TV1 là lớp điều phối và đóng gói, không truy cập trực tiếp da
   backend trực tiếp để sửa thiếu metadata.
 - Mọi thay đổi corpus, index, model hoặc mapping phải có report/hash tương ứng
   để truy nguyên kết quả benchmark và submission.
-
