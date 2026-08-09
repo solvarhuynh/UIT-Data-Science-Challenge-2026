@@ -336,7 +336,12 @@ class MockHybridRetriever:
 
         if cache_file.exists():
             logger.info("⚡ Đã tìm thấy cache embeddings: '%s'. Đang nạp memory-mapped cực nhanh...", cache_file)
-            self._doc_embeddings = np.load(cache_file, mmap_mode="r")
+            try:
+                self._doc_embeddings = np.load(cache_file, mmap_mode="r")
+            except Exception:
+                # Fallback nếu file được ghi bằng raw memmap binary
+                emb_dim = 768
+                self._doc_embeddings = np.memmap(cache_file, dtype="float32", mode="r", shape=(self.N, emb_dim))
             logger.info("⚡ Nạp xong cache embeddings shape: %s trong 0.01 giây!", self._doc_embeddings.shape)
             return
 
@@ -394,14 +399,21 @@ class MockHybridRetriever:
                 logger.info("Progress: %d / %d documents encoded into vector embeddings...", min(offset + chunk_size, self.N), self.N)
 
         mmap_arr.flush()
+        logger.info("💾 Đang xuất file vector cache chuẩn .npy...")
+        np.save(cache_file, mmap_arr)
         del mmap_arr
 
-        # Đổi tên file tạm thành file cache chính thức
-        if cache_file.exists():
-            cache_file.unlink()
-        tmp_cache_file.rename(cache_file)
+        if tmp_cache_file.exists():
+            try:
+                tmp_cache_file.unlink()
+            except Exception:
+                pass
 
-        self._doc_embeddings = np.load(cache_file, mmap_mode="r")
+        try:
+            self._doc_embeddings = np.load(cache_file, mmap_mode="r")
+        except Exception:
+            self._doc_embeddings = np.memmap(cache_file, dtype="float32", mode="r", shape=(self.N, emb_dim))
+            
         logger.info("🎉 Encoding finished in %.1fs. Saved memory-mapped cache to '%s'!", time.monotonic() - start, cache_file)
         
         # GIẢI PHÓNG GPU VRAM NGAY LẬP TỨC CHO QWEN LLM
