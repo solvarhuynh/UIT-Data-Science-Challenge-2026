@@ -35,6 +35,26 @@ def _document_mapping(parsed: Any) -> Optional[Mapping[str, Any]]:
     return None
 
 
+def _present_field(
+    mapping: Optional[Mapping[str, Any]], fields: tuple[str, ...]
+) -> tuple[Optional[str], Any]:
+    """Return a present field even when its official value is empty.
+
+    ``get_first_field`` deliberately skips empty values, which is appropriate
+    for identifiers and titles. Content is different: an explicitly empty
+    ``passage`` must stay empty and auditable instead of falling back to the
+    JSON serialization containing IDs and URLs.
+    """
+
+    if mapping is None:
+        return None, None
+    by_lower_name = {str(key).lower(): value for key, value in mapping.items()}
+    for field in fields:
+        if field in by_lower_name:
+            return field, by_lower_name[field]
+    return None, None
+
+
 def _metadata_from_mapping(mapping: Optional[Mapping[str, Any]]) -> Dict[str, Any]:
     metadata: Dict[str, Any] = {}
     issue_date = get_first_field(mapping, DATE_FIELDS)
@@ -74,14 +94,11 @@ def _raw_document_from_json_record(
         metadata["source_line"] = source_line
     if source_id is not None:
         metadata["source_document_id"] = source_id
-    content = get_first_field(mapping, CONTENT_FIELDS)
-    if content is not None:
-        raw_text = str(content)
-        metadata["content_field"] = next(
-            field
-            for field in CONTENT_FIELDS
-            if mapping and mapping.get(field) is not None
-        )
+    content_field, content = _present_field(mapping, CONTENT_FIELDS)
+    if content_field is not None:
+        raw_text = "" if content is None else str(content)
+        metadata["content_field"] = content_field
+        metadata["source_content_empty"] = not raw_text.strip()
     if source_id is not None:
         metadata["source_context_id"] = source_id
 

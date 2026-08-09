@@ -4,6 +4,16 @@ chunk_overlap: 32
 top_k: 10
 similarity_threshold: 0.5
 
+data:
+  processed_root: data/processed_v3
+
+parent_context:
+  enabled: true
+  parents_dir: data/processed_v3/parents
+  max_cached_documents: 128
+  max_parent_tokens: 2048
+  max_total_tokens: 7000
+
 embedding:
   model_path: ./models/dek21-v2
   model_id: huyydangg/DEk21_hcmute_embedding_v2

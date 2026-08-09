@@ -187,6 +187,42 @@ class TestGenerateAnswer:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
+    async def test_parent_expansion_changes_prompt_but_not_response_provenance(
+        self,
+        tmp_prompts: Path,
+        good_context: list[RetrievalHit],
+    ) -> None:
+        class CapturingLLM:
+            def __init__(self) -> None:
+                self.prompt = ""
+
+            def generate(self, prompt: str) -> str:
+                self.prompt = prompt
+                return "Trả lời [Bộ luật Lao động 2019, Điều 10, Khoản 1]"
+
+        class StubExpander:
+            def expand(self, hits: list[RetrievalHit]) -> list[RetrievalHit]:
+                return [
+                    hits[0].model_copy(
+                        update={"text": "TOÀN VĂN PARENT ĐÃ ĐƯỢC HYDRATE"}
+                    )
+                ]
+
+        llm = CapturingLLM()
+        parent_engine = QAEngine(
+            llm_client=llm,  # type: ignore[arg-type]
+            prompt_builder=PromptBuilder(prompts_root=tmp_prompts),
+            citation_parser=CitationParser(),
+            context_expander=StubExpander(),
+        )
+
+        response = await parent_engine.generate_answer("Câu hỏi?", good_context)
+
+        assert "TOÀN VĂN PARENT ĐÃ ĐƯỢC HYDRATE" in llm.prompt
+        assert response.retrieval_hits == good_context
+
+    @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_accepts_high_final_score_from_reranked_pipeline(
         self,
         mock_llm: MockLLMClient,

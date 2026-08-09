@@ -11,6 +11,7 @@ class RetrievalHit(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     chunk_id: str = Field(min_length=1)
+    parent_id: Optional[str] = None
     doc_id: str = Field(min_length=1)
     text: str = Field(min_length=1)
     score: Optional[float] = Field(default=None, allow_inf_nan=False)

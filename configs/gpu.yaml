@@ -1,6 +1,13 @@
 # RTX 5060 Ti 16 GB profile used for offline indexing, reranking, and QA.
 environment: gpu
 
+parent_context:
+  enabled: true
+  parents_dir: data/processed_v3/parents
+  max_cached_documents: 256
+  max_parent_tokens: 3072
+  max_total_tokens: 10000
+
 embedding:
   model_path: ./models/dek21-v2
   model_id: huyydangg/DEk21_hcmute_embedding_v2

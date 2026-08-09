@@ -5,7 +5,7 @@ import logging
 import math
 import re
 import uuid
-from typing import Optional
+from typing import Optional, Protocol
 
 from udsc2026.contracts.qa import QAResponse
 from udsc2026.contracts.retrieval import RetrievalHit
@@ -32,6 +32,13 @@ _CONTINUATION_PATTERN = re.compile(
     r"(?:\n\s*\[\d+\]\s*\(|\nCÂU HỎi:|\nTRẢ LỜI:|\n\s*\[\d{1,3}\]\s*law_name)",
     re.IGNORECASE,
 )
+
+
+class ContextExpander(Protocol):
+    """Post-rerank context expansion interface used only for prompt input."""
+
+    def expand(self, hits: list[RetrievalHit]) -> list[RetrievalHit]:
+        """Return bounded prompt contexts without mutating original hits."""
 
 
 class QAEngine:
@@ -63,6 +70,7 @@ class QAEngine:
         prompt_builder: Optional[PromptBuilder] = None,
         citation_parser: Optional[CitationParser] = None,
         min_context_score: float = _MIN_CONTEXT_SCORE,
+        context_expander: Optional[ContextExpander] = None,
     ) -> None:
         """Initialise the QA Engine with its dependencies.
 
@@ -89,6 +97,7 @@ class QAEngine:
         self._prompt_builder = prompt_builder or PromptBuilder()
         self._citation_parser = citation_parser or CitationParser()
         self._min_score = float(raw_min_context_score)
+        self._context_expander = context_expander
 
     # ------------------------------------------------------------------
     # Public API
@@ -146,17 +155,25 @@ class QAEngine:
                 trace_id=tid,
             )
 
+        prompt_contexts = (
+            self._context_expander.expand(contexts)
+            if self._context_expander is not None
+            else contexts
+        )
+        if not prompt_contexts:
+            prompt_contexts = contexts
+
         #  2. Build both compatibility text and native chat turns. The real
         # Qwen client consumes messages; lightweight mocks keep using text.
         prompt = self._prompt_builder.build_prompt(
             question=question,
-            contexts=contexts,
+            contexts=prompt_contexts,
             prompt_version=prompt_version,
             rag_template=rag_template,
         )
         messages = self._prompt_builder.build_messages(
             question=question,
-            contexts=contexts,
+            contexts=prompt_contexts,
             prompt_version=prompt_version,
             rag_template=rag_template,
         )

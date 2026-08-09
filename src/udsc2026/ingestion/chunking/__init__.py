@@ -9,7 +9,10 @@ from udsc2026.ingestion.chunking.chunker import (
 )
 from udsc2026.ingestion.chunking.models import ChunkingResult, ValidationReport
 from udsc2026.ingestion.chunking.validation import validate_chunking_results
-from udsc2026.ingestion.chunking.writer import write_chunking_outputs
+from udsc2026.ingestion.chunking.writer import (
+    write_chunking_outputs,
+    write_chunking_outputs_streaming,
+)
 
 __all__ = [
     "ChunkingResult",
@@ -21,4 +24,5 @@ __all__ = [
     "token_len",
     "validate_chunking_results",
     "write_chunking_outputs",
+    "write_chunking_outputs_streaming",
 ]

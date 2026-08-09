@@ -3,12 +3,17 @@
 import re
 
 LEGAL_STRUCTURE_LINE = re.compile(
-    r"^\s*(?:Chương\s+(?:[IVXLCDM]+|\d+)|Mục\s+\d+|Điều\s+\d+|"
-    r"Khoản\s+\d+|Điểm\s+[a-zđ]|\d+[.)]|[a-zđ][.)])(?:[.:)]\s*|\s|$)",
+    r"^\s*(?:(?:Chương|Mục|Điều|Khoản|Điểm|Phần|Phụ\s+lục)\s*$|"
+    r"Chương\s+(?:[IVXLCDM]+|\d+)|Mục\s+(?:[IVXLCDM]+|\d+)|"
+    r"Điều\s+\d+[a-zđ]?|Khoản\s+\d+[a-zđ]?|Điểm\s+[a-zđ]|"
+    r"Phần\s+(?:thứ\s+)?(?:[IVXLCDM]+|\d+)|"
+    r"Phụ\s+lục\s+(?:số\s+)?(?:[IVXLCDM]+|\d+)|"
+    r"\d+[a-zđ]?[.)]|[a-zđ][.)])(?:[.:)]\s*|\s|$)",
     re.IGNORECASE | re.UNICODE,
 )
 PAGE_NUMBER_LINE = re.compile(
-    r"^\s*(?:trang\s*)?\d{1,4}(?:\s*(?:/|trên)\s*\d{1,4})?\s*$",
+    r"^\s*(?:trang|page)\s*[:#-]?\s*\d{1,4}"
+    r"(?:\s*(?:/|trên|of)\s*\d{1,4})?\s*$",
     re.IGNORECASE | re.UNICODE,
 )
 TABLE_OF_CONTENTS = re.compile(r"^\s*mục\s+lục\s*$", re.IGNORECASE | re.UNICODE)

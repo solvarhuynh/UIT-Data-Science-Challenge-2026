@@ -93,3 +93,6 @@ class LegalStructureDocument(BaseModel):
     entries: List[StructureEntry] = Field(default_factory=list)
     requires_manual_review: bool = False
     review_reasons: List[str] = Field(default_factory=list)
+    repaired_split_article_count: int = 0
+    suspected_split_article_count: int = 0
+    appendix_boundary_count: int = 0

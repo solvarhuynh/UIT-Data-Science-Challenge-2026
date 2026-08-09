@@ -1,8 +1,9 @@
 """Reproducible raw-to-processed orchestration for legal-document ingestion."""
 
 import json
+import subprocess
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Callable, List, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -13,8 +14,12 @@ from udsc2026.ingestion.btc import (
     discover_btc_qa_files,
     extract_btc_context_documents,
 )
-from udsc2026.ingestion.chunking import ValidationReport, write_chunking_outputs
+from udsc2026.ingestion.chunking import (
+    ValidationReport,
+    write_chunking_outputs_streaming,
+)
 from udsc2026.ingestion.cleaners import clean_raw_documents
+from udsc2026.ingestion.disk_audit import audit_processed_corpus
 from udsc2026.ingestion.readers import extract_raw_documents
 
 
@@ -30,13 +35,25 @@ class IngestionPipelineResult(BaseModel):
     manifest_path: Optional[str] = None
     orphan_report_path: Optional[str] = None
     corpus_hash: Optional[str] = None
+    disk_audit_path: Optional[str] = None
+    processing_manifest_path: Optional[str] = None
+    synthetic_benchmark_path: Optional[str] = None
+    synthetic_benchmark_sha256: Optional[str] = None
+    synthetic_benchmark_record_count: int = 0
+    synthetic_benchmark_source_chunk_corpus_sha256: Optional[str] = None
+    integrity_gate_passed: bool = False
+    semantic_completeness_gate_passed: bool = False
 
 
 def run_ingestion_pipeline(
     raw_directory: Union[str, Path] = "data/raw/btc",
-    processed_root: Union[str, Path] = "data/processed",
+    processed_root: Union[str, Path] = "data/processed_v3",
     chunk_size: int = 192,
     chunk_overlap: int = 32,
+    progress_callback: Optional[Callable[[int, str], None]] = None,
+    synthetic_benchmark_count: Optional[int] = None,
+    synthetic_benchmark_seed: int = 2026,
+    synthetic_benchmark_require_all_question_types: bool = True,
 ) -> IngestionPipelineResult:
     """Run extract, clean, structure-aware chunking, and validation in order.
 
@@ -75,7 +92,7 @@ def run_ingestion_pipeline(
         output_dir=root / "documents",
         errors_path=metadata_dir / "clean_errors.json",
     )
-    chunking_results, report = write_chunking_outputs(
+    chunked_document_count, report = write_chunking_outputs_streaming(
         clean_documents,
         chunks_dir=root / "chunks",
         parents_dir=root / "parents",
@@ -83,20 +100,111 @@ def run_ingestion_pipeline(
         review_path=metadata_dir / "manual_review_documents.json",
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
+        progress_callback=progress_callback,
     )
+    disk_audit_path = metadata_dir / "disk_audit_report.json"
+    disk_audit = audit_processed_corpus(
+        root,
+        source_root,
+        report_path=disk_audit_path,
+    )
+    benchmark_artifact = None
+    if synthetic_benchmark_count is not None and disk_audit.integrity_gate_passed:
+        # Imported lazily to keep the core ingestion package independent for
+        # callers that do not request evaluation artifacts.
+        from udsc2026.evaluation.synthetic_generator import (
+            regenerate_synthetic_benchmark,
+        )
+
+        benchmark_artifact = regenerate_synthetic_benchmark(
+            root / "chunks",
+            root / "benchmarks" / "synthetic_qa.jsonl",
+            target_count=synthetic_benchmark_count,
+            seed=synthetic_benchmark_seed,
+            require_all_question_types=(synthetic_benchmark_require_all_question_types),
+        )
+    processing_manifest_path = metadata_dir / "processing_manifest.json"
+    processing_manifest = {
+        "schema_version": "udsc-ingestion-v3",
+        "source_root": str(source_root),
+        "processed_root": str(root),
+        "source_corpus_hash": corpus_hash,
+        "processed_corpus_tree_hash": disk_audit.corpus_tree_hash,
+        "git_commit": _git_commit(),
+        "chunking": {
+            "chunk_size": chunk_size,
+            "chunk_overlap": chunk_overlap,
+            "parent_text_storage": "separate_jsonl",
+        },
+        "counts": {
+            "documents": disk_audit.document_count,
+            "chunks": disk_audit.chunk_count,
+            "parents": disk_audit.parent_count,
+        },
+        "synthetic_benchmark": (
+            benchmark_artifact.model_dump(mode="json")
+            if benchmark_artifact is not None
+            else None
+        ),
+        "integrity_gate_passed": disk_audit.integrity_gate_passed,
+        "semantic_completeness_gate_passed": (
+            disk_audit.semantic_completeness_gate_passed
+        ),
+        "quality_gate_passed": disk_audit.quality_gate_passed,
+    }
+    _write_json(processing_manifest_path, processing_manifest)
     return IngestionPipelineResult(
         raw_document_count=len(raw_documents),
         cleaned_document_count=len(clean_documents),
-        chunked_document_count=sum(bool(result.chunks) for result in chunking_results),
+        chunked_document_count=chunked_document_count,
         document_ids=[document.doc_id for document in clean_documents],
         validation_report=report,
         processed_root=str(root),
         manifest_path=str(manifest_path) if manifest_path else None,
         orphan_report_path=str(orphan_report_path) if orphan_report_path else None,
         corpus_hash=corpus_hash,
+        disk_audit_path=str(disk_audit_path),
+        processing_manifest_path=str(processing_manifest_path),
+        synthetic_benchmark_path=(
+            benchmark_artifact.output_path if benchmark_artifact else None
+        ),
+        synthetic_benchmark_sha256=(
+            benchmark_artifact.benchmark_sha256 if benchmark_artifact else None
+        ),
+        synthetic_benchmark_record_count=(
+            benchmark_artifact.record_count if benchmark_artifact else 0
+        ),
+        synthetic_benchmark_source_chunk_corpus_sha256=(
+            benchmark_artifact.source_chunk_corpus_sha256
+            if benchmark_artifact
+            else None
+        ),
+        integrity_gate_passed=disk_audit.integrity_gate_passed,
+        semantic_completeness_gate_passed=(
+            disk_audit.semantic_completeness_gate_passed
+        ),
     )
 
 
 def _write_json(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _git_commit() -> Optional[str]:
+    repository_root = Path(__file__).resolve().parents[3]
+    try:
+        return subprocess.check_output(
+            [
+                "git",
+                "-c",
+                "safe.directory={0}".format(repository_root.as_posix()),
+                "rev-parse",
+                "HEAD",
+            ],
+            cwd=repository_root,
+            stderr=subprocess.DEVNULL,
+            text=True,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        return None

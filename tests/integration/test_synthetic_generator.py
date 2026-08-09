@@ -5,10 +5,14 @@ import json
 import pytest
 
 from udsc2026.contracts import LegalChunk
+from udsc2026.evaluation.loaders import load_benchmark
 from udsc2026.evaluation.synthetic_generator import (
     QUESTION_TYPES,
     generate_synthetic_benchmark,
+    iter_legal_chunks,
     load_legal_chunks,
+    regenerate_synthetic_benchmark,
+    validate_synthetic_benchmark_sources,
     write_synthetic_benchmark,
 )
 
@@ -72,6 +76,8 @@ def test_generator_builds_100_to_200_grounded_records_for_all_question_types():
         assert record.gold_chunk_ids
         assert set(record.gold_chunk_ids).issubset(source_ids)
         assert len(record.gold_chunk_ids) == len(record.gold_citations)
+        assert len(record.gold_chunk_ids) == len(record.metadata["gold_chunk_sha256"])
+        assert record.metadata["source_chunk_count"] == len(source_chunks)
     assert any(record.difficulty == "hard" for record in records)
 
 
@@ -114,3 +120,99 @@ def test_chunk_loader_reads_jsonl_records_written_by_chunking(tmp_path):
     loaded = load_legal_chunks(path)
 
     assert loaded == [chunk]
+
+
+def test_streaming_regeneration_binds_gold_ids_to_content_hashes(tmp_path):
+    chunks_dir = tmp_path / "processed_v3" / "chunks"
+    chunks_dir.mkdir(parents=True)
+    chunks_path = chunks_dir / "law-2019.jsonl"
+    chunks_path.write_text(
+        "".join(
+            json.dumps(chunk.model_dump(), ensure_ascii=False) + "\n"
+            for chunk in _coverage_chunks()
+        ),
+        encoding="utf-8",
+    )
+    output = tmp_path / "processed_v3" / "benchmarks" / "synthetic_qa.jsonl"
+
+    artifact = regenerate_synthetic_benchmark(
+        chunks_dir, output, target_count=100, seed=7
+    )
+
+    assert artifact.record_count == 100
+    assert artifact.source_chunk_count == len(_coverage_chunks())
+    assert len(artifact.source_chunk_corpus_sha256) == 64
+    assert len(artifact.benchmark_sha256) == 64
+    assert output.is_file()
+    assert len(load_benchmark(output)) == 100
+    records = generate_synthetic_benchmark(
+        iter_legal_chunks(chunks_dir), target_count=100, seed=7
+    )
+    assert validate_synthetic_benchmark_sources(records, chunks_dir) == (
+        artifact.source_chunk_count,
+        artifact.source_chunk_corpus_sha256,
+    )
+
+
+def test_source_validation_rejects_a_gold_id_whose_text_changed(tmp_path):
+    chunks = _coverage_chunks()
+    chunks_path = tmp_path / "chunks.jsonl"
+    chunks_path.write_text(
+        "".join(
+            json.dumps(chunk.model_dump(), ensure_ascii=False) + "\n"
+            for chunk in chunks
+        ),
+        encoding="utf-8",
+    )
+    records = generate_synthetic_benchmark(
+        iter_legal_chunks(chunks_path), target_count=100, seed=7
+    )
+    gold_id = records[0].gold_chunk_ids[0]
+    changed = [
+        chunk.model_copy(update={"text": "Ná»™i dung Ä‘Ă£ bá»‹ thay Ä‘á»•i."})
+        if chunk.chunk_id == gold_id
+        else chunk
+        for chunk in chunks
+    ]
+    chunks_path.write_text(
+        "".join(
+            json.dumps(chunk.model_dump(), ensure_ascii=False) + "\n"
+            for chunk in changed
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Gold chunk identity changed"):
+        validate_synthetic_benchmark_sources(records, chunks_path)
+
+
+def test_source_validation_rejects_changed_gold_citation_provenance(tmp_path):
+    chunks = _coverage_chunks()
+    chunks_path = tmp_path / "chunks.jsonl"
+    chunks_path.write_text(
+        "".join(
+            json.dumps(chunk.model_dump(), ensure_ascii=False) + "\n"
+            for chunk in chunks
+        ),
+        encoding="utf-8",
+    )
+    records = generate_synthetic_benchmark(
+        iter_legal_chunks(chunks_path), target_count=100, seed=7
+    )
+    gold_id = records[0].gold_chunk_ids[0]
+    changed = [
+        chunk.model_copy(update={"article": "\u0110i\u1ec1u 999"})
+        if chunk.chunk_id == gold_id
+        else chunk
+        for chunk in chunks
+    ]
+    chunks_path.write_text(
+        "".join(
+            json.dumps(chunk.model_dump(), ensure_ascii=False) + "\n"
+            for chunk in changed
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="Gold chunk identity changed"):
+        validate_synthetic_benchmark_sources(records, chunks_path)

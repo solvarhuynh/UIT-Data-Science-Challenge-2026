@@ -238,6 +238,7 @@ def _to_hit(chunk: LegalChunk, score: float) -> RetrievalHit:
             metadata.setdefault(field, value)
     return RetrievalHit(
         chunk_id=chunk.chunk_id,
+        parent_id=chunk.parent_id,
         doc_id=chunk.doc_id,
         text=chunk.text,
         score=score,

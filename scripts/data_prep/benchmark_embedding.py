@@ -40,12 +40,12 @@ def read_chunks(chunks_dir: Path) -> list[dict[str, str]]:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--chunks-dir", default="data/processed/chunks", type=Path)
+    parser.add_argument("--chunks-dir", default="data/processed_v3/chunks", type=Path)
     parser.add_argument("--batch-size", type=int)
     parser.add_argument(
         "--error-report",
         type=Path,
-        default=Path("data/processed/metadata/embedding_errors.json"),
+        default=Path("data/processed_v3/metadata/embedding_errors.json"),
     )
     return parser.parse_args()
 

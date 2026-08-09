@@ -98,6 +98,7 @@ def payload_to_hit(payload: dict[str, Any], score: float) -> RetrievalHit:
             metadata.setdefault(field, payload[field])
     return RetrievalHit(
         chunk_id=payload["chunk_id"],
+        parent_id=payload.get("parent_id"),
         doc_id=payload["doc_id"],
         text=payload["text"],
         score=float(score),

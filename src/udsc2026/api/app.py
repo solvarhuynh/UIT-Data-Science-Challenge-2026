@@ -7,6 +7,7 @@ clients during startup, keeping liveness checks lightweight.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import os
 import socket
@@ -78,6 +79,11 @@ def _build_orchestrator() -> RAGOrchestrator:
     from udsc2026.retrieval.dense.dense_retriever import DenseRetriever
     from udsc2026.retrieval.hybrid.config import load_hybrid_settings
     from udsc2026.retrieval.hybrid.hybrid_retriever import HybridRetriever
+    from udsc2026.retrieval.parent_context import (
+        JsonlParentStore,
+        ParentContextExpander,
+        ParentContextSettings,
+    )
     from udsc2026.retrieval.reranking.cross_encoder import CrossEncoderReranker
     from udsc2026.retrieval.sparse.bm25_retriever import BM25Retriever
 
@@ -116,13 +122,41 @@ def _build_orchestrator() -> RAGOrchestrator:
     cache = (
         FallbackCache(RedisCache(redis_url), local_cache) if redis_url else local_cache
     )
+    llm_client = LLMClient(load_llm_config())
+    parent_context = config.get("parent_context", {})
+    if not isinstance(parent_context, Mapping):
+        raise ValueError("parent_context config must be a mapping")
+    parent_context_settings = ParentContextSettings.model_validate(parent_context)
+    context_expander = None
+    parent_context_version = "disabled"
+    if parent_context_settings.enabled:
+        parents_dir = Path(parent_context_settings.parents_dir)
+        parent_store = JsonlParentStore(
+            parents_dir,
+            max_cached_documents=parent_context_settings.max_cached_documents,
+        )
+        context_expander = ParentContextExpander(
+            parent_store,
+            max_parent_tokens=parent_context_settings.max_parent_tokens,
+            max_total_tokens=parent_context_settings.max_total_tokens,
+        )
+        processing_manifest = (
+            parents_dir.parent / "metadata" / "processing_manifest.json"
+        )
+        if processing_manifest.is_file():
+            parent_context_version = hashlib.sha256(
+                processing_manifest.read_bytes()
+            ).hexdigest()
+        else:
+            parent_context_version = "unversioned:{0}".format(parents_dir.resolve())
     return RAGOrchestrator(
         retriever=retriever,
         reranker=reranker,
-        qa_engine=QAEngine(LLMClient(load_llm_config())),
+        qa_engine=QAEngine(llm_client, context_expander=context_expander),
         cache=cache,
         retriever_version="hybrid_v1",
         reranker_version=reranker_version,
+        parent_context_version=parent_context_version,
     )
 
 

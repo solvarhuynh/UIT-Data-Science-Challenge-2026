@@ -44,7 +44,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--benchmark",
         type=Path,
-        default=Path("data/processed/benchmarks/synthetic_qa.jsonl"),
+        default=Path("data/processed_v3/benchmarks/synthetic_qa.jsonl"),
     )
     parser.add_argument("--config-env", default="gpu")
     parser.add_argument("--candidate-k", type=_positive_int, default=50)

@@ -64,6 +64,7 @@ class RAGOrchestrator:
         cache_ttl_seconds: int = 300,
         retriever_version: str = "hybrid_v1",
         reranker_version: str = "disabled",
+        parent_context_version: str = "disabled",
     ) -> None:
         """Initialize pipeline dependencies without coupling to FastAPI."""
         if cache_ttl_seconds <= 0:
@@ -75,6 +76,7 @@ class RAGOrchestrator:
         self._cache_ttl_seconds = cache_ttl_seconds
         self._retriever_version = retriever_version
         self._reranker_version = reranker_version
+        self._parent_context_version = parent_context_version
 
     async def answer(self, request: QueryRequest) -> QueryResponse:
         """Execute the full pipeline and return a stable query response."""
@@ -159,6 +161,7 @@ class RAGOrchestrator:
             "rag_template": request.rag_template,
             "retriever_version": self._retriever_version,
             "reranker_version": self._reranker_version,
+            "parent_context_version": self._parent_context_version,
         }
         serialized = json.dumps(
             payload,

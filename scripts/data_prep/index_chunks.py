@@ -30,7 +30,7 @@ def _positive_int(value: str) -> int:
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--chunks-dir", default="data/processed/chunks")
+    parser.add_argument("--chunks-dir", default="data/processed_v3/chunks")
     parser.add_argument("--config-env", default="development")
     parser.add_argument("--vector-db-type", choices=("qdrant", "faiss"))
     parser.add_argument("--bm25-index-path")
@@ -353,7 +353,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         LOGGER.error("No valid chunks were indexed")
         return 1
 
-    error_path = Path("data/processed/metadata/index_errors.json")
+    chunks_path = Path(args.chunks_dir)
+    error_path = chunks_path.parent / "metadata" / "index_errors.json"
     error_path.parent.mkdir(parents=True, exist_ok=True)
     error_path.write_text(
         json.dumps(errors, ensure_ascii=False, indent=2) + "\n",
