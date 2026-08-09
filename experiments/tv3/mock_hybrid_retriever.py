@@ -241,6 +241,7 @@ class DiskBM25:
         self.b = b
         self.max_docs = max_docs
         
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         try:
             self.conn = sqlite3.connect(str(self.db_path))
             self.conn.execute("PRAGMA journal_mode = OFF;")
@@ -249,13 +250,18 @@ class DiskBM25:
             self.conn.execute("PRAGMA page_size = 65536;")
             self._init_db()
         except sqlite3.DatabaseError:
-            logger.warning("⚠️ File DB '%s' bị malformed do đĩa đầy trước đó. Đang xóa và tạo lại DB mới...", self.db_path)
+            logger.warning("⚠️ File DB '%s' bị malformed. Đang dọn dẹp sạch sẽ và tạo lại DB mới...", self.db_path)
             try:
                 self.conn.close()
             except Exception:
                 pass
-            if self.db_path.exists():
-                self.db_path.unlink()
+            for ext in ["", "-journal", "-wal", "-shm"]:
+                f = Path(str(self.db_path) + ext)
+                if f.exists():
+                    try:
+                        f.unlink()
+                    except Exception:
+                        pass
             self.conn = sqlite3.connect(str(self.db_path))
             self.conn.execute("PRAGMA journal_mode = OFF;")
             self.conn.execute("PRAGMA synchronous = OFF;")
