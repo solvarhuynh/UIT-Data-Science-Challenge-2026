@@ -429,8 +429,39 @@ class MockHybridRetriever:
                 torch.cuda.empty_cache()
             logger.info("🧹 Đã giải phóng hoàn toàn VRAM của model Embedding cho LLM!")
 
+    def _resolve_parent_text(self, doc: dict) -> str:
+        """Resolve full parent document text from chunks to eliminate context fragmentation."""
+        chunk_text = doc.get("text", "")
+        parents_dir = self.parents_dir
+        if "chunks" in str(parents_dir):
+            parents_dir = Path(str(parents_dir).replace("chunks", "parents"))
+
+        doc_id = doc.get("doc_id") or doc.get("parent_id") or ""
+        parent_candidates = []
+        if doc_id:
+            parent_candidates.append(parents_dir / str(doc_id))
+            parent_candidates.append(parents_dir / f"{doc_id}.jsonl")
+            parent_candidates.append(parents_dir / f"context_{doc_id}.jsonl")
+            parent_candidates.append(parents_dir / f"context_{doc_id}")
+
+        for cand in parent_candidates:
+            if cand.exists():
+                try:
+                    with open(cand, "r", encoding="utf-8") as f:
+                        lines = [line.strip() for line in f if line.strip()]
+                        parent_texts = []
+                        for l in lines[:5]:
+                            p_json = json.loads(l)
+                            parent_texts.append(p_json.get("text", ""))
+                        full_parent_text = "\n".join(parent_texts)
+                        if len(full_parent_text) > 50:
+                            return f"[Đoạn trích chi tiết]: {chunk_text}\n\n[Toàn văn Điều luật tham chiếu]: {full_parent_text[:3000]}"
+                except Exception:
+                    pass
+        return chunk_text
+
     def search(self, query: str, top_k: int = 3, mode: str = "hybrid") -> list[dict]:
-        """Search for top_k documents using 'bm25', 'dense', or 'hybrid' with Dual Query Fusion."""
+        """Search for top_k documents using 'bm25', 'dense', or 'hybrid' with Dual Query Fusion & Parent Resolution."""
         N = self.N
         if N == 0:
             return []
@@ -483,7 +514,7 @@ class MockHybridRetriever:
                     dense_ranks[idx] = min(dense_ranks.get(idx, N), rank)
                     candidate_ids.add(idx)
 
-        # 3. Combine with RRF over ONLY candidate_ids (tối đa ~400 items thay vì 1 triệu items!)
+        # 3. Combine with RRF over ONLY candidate_ids
         final_scores = []
         k = self.rrf_k
         alpha = self.alpha
@@ -507,5 +538,7 @@ class MockHybridRetriever:
             doc = self._disk_bm25.get_doc(doc_id)
             if doc:
                 doc["retrieval_score"] = float(rrf_score)
+                # Tự động giải nén Parent Context để cung cấp ngữ cảnh đầy đủ cho LLM
+                doc["text"] = self._resolve_parent_text(doc)
                 results.append(doc)
         return results
