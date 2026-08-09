@@ -14,7 +14,9 @@ _PRACTICAL_FALLBACK_MARKERS = re.compile(
     r"(?im)\b(?:Lời nói đầu|Phạm vi điều chỉnh|Đối tượng áp dụng|Giải thích từ ngữ|Quy định chung|Điều khoản thi hành)\b"
 )
 _ARTICLE_LIKE_MARKERS = re.compile(
-    r"(?im)(?:^|\s)(?:Điều|Dieu|DIEU)\s+\d+|(?:^|\s)(?:Khoản|Khoan|KHOAN)\s+\d+|(?:^|\s)(?:Điểm|Diem|DIEM)\s+[a-zđ]"
+    r"(?im)(?<![\wÀ-ỹ])(?:Điều|Dieu)(?=\s*\d+)\s*\d+(?=\s|[.:)]|$)|"
+    r"(?<![\wÀ-ỹ])(?:Khoản|Khoan)(?=\s*\d+)\s*\d+(?=\s|[.:)]|$)|"
+    r"(?<![\wÀ-ỹ])(?:Điểm|Diem)(?=\s*[a-zđ](?=\s|[.:)]|$))\s*[a-zđ](?=\s|[.:)]|$)"
 )
 _LEGAL_SECTION_MARKERS = re.compile(
     r"(?im)^\s*(?:Chương|Chuong|CHUONG|Mục|Muc|MUC|Điều|Dieu|DIEU|Khoản|Khoan|KHOAN|Điểm|Diem|DIEM)\b"
@@ -199,9 +201,13 @@ def _looks_like_fallback_candidate(document: CleanDocument) -> bool:
 
 
 def _looks_like_ocr_noise(text: str, removed_line_count: int) -> bool:
-    total = max(len(text), 1)
-    digit_ratio = sum(char.isdigit() for char in text) / total
-    symbol_ratio = sum((not char.isalnum()) and not char.isspace() for char in text) / total
+    # Markup and table delimiters are structured source content, not OCR noise.
+    signal_text = re.sub(r"(?is)<[^>]+>", " ", text).replace("|", " ")
+    total = max(len(signal_text), 1)
+    digit_ratio = sum(char.isdigit() for char in signal_text) / total
+    symbol_ratio = sum(
+        (not char.isalnum()) and not char.isspace() for char in signal_text
+    ) / total
     short_line_ratio = 0
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     if lines:

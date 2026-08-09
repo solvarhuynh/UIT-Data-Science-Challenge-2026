@@ -47,6 +47,8 @@ def run_ingestion_pipeline(
     processed_root: Union[str, Path] = "data/processed",
     chunk_size: int = 512,
     chunk_overlap: int = 80,
+    force_overwrite: bool = False,
+    clear_cache: bool = False,
 ) -> IngestionPipelineResult:
     """Run extract, clean, structure-aware chunking, and validation in order.
 
@@ -91,6 +93,7 @@ def run_ingestion_pipeline(
         review_path=metadata_dir / "manual_review_documents.json",
         chunk_size=chunk_size,
         chunk_overlap=chunk_overlap,
+        force_overwrite=force_overwrite or clear_cache,
     )
     breakdown_path = metadata_dir / "manual_review_breakdown.json"
     breakdown = build_manual_review_breakdown(

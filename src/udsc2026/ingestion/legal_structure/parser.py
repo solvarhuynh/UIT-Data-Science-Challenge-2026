@@ -135,7 +135,7 @@ class LegalStructureParser:
             if not line:
                 continue
 
-            match = PATTERNS["chapter"].match(line)
+            match = PATTERNS["chapter"].search(line)
             if match:
                 # A same-level heading closes the prior chapter before this
                 # line is included in any source span.
@@ -155,7 +155,7 @@ class LegalStructureParser:
                 add_entry("chapter", chapter.identifier, line, line_number)
                 continue
 
-            match = PATTERNS["section"].match(line)
+            match = PATTERNS["section"].search(line)
             if match:
                 section = article = clause = point = None
                 append_to_span(line, line_number)
@@ -176,7 +176,7 @@ class LegalStructureParser:
                 add_entry("section", section.identifier, line, line_number)
                 continue
 
-            match = PATTERNS["article"].match(line)
+            match = PATTERNS["article"].search(line)
             if match:
                 article = clause = point = None
                 append_to_span(line, line_number)
@@ -202,7 +202,7 @@ class LegalStructureParser:
             # Clause and point rules run only in the active Article state.
             # Check points first: otherwise ``a)`` is not a numeric clause,
             # but this ordering documents the intended hierarchy explicitly.
-            point_match = LABELED_POINT.match(line) or PATTERNS["point"].match(line)
+            point_match = LABELED_POINT.search(line) or PATTERNS["point"].match(line)
             if article is not None and point_match:
                 point = None
                 append_to_span(line, line_number)
@@ -226,7 +226,7 @@ class LegalStructureParser:
                 add_entry("point", point.identifier, line, line_number)
                 continue
 
-            clause_match = LABELED_CLAUSE.match(line) or PATTERNS["clause"].match(line)
+            clause_match = LABELED_CLAUSE.search(line) or PATTERNS["clause"].match(line)
             if article is not None and clause_match:
                 clause = point = None
                 append_to_span(line, line_number)

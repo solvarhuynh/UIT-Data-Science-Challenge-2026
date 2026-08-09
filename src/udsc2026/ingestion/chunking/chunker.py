@@ -15,6 +15,7 @@ from udsc2026.ingestion.legal_structure.models import (
     LegalStructureDocument,
     Point,
 )
+from udsc2026.ingestion.reviewing import classify_manual_review_document
 
 _SENTENCE_BOUNDARY = re.compile(r"(?<=[.!?;])\s+")
 _ID_UNSAFE = re.compile(r"[^a-z0-9]+")
@@ -108,10 +109,20 @@ def chunk_clean_document(
     chunk_overlap: int = 80,
 ) -> ChunkingResult:
     """Parse and chunk one cleaned document without changing original text."""
+    review_reason, _ = classify_manual_review_document(document)
+    if review_reason in {"cleaner_cleared_text", "ocr_noise"}:
+        # These inputs are retained for audit through manual review, but must
+        # never reach retrieval or create empty JSONL artifacts downstream.
+        return ChunkingResult(
+            doc_id=document.doc_id,
+            requires_manual_review=True,
+            review_reasons=[review_reason],
+        )
+
     parsed = parse_legal_document(document)
     effective_date = document.metadata.get("effective_date")
     if parsed.requires_manual_review:
-        fallback_result = _chunk_manual_review_document(
+        fallback_result = _chunk_no_article_document(
             document,
             parsed.review_reasons,
             effective_date=str(effective_date) if effective_date else None,
@@ -396,7 +407,7 @@ def _label(prefix: str, identifier: str) -> str:
     return "{0} {1}".format(prefix, identifier)
 
 
-def _chunk_manual_review_document(
+def _chunk_no_article_document(
     document: CleanDocument,
     review_reasons: List[str],
     *,
@@ -404,12 +415,12 @@ def _chunk_manual_review_document(
     chunk_size: int,
     chunk_overlap: int,
 ) -> Optional[ChunkingResult]:
-    """Fallback chunking for legal documents without explicit Điều/Khoản markers."""
+    """Chunk long supplementary material only at document-safe boundaries."""
     text = document.cleaned_text.strip()
-    if not text or not _looks_like_fallback_source(document):
+    if len(text) <= 200:
         return None
 
-    article_label = _fallback_article_label(document)
+    article_label = "Phụ lục / Văn bản bổ sung"
     parent_id = "{0}_fallback".format(_safe_id(document.doc_id))
     parent = LegalParent(
         parent_id=parent_id,
@@ -422,7 +433,7 @@ def _chunk_manual_review_document(
         source=document.source_path,
         metadata={
             "source": document.source_path,
-            "fallback_mode": "manual_review_no_article",
+            "fallback_mode": "no_article_structure",
             "review_reasons": list(review_reasons),
             "effective_date": effective_date,
         },
@@ -465,63 +476,43 @@ def _chunk_manual_review_document(
                     "expanded_terms": expanded_terms_in_text(part, document.abbreviations),
                     "char_count": len(part),
                     "token_count": token_len(part),
-                    "fallback_mode": "manual_review_no_article",
+                    "fallback_mode": "no_article_structure",
                 },
             )
         )
     return result
 
 
-def _looks_like_fallback_source(document: CleanDocument) -> bool:
-    text = document.cleaned_text
-    fallback_markers = (
-        "lời nói đầu",
-        "phạm vi điều chỉnh",
-        "đối tượng áp dụng",
-        "giải thích từ ngữ",
-        "quy định chung",
-        "điều khoản thi hành",
-    )
-    lowered = text.casefold()
-    if any(marker in lowered for marker in fallback_markers):
-        return True
-    if document.title:
-        title = document.title.casefold()
-        legal_title_keywords = (
-            "luat",
-            "nghi dinh",
-            "nghi-quyet",
-            "thong tu",
-            "quyet dinh",
-            "huong dan",
-        )
-        if any(keyword in title for keyword in legal_title_keywords):
-            return any(marker in lowered for marker in fallback_markers)
-    return False
-
-
-def _fallback_article_label(document: CleanDocument) -> str:
-    lowered = document.cleaned_text.casefold()
-    for candidate in (
-        "Lời nói đầu",
-        "Phạm vi điều chỉnh",
-        "Đối tượng áp dụng",
-        "Giải thích từ ngữ",
-        "Quy định chung",
-        "Điều khoản thi hành",
-    ):
-        if candidate.casefold() in lowered:
-            return candidate
-    return "Phần mở đầu"
-
-
 def _fallback_text_parts(text: str, chunk_size: int, chunk_overlap: int) -> List[str]:
-    paragraphs = [part.strip() for part in re.split(r"\n\s*\n+", text) if part.strip()]
-    source_parts = paragraphs if paragraphs else [text]
+    """Split only between paragraphs or complete HTML/Markdown table blocks.
+
+    ``chunk_size`` and ``chunk_overlap`` are intentionally unused here:
+    supplementary material is never token-window sliced, which would corrupt
+    tables and layouts.  Oversized intact blocks are safer than damaged data.
+    """
+    del chunk_size, chunk_overlap
+    html_blocks = re.split(r"(?is)(<table\b.*?</table>)", text)
     chunks: List[str] = []
-    for part in source_parts:
-        if token_len(part) <= chunk_size:
-            chunks.append(part)
-        else:
-            chunks.extend(split_by_sentence_with_overlap(part, chunk_size, chunk_overlap))
+    for block in html_blocks:
+        block = block.strip()
+        if not block:
+            continue
+        if re.fullmatch(r"(?is)<table\b.*?</table>", block):
+            chunks.append(block)
+            continue
+        paragraphs = re.split(r"\n\s*\n+", block)
+        current: List[str] = []
+        for paragraph in paragraphs:
+            paragraph = paragraph.strip()
+            if not paragraph:
+                continue
+            if "|" in paragraph and "\n" in paragraph:
+                if current:
+                    chunks.append("\n\n".join(current))
+                    current = []
+                chunks.append(paragraph)
+            else:
+                current.append(paragraph)
+        if current:
+            chunks.append("\n\n".join(current))
     return chunks

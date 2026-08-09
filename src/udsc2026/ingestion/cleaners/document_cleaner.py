@@ -12,6 +12,7 @@ from udsc2026.ingestion.cleaners.patterns import (
     HORIZONTAL_WHITESPACE,
     LEADING_BULLET,
     LEGAL_STRUCTURE_LINE,
+    LIGHT_OCR_WORD_REPLACEMENTS,
     MULTIPLE_BLANK_LINES,
     ONLY_SYMBOLS,
     PAGE_NUMBER_LINE,
@@ -81,6 +82,13 @@ def normalize_unicode_and_ocr(text: str) -> str:
     normalized = unicodedata.normalize("NFC", text)
     for source, replacement in OCR_REPLACEMENTS.items():
         normalized = normalized.replace(source, replacement)
+    for source, replacement in LIGHT_OCR_WORD_REPLACEMENTS.items():
+        normalized = re.sub(
+            r"(?<!\w){0}(?!\w)".format(re.escape(source)),
+            lambda match: _match_case(match.group(0), replacement),
+            normalized,
+            flags=re.IGNORECASE | re.UNICODE,
+        )
     normalized = normalized.replace("\r\n", "\n").replace("\r", "\n")
     return normalize_vietnamese_vowels(normalized)
 
@@ -98,7 +106,7 @@ def _page_edge_candidates(pages: Sequence[Sequence[str]]) -> Counter[str]:
         nonempty = [line for line in lines if line]
         edge_lines = {line.casefold(): line for line in nonempty[:3] + nonempty[-3:]}
         for line in edge_lines.values():
-            if len(line) <= 160 and not LEGAL_STRUCTURE_LINE.match(line):
+            if len(line) <= 160 and not LEGAL_STRUCTURE_LINE.search(line):
                 candidates[line.casefold()] += 1
     return candidates
 
@@ -119,7 +127,7 @@ def is_garbage_line(line: str, in_table_of_contents: bool) -> bool:
     if in_table_of_contents and TOC_ENTRY.match(line):
         return True
     is_short_symbol = len(line) <= 2 and ONLY_SYMBOLS.match(line)
-    if is_short_symbol and not LEGAL_STRUCTURE_LINE.match(line):
+    if is_short_symbol and not LEGAL_STRUCTURE_LINE.search(line):
         return True
     return False
 
@@ -145,7 +153,7 @@ def _remove_repeated_noise(text: str) -> Tuple[str, List[str]]:
             # ends the TOC block when it is a real structure line, not an entry.
             if (
                 in_table_of_contents
-                and LEGAL_STRUCTURE_LINE.match(line)
+                and LEGAL_STRUCTURE_LINE.search(line)
                 and not TOC_ENTRY.match(line)
             ):
                 in_table_of_contents = False
@@ -166,7 +174,7 @@ def _should_merge(previous: str, current: str) -> bool:
         return False
     # Preserve a line that *starts* a new Điều/Khoản/Điểm. A structural line
     # may still have a hard-wrapped continuation on its following line.
-    if LEGAL_STRUCTURE_LINE.match(current):
+    if LEGAL_STRUCTURE_LINE.search(current):
         return False
     return previous[-1] not in ".;:?!"
 

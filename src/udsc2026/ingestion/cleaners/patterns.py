@@ -3,16 +3,16 @@
 import re
 
 _STRUCTURE_PREFIX = (
-    r"^\s*(?:(?:\d+(?:\.\d+)*|[IVXLCDM]+|[a-zđ])[.):\-–—]?\s*|"
+    r"(?<![\wÀ-ỹ])(?:(?:\d+(?:\.\d+)*|[IVXLCDM]+|[a-zđ])[.):\-–—]?\s*|"
     r"[•‣▪◦●◆◇➢➤\-–—]+\s*){0,3}"
 )
 
 LEGAL_STRUCTURE_LINE = re.compile(
-    rf"{_STRUCTURE_PREFIX}(?:Chương|Chuong|CHUONG)\s+(?:[IVXLCDM]+|\d+)|"
-    rf"{_STRUCTURE_PREFIX}(?:Mục|Muc|MUC)\s+\d+|"
-    rf"{_STRUCTURE_PREFIX}(?:Điều|Dieu|DIEU)\s+\d+|"
-    rf"{_STRUCTURE_PREFIX}(?:Khoản|Khoan|KHOAN)\s+\d+|"
-    rf"{_STRUCTURE_PREFIX}(?:Điểm|Diem|DIEM)\s+[a-zđ]|"
+    rf"{_STRUCTURE_PREFIX}(?:Chương|Chuong)(?=\s*(?:[IVXLCDM]+|\d+))\s*(?:[IVXLCDM]+|\d+)(?=\s|[.:)\-–—]|$)|"
+    rf"{_STRUCTURE_PREFIX}(?:Mục|Muc)(?=\s*\d+)\s*\d+(?=\s|[.:)\-–—]|$)|"
+    rf"{_STRUCTURE_PREFIX}(?:Điều|Dieu)(?=\s*\d+)\s*\d+(?=\s|[.:)\-–—]|$)|"
+    rf"{_STRUCTURE_PREFIX}(?:Khoản|Khoan)(?=\s*\d+)\s*\d+(?=\s|[.:)\-–—]|$)|"
+    rf"{_STRUCTURE_PREFIX}(?:Điểm|Diem)(?=\s*[a-zđ](?=\s|[.:)]|$))\s*[a-zđ](?=\s|[.:)]|$)|"
     r"^\s*\d+[.)]|^\s*[a-zđ][.)]",
     re.IGNORECASE | re.UNICODE,
 )
@@ -34,6 +34,14 @@ HORIZONTAL_WHITESPACE = re.compile(r"[^\S\r\n]+", re.UNICODE)
 MULTIPLE_BLANK_LINES = re.compile(r"\n[ \t]*\n(?:[ \t]*\n)+")
 LEADING_BULLET = re.compile(r"^(\s*)[•‣▪◦●◆◇➢➤]\s*")
 ONLY_SYMBOLS = re.compile(r"^[\W_]+$", re.UNICODE)
+
+# OCR substitutions are deliberately whole-word and limited to unambiguous
+# legal markers.  They repair extraction noise without rewriting corpus prose.
+LIGHT_OCR_WORD_REPLACEMENTS = {
+    "s0": "số",
+    "d1eu": "điều",
+    "kh0an": "khoản",
+}
 
 ABBREVIATION_DEFINITION = re.compile(
     r"([A-ZĐÂÊÔƠƯ][^()]{3,80}?)\s*\(\s*"

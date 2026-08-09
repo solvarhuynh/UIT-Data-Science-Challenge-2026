@@ -26,6 +26,7 @@ def write_chunking_outputs(
     review_path: Optional[Union[str, Path]] = None,
     chunk_size: int = 512,
     chunk_overlap: int = 80,
+    force_overwrite: bool = False,
 ) -> Tuple[List[ChunkingResult], ValidationReport]:
     """Chunk documents, save one JSONL pair per document, and write a report."""
     document_list = list(documents)
@@ -38,9 +39,14 @@ def write_chunking_outputs(
     parent_target = Path(parents_dir) if parents_dir else DEFAULT_PARENTS_DIR
     chunk_target.mkdir(parents=True, exist_ok=True)
     parent_target.mkdir(parents=True, exist_ok=True)
+    if force_overwrite:
+        _remove_empty_jsonl(chunk_target)
+        _remove_empty_jsonl(parent_target)
     for result in results:
-        _write_jsonl(chunk_target / "{0}.jsonl".format(result.doc_id), result.chunks)
-        _write_jsonl(parent_target / "{0}.jsonl".format(result.doc_id), result.parents)
+        if result.chunks:
+            _write_jsonl(chunk_target / "{0}.jsonl".format(result.doc_id), result.chunks)
+        if result.parents:
+            _write_jsonl(parent_target / "{0}.jsonl".format(result.doc_id), result.parents)
 
     report = validate_chunking_results(results, chunk_size=chunk_size)
     _write_json(
@@ -64,6 +70,17 @@ def _write_jsonl(path: Path, records: Iterable[BaseModel]) -> None:
 def _write_json(path: Path, value: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _remove_empty_jsonl(directory: Path) -> None:
+    """Remove only blank JSONL artifacts in an explicitly selected output dir."""
+    for path in directory.glob("*.jsonl"):
+        try:
+            if not path.read_text(encoding="utf-8").strip():
+                path.unlink()
+        except OSError:
+            # A single stale artifact must not prevent the rest of ingestion.
+            continue
 
 
 def _ensure_unique_document_ids(documents: Iterable[CleanDocument]) -> None:
