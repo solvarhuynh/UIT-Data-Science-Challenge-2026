@@ -16,9 +16,9 @@ Số liệu V3 đã audit ngày 09/08/2026:
 | Hạng mục | Giá trị |
 | --- | ---: |
 | Documents | 8.532 |
-| Chunks | 1.275.250 |
-| Parents | 185.339 |
-| Dung lượng tổng | khoảng 2,70 GiB |
+| Chunks | 1.270.356 |
+| Parents | 184.548 |
+| Dung lượng tổng | 2.905.166.051 bytes (2,706 GiB) |
 | Missing token/bigram trong child | 0 / 0 |
 | Duplicate/orphan/invalid/empty chunk | 0 |
 | Synthetic benchmark | 100 câu, đủ 7 nhóm |
@@ -27,9 +27,10 @@ Các hash chuẩn nằm trong `metadata/processing_manifest.json`:
 
 ```text
 source_corpus_hash: cda01fcb55da1e5656f1190eb35f07d77314ed72220d13aa6a1f421737d202ed
-processed_corpus_tree_hash: 5420eb3f9e26b018351a83faf7a5139fa790d2e2c05d006578cb2192bcd52765
-synthetic_benchmark.benchmark_sha256: 01d59551a69f6e249e6dc0644ff9b541c1558c426e33e72dad690cb6d20a7fd0
-synthetic_benchmark.source_chunk_corpus_sha256: 46ab8928bf548b16d167464f70da6db9bfd722d07193d9d3f911bf57fa583180
+processed_corpus_tree_hash: 80fb33ff1133ce2583097cc5a98ddc9739240a60bfe11c979892d5412dcda647
+synthetic_benchmark.benchmark_sha256: 80f27b47e81aa40b25ca55ab2fe7fb7edd8fc65388f41fdae841a48a104892d3
+synthetic_benchmark.source_chunk_corpus_sha256: d2aa542f1f45ad9f310bceb43063aed3058d2e81edbb15ecf18525c3c6d6bbc7
+git_commit: 00d45381dd85e8cae0152c5fe0cf4dde8278dc51
 ```
 
 V3 có `integrity_gate_passed=true`. `semantic_completeness_gate_passed=false`
@@ -41,6 +42,10 @@ LegalIR và 9 câu có toàn bộ gold rỗng. Không tự bịa nội dung cho 
 ```powershell
 git clone https://github.com/solvarhuynh/UIT-Data-Science-Challenge-2026.git
 cd UIT-Data-Science-Challenge-2026
+git pull --ff-only origin main
+$VerifiedCommit = "00d45381dd85e8cae0152c5fe0cf4dde8278dc51"
+git merge-base --is-ancestor $VerifiedCommit HEAD
+if ($LASTEXITCODE -ne 0) { throw "HEAD chưa chứa code V3 đã được audit: $VerifiedCommit" }
 py -3.11 -m venv .venv
 Set-ExecutionPolicy -Scope Process Bypass
 .\.venv\Scripts\Activate.ps1
@@ -94,7 +99,7 @@ Script sẽ lần lượt:
 2. tải ba model, ghi download manifest;
 3. preflight CUDA/model/disk và xác minh V3 manifest, audit, counts, benchmark SHA;
 4. smoke LLM, index 10.000 chunks và rerank 10 câu;
-5. build dense FAISS cho toàn bộ 1.275.250 chunks;
+5. build dense FAISS cho toàn bộ 1.270.356 chunks;
 6. sinh dense top-50 cho 100 câu benchmark;
 7. rerank bằng BGE, giữ top-5 và xuất báo cáo before/after.
 
@@ -120,7 +125,7 @@ Chỉ nhận kết quả khi:
 
 - preflight không có `failures`, riêng data phải có `ok=true`;
 - data integrity pass và benchmark SHA khớp manifest;
-- dense manifest ghi đủ 1.275.250 chunks;
+- dense manifest ghi đủ 1.270.356 chunks;
 - đủ 100 câu trong dense predictions;
 - reranker chỉ sắp xếp/cắt top-5, không sửa text/citation/metadata;
 - Recall/MRR before và after dùng cùng benchmark, cùng candidate pool.
