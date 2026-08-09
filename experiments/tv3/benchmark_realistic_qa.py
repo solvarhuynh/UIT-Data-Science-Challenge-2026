@@ -88,7 +88,7 @@ async def main():
     parser.add_argument("--max_new_tokens", type=int, default=512, help="Giới hạn số token Qwen3 sinh ra (chống OOM)")
     parser.add_argument("--dataset", type=str, default="", help="Đường dẫn file train.json")
     parser.add_argument("--parents_dir", type=str, default="", help="Đường dẫn thư mục parents chứa file jsonl")
-    parser.add_argument("--model_path", type=str, default="Qwen/Qwen2.5-3B-Instruct", help="Tên model Qwen (<4B) trên HuggingFace (ví dụ: Qwen/Qwen2.5-3B-Instruct) hoặc đường dẫn local")
+    parser.add_argument("--model_path", type=str, default="thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2", help="Tên model Qwen (<4B) trên HuggingFace hoặc đường dẫn local (mặc định: thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2)")
     parser.add_argument("--embedding_model", type=str, default="huyydangg/DEk21_hcmute_embedding_v2", help="Tên model trên HuggingFace (ví dụ: huyydangg/DEk21_hcmute_embedding_v2) hoặc đường dẫn local")
     parser.add_argument("--quantization", type=str, default="none", choices=["4bit", "8bit", "none"], help="Mức nén quantization (Kaggle T4 x2 khuyên dùng 'none')")
     parser.add_argument("--device", type=str, default="cuda", help="cuda hoặc cpu")
@@ -104,6 +104,8 @@ async def main():
         default="default_rag_v2",
         help="RAG template name (file under prompts/rag_templates/ without .md).",
     )
+    parser.add_argument("--use_reranker", action="store_true", help="Bật Cross-Encoder Reranker của TV5 (BAAI/bge-reranker-v2-m3)")
+    parser.add_argument("--reranker_model", type=str, default="BAAI/bge-reranker-v2-m3", help="Mô hình Reranker của TV5")
     parser.add_argument(
         "--output-json",
         type=Path,
@@ -159,7 +161,20 @@ async def main():
         max_docs=args.max_docs,
     )
 
-    # 3. Khởi tạo Qwen LLM
+    # 3. Khởi tạo CrossEncoderReranker chính thức của TV5 (nếu được bật)
+    tv5_reranker = None
+    if args.use_reranker:
+        try:
+            from udsc2026.infrastructure.reranker import CrossEncoderClient
+            from udsc2026.retrieval.reranking import CrossEncoderReranker
+            logger.info("⏳ Đang khởi tạo CrossEncoderReranker TV5 từ '%s'...", args.reranker_model)
+            client = CrossEncoderClient(args.reranker_model, device=args.device if torch.cuda.is_available() else "cpu")
+            tv5_reranker = CrossEncoderReranker(client)
+            logger.info("✅ Đã nạp thành công Reranker chính thức của TV5!")
+        except Exception as e:
+            logger.warning("Không thể nạp TV5 Reranker (%s). Sẽ tiếp tục dùng RRF scores mặc định.", e)
+
+    # 4. Khởi tạo Qwen LLM
     model_path = args.model_path
     local_qwen = BASE_DIR / "models/qwen3-legal"
     if local_qwen.exists():
@@ -184,9 +199,9 @@ async def main():
     success_count = 0
 
     print("\n" + "=" * 70)
-    print(f"🚀 BENCHMARK THỰC TẾ HYBRID (BM25 + Dense {args.embedding_model} + LLM)")
+    print(f"🚀 BENCHMARK THỰC TẾ HYBRID (BM25 + Dense {args.embedding_model} + TV5 Reranker + LLM)")
     print(
-        f"   mode={args.mode} | top_k={args.top_k} | "
+        f"   mode={args.mode} | top_k={args.top_k} | use_reranker={args.use_reranker} | "
         f"prompt={args.prompt_version}/{args.rag_template} | "
         f"quantization={args.quantization} | limit={args.limit}"
     )
@@ -200,10 +215,11 @@ async def main():
         if not gold_answer or not gold_answer.strip():
             continue
 
-        # 4. Tìm kiếm Hybrid
-        retrieved_docs = retriever.search(question, top_k=args.top_k, mode=args.mode)
+        # 5. Tìm kiếm Hybrid (Kéo 20 ứng viên nếu dùng TV5 Reranker, hoặc top_k nếu không)
+        search_k = 20 if tv5_reranker is not None else args.top_k
+        retrieved_docs = retriever.search(question, top_k=search_k, mode=args.mode)
 
-        # 5. Chuyển đổi thành RetrievalHit với chiến lược Context Budget (Mở rộng 10000 chars cho Kaggle GPU)
+        # 6. Chuyển đổi thành RetrievalHit với chiến lược Context Budget
         TOTAL_CHAR_BUDGET = 10000 if args.max_context_len == 1200 else args.max_context_len * len(retrieved_docs)
         n_docs = len(retrieved_docs)
         contexts = []
@@ -223,6 +239,13 @@ async def main():
                 article=doc.get("article"),
             )
             contexts.append(hit)
+
+        # 7. Rerank bằng CrossEncoderReranker chính thức của TV5 (nếu bật)
+        if tv5_reranker is not None and len(contexts) > 1:
+            try:
+                contexts = tv5_reranker.rerank(question, candidates=contexts, top_n=args.top_k)
+            except Exception as e:
+                logger.warning("Reranking TV5 thất bại: %s", e)
 
         if not contexts:
             continue
