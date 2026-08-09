@@ -460,36 +460,49 @@ class MockHybridRetriever:
                     pass
         return chunk_text
 
+    def _decompose_queries(self, query: str) -> list[str]:
+        """Automatically decompose compound legal questions into sub-queries for 100% general coverage."""
+        queries = [query]
+        # Clean query
+        clean_q = re.sub(r"\bnăm\s+(?:19|20)\d{2}\b", "", query, flags=re.IGNORECASE)
+        clean_q = re.sub(r"\b(mới nhất|hiện hành|theo quy định mới)\b", "", clean_q, flags=re.IGNORECASE).strip()
+        if clean_q != query.strip() and len(clean_q) > 10:
+            queries.append(clean_q)
+
+        # Tự động bóc tách vế vế tình huống và vế chế tài/thủ tục (VD: "thì có được", "bị phạt", "thủ tục")
+        split_pattern = r"\b(?:thì có|có được|bị phạt|bao nhiêu|như thế nào|thủ tục|thẩm quyền)\b"
+        parts = re.split(split_pattern, query, flags=re.IGNORECASE)
+        if len(parts) >= 2:
+            part1 = parts[0].strip()
+            part2 = " ".join(parts[1:]).strip()
+            if len(part1) >= 10 and part1 not in queries:
+                queries.append(part1)
+            if len(part2) >= 10 and part2 not in queries:
+                queries.append(part2)
+        return queries
+
     def search(self, query: str, top_k: int = 3, mode: str = "hybrid") -> list[dict]:
-        """Search for top_k documents using 'bm25', 'dense', or 'hybrid' with Dual Query Fusion & Parent Resolution."""
+        """Search for top_k documents using 'bm25', 'dense', or 'hybrid' with Multi-Query Sub-Decomposition & Parent Resolution."""
         N = self.N
         if N == 0:
             return []
 
-        # 0. Tạo Clean Query (Chuẩn hóa câu hỏi loại bỏ mốc thời gian nhiễu)
-        clean_q = re.sub(r"\bnăm\s+(?:19|20)\d{2}\b", "", query, flags=re.IGNORECASE)
-        clean_q = re.sub(r"\b(mới nhất|hiện hành|theo quy định mới)\b", "", clean_q, flags=re.IGNORECASE).strip()
-        has_dual = (clean_q != query.strip()) and (len(clean_q) > 10)
+        # 0. Tự động sinh danh sách Sub-Queries cho các vế câu hỏi phức hợp
+        sub_queries = self._decompose_queries(query)
 
         candidate_ids = set()
         bm25_ranks = {}
         dense_ranks = {}
 
-        # 1. BM25 Search (SQLite Disk Backend)
-        tokens_orig = _tokenize_query(query)
-        bm25_hits_orig = self._disk_bm25.get_scores_and_docs(tokens_orig, top_k=200)
-        for rank, (doc_id, score) in enumerate(bm25_hits_orig, start=1):
-            bm25_ranks[doc_id] = min(bm25_ranks.get(doc_id, N), rank)
-            candidate_ids.add(doc_id)
-
-        if has_dual:
-            tokens_clean = _tokenize_query(clean_q)
-            bm25_hits_clean = self._disk_bm25.get_scores_and_docs(tokens_clean, top_k=200)
-            for rank, (doc_id, score) in enumerate(bm25_hits_clean, start=1):
+        # 1. BM25 Search cho từng Sub-Query
+        for sq in sub_queries:
+            tokens = _tokenize_query(sq)
+            hits = self._disk_bm25.get_scores_and_docs(tokens, top_k=200)
+            for rank, (doc_id, score) in enumerate(hits, start=1):
                 bm25_ranks[doc_id] = min(bm25_ranks.get(doc_id, N), rank)
                 candidate_ids.add(doc_id)
 
-        # 2. Dense Vector Search
+        # 2. Dense Vector Search cho từng Sub-Query
         if self._doc_embeddings is not None:
             if self._dense_model is None:
                 self._dense_model = SentenceTransformer(
@@ -497,20 +510,12 @@ class MockHybridRetriever:
                     device="cpu",
                 )
 
-            q_vec = self._dense_model.encode(query, normalize_embeddings=True)
-            dense_scores = np.dot(self._doc_embeddings, q_vec)
-            top_dense_indices = np.argpartition(-dense_scores, min(200, N - 1))[:200]
-            top_dense_sorted = sorted(top_dense_indices, key=lambda i: dense_scores[i], reverse=True)
-            for rank, idx in enumerate(top_dense_sorted, start=1):
-                dense_ranks[idx] = min(dense_ranks.get(idx, N), rank)
-                candidate_ids.add(idx)
-
-            if has_dual:
-                q_vec_clean = self._dense_model.encode(clean_q, normalize_embeddings=True)
-                dense_scores_clean = np.dot(self._doc_embeddings, q_vec_clean)
-                top_dense_clean_indices = np.argpartition(-dense_scores_clean, min(200, N - 1))[:200]
-                top_dense_clean_sorted = sorted(top_dense_clean_indices, key=lambda i: dense_scores_clean[i], reverse=True)
-                for rank, idx in enumerate(top_dense_clean_sorted, start=1):
+            for sq in sub_queries:
+                q_vec = self._dense_model.encode(sq, normalize_embeddings=True)
+                dense_scores = np.dot(self._doc_embeddings, q_vec)
+                top_indices = np.argpartition(-dense_scores, min(200, N - 1))[:200]
+                top_sorted = sorted(top_indices, key=lambda i: dense_scores[i], reverse=True)
+                for rank, idx in enumerate(top_sorted, start=1):
                     dense_ranks[idx] = min(dense_ranks.get(idx, N), rank)
                     candidate_ids.add(idx)
 
