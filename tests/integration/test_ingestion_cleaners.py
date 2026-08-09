@@ -22,6 +22,19 @@ def test_cleaner_normalizes_unicode_noise_and_preserves_legal_structure():
     assert cleaned_text == ("Điều 1. Phạm vi áp dụng của Luật.\n1. Nội dung quy định.")
 
 
+def test_cleaner_preserves_mid_line_and_accentless_legal_headings():
+    raw_text = (
+        "1. Dieu 1. Pham vi ap dung.\n"
+        "2. Khoan 1. Quy dinh chung.\n"
+        "3. Diem a) Noi dung diem a."
+    )
+
+    cleaned_text, removed_lines = clean_text(raw_text)
+
+    assert removed_lines == []
+    assert cleaned_text == raw_text
+
+
 def test_cleaner_removes_repeated_headers_footers_and_page_markers():
     raw_text = (
         "CỔNG THÔNG TIN PHÁP LUẬT\nĐiều 1. Nội dung trang một.\n"

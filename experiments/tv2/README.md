@@ -1,4 +1,4 @@
-# TV2 retrieval experiment
+﻿# TV2 retrieval experiment
 
 Đây là smoke test thủ công cho pipeline retrieval của TV2; logic ổn định nằm trong `src/` và `scripts/`.
 
@@ -6,7 +6,7 @@
 
 - JSONL tại `data/processed/chunks/*.jsonl`.
 - Mỗi dòng phải là một `LegalChunk` theo schema TV4/TV2: `chunk_id`, `doc_id`, `text` và metadata citation.
-- Model BKAI local tại `models/bkai-bi-encoder/` nếu chạy dense/hybrid.
+- Model HCMUTE Embedding v2 local tại `models/hcmute-embedding-v2/` nếu chạy dense/hybrid.
 
 ## Chạy
 
@@ -35,3 +35,4 @@ python -c "from udsc2026.retrieval.sparse.bm25_retriever import BM25Retriever; b
 
 Đây là bước kiểm tra thủ công khi có dữ liệu mới, không phải unit test chính thức. Unit test
 chạy bằng một lệnh chung ở README gốc.
+

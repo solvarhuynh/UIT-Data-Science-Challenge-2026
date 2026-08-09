@@ -192,6 +192,7 @@ def is_current_manifest(path: Path, expected: dict[str, Any]) -> bool:
         return False
     keys = (
         "source_fingerprint",
+        "corpus_hash",
         "model_hash",
         "vector_db_type",
         "collection_name",
@@ -246,7 +247,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             return iterable if iterable is not None else _Progress()
 
     from udsc2026.infrastructure.config import load_config
-    from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient
+    from udsc2026.infrastructure.embedding.client import EmbeddingClient
     from udsc2026.infrastructure.vector_db.factory import get_vector_db_adapter
 
     config = load_config(args.config_env)
@@ -275,9 +276,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         "collection_name": collection_name,
         "max_chunks": args.max_chunks,
     }
-    if not args.force and is_current_manifest(manifest_path, cache_identity):
-        print(f"Dense index is current: {manifest_path}")
-        return 0
+    if not args.force:
+        LOGGER.info("Checking corpus hash without loading it into RAM...")
+        precheck_hash = RunningCorpusHash()
+        precheck_errors: list[dict[str, Any]] = []
+        for chunk in iter_chunks(
+            args.chunks_dir,
+            precheck_errors,
+            max_chunks=args.max_chunks,
+        ):
+            precheck_hash.update(chunk.chunk_id, chunk.text)
+        cache_identity["corpus_hash"] = precheck_hash.hexdigest()
+        if is_current_manifest(manifest_path, cache_identity):
+            print(f"Dense index is current: {manifest_path}")
+            return 0
 
     LOGGER.info("Indexing %d chunks with %s", total_chunks, model_path)
     embedder = EmbeddingClient(

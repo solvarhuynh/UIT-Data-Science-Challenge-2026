@@ -223,6 +223,43 @@ class TestGenerateAnswer:
 
     @pytest.mark.unit
     @pytest.mark.asyncio
+    async def test_lost_in_middle_reorders_prompt_only(
+        self,
+        tmp_prompts: Path,
+    ) -> None:
+        class CapturingLLM:
+            def __init__(self) -> None:
+                self.prompt = ""
+
+            def generate(self, prompt: str) -> str:
+                self.prompt = prompt
+                return "Câu trả lời"
+
+        contexts = [
+            RetrievalHit(
+                chunk_id=f"chunk-{index}",
+                doc_id=f"doc-{index}",
+                text=label,
+                score=1.0 - index / 10,
+            )
+            for index, label in enumerate(("FIRST", "SECOND", "THIRD", "FOURTH"))
+        ]
+        llm = CapturingLLM()
+        reordered_engine = QAEngine(
+            llm_client=llm,  # type: ignore[arg-type]
+            prompt_builder=PromptBuilder(prompts_root=tmp_prompts),
+            use_chat_template=False,
+        )
+
+        response = await reordered_engine.generate_answer("Câu hỏi?", contexts)
+
+        assert llm.prompt.index("FIRST") < llm.prompt.index("THIRD")
+        assert llm.prompt.index("THIRD") < llm.prompt.index("FOURTH")
+        assert llm.prompt.index("FOURTH") < llm.prompt.index("SECOND")
+        assert response.retrieval_hits == contexts
+
+    @pytest.mark.unit
+    @pytest.mark.asyncio
     async def test_accepts_high_final_score_from_reranked_pipeline(
         self,
         mock_llm: MockLLMClient,

@@ -3,22 +3,20 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient
+from udsc2026.infrastructure.embedding.client import EmbeddingClient
 from udsc2026.retrieval.sparse.tokenizer import tokenize_vi
 
 
 @pytest.fixture
 def client():
-    with patch(
-        "udsc2026.infrastructure.embedding.bkai_client.SentenceTransformer"
-    ) as model:
+    with patch("udsc2026.infrastructure.embedding.client.SentenceTransformer") as model:
         model.return_value.encode.side_effect = lambda texts, **kwargs: np.asarray(
             [0.1, 0.2, 0.3]
             if isinstance(texts, str)
             else [[0.1, 0.2, 0.3] for _ in texts]
         )
         with patch(
-            "udsc2026.infrastructure.embedding.bkai_client.Path.is_dir",
+            "udsc2026.infrastructure.embedding.client.Path.is_dir",
             return_value=True,
         ):
             yield EmbeddingClient("local-model")
@@ -93,7 +91,7 @@ def test_long_documents_are_windowed_and_aggregated(client):
         [[1.0, 0.0, 0.0] for _ in texts]
     )
 
-    vectors = client.embed_documents(["Ä‘iá»u luáº­t rất dĂ i"])
+    vectors = client.embed_documents(["điều luật rất dài"])
 
     assert vectors == [[1.0, 0.0, 0.0]]
     assert client.windowed_document_count == 1

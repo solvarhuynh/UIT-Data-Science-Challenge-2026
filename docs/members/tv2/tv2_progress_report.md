@@ -1,4 +1,4 @@
-# TV2 Progress Report
+﻿# TV2 Progress Report
 
 Tài liệu này tổng hợp các prompt TV2 đã được xử lý từ `prompts.md`, theo đúng trạng thái thực tế của repo sau khi hoàn thành từng bước.
 
@@ -97,7 +97,7 @@ Tác dụng sau khi làm xong:
 
 File runtime chính:
 
-- `src/udsc2026/infrastructure/embedding/bkai_client.py`
+- `src/udsc2026/infrastructure/embedding/client.py`
 - `scripts/data_prep/benchmark_embedding.py`
 
 File test:
@@ -198,3 +198,4 @@ Chức năng:
 - Khi chuyển chunk thành `RetrievalHit`, các field citation như `chunk_id`,
   `doc_id`, `text`, `source`, `law_name`, `article`, `clause` và `metadata`
   phải giữ nguyên giá trị gốc nếu chunk có cung cấp.
+

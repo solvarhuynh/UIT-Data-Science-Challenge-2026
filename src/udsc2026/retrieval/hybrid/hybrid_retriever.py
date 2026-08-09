@@ -99,7 +99,7 @@ class HybridRetriever:
 @lru_cache(maxsize=1)
 def _default_retriever() -> SearchRetriever:
     config = _config()
-    from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient
+    from udsc2026.infrastructure.embedding.client import EmbeddingClient
     from udsc2026.infrastructure.embedding.config import load_embedding_config
     from udsc2026.infrastructure.reranker.config import load_reranker_settings
     from udsc2026.infrastructure.vector_db.factory import get_vector_db_adapter

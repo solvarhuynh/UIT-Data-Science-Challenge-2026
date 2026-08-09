@@ -23,7 +23,7 @@ flowchart TB
         QP[QA Pipeline]
     end
     subgraph Local[Local Infrastructure]
-        BKAI[BKAI Vietnamese Bi-Encoder]
+        HCMUTE Embedding v2[HCMUTE Embedding v2]
         BM25[BM25 Index]
         Qdrant[(Vector Store)]
         Qwen[Qwen3 Vietnamese Legal]
@@ -31,7 +31,7 @@ flowchart TB
     React -->|JSON request / SSE stream| API
     API --> C
     C --> RP
-    RP --> BKAI
+    RP --> HCMUTE Embedding v2
     RP --> BM25
     RP --> Qdrant
     RP --> QP
@@ -47,7 +47,7 @@ sequenceDiagram
     participant F as React
     participant A as FastAPI
     participant R as Retrieval
-    participant B as BKAI/BM25/Qdrant
+    participant B as HCMUTE Embedding/BM25/Qdrant
     participant Q as QA/Qwen3
     F->>A: POST /api/v1/query {question, top_k}
     A->>R: RetrieveRequest
@@ -77,7 +77,7 @@ sequenceDiagram
 Với mỗi query:
 
 1. Chuẩn hóa câu hỏi.
-2. BKAI encode query để dense search.
+2. HCMUTE Embedding v2 encode query để dense search.
 3. BM25 tìm các kết quả khớp thuật ngữ pháp lý.
 4. Hybrid fusion kết hợp sparse score và dense score.
 5. Rerank, lọc theo threshold và giới hạn `top_k`.

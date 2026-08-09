@@ -1,4 +1,4 @@
-# Hybrid Search cho LegalIR
+﻿# Hybrid Search cho LegalIR
 
 ## Mục tiêu
 
@@ -77,7 +77,7 @@ hybrid_score = 0.55 * 0.86 + 0.45 * 0.72 + 0.05 = 0.847
 ## Quy trình xử lý
 
 1. Nhận query từ FastAPI.
-2. Chạy Dense Retrieval bằng BKAI Bi-encoder.
+2. Chạy Dense Retrieval bằng HCMUTE embedding v2.
 3. Chạy BM25 Retrieval trên cùng tập chunk đã chuẩn hóa.
 4. Gộp kết quả theo `chunk_id`.
 5. Normalize `dense_score` và `sparse_score`.
@@ -106,3 +106,4 @@ chunk_id, doc_id, law_name, article, clause, text, dense_score, sparse_score, hy
 - Query có số điều, tên nghị định, mã văn bản: tăng `beta`.
 - Query diễn đạt đời thường, ít thuật ngữ chính xác: tăng `alpha`.
 - LegalQA cần citation chắc: giữ `overlap_bonus` để ưu tiên kết quả được cả hai nhánh đồng thuận.
+

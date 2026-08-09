@@ -12,7 +12,7 @@ from udsc2026.infrastructure.vector_db.base import VectorDBAdapter
 LOGGER = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
-    from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient
+    from udsc2026.infrastructure.embedding.client import EmbeddingClient
 
 
 class DenseRetriever:
@@ -64,7 +64,7 @@ def _default_retriever() -> DenseRetriever:
     from udsc2026.infrastructure.embedding.config import load_embedding_config
 
     embedding_config = load_embedding_config()
-    from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient
+    from udsc2026.infrastructure.embedding.client import EmbeddingClient
 
     embedding_client = EmbeddingClient(
         model_path=embedding_config.get(

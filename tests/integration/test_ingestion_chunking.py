@@ -355,6 +355,61 @@ def test_searchable_coverage_counts_missing_duplicate_occurrences():
     assert result.missing_source_bigram_count == 2
 
 
+def test_fallback_chunking_handles_no_article_preamble_documents():
+    document = CleanDocument(
+        doc_id="fallback",
+        source_path="data/raw/fallback.txt",
+        title="Luật mẫu",
+        cleaned_text=(
+            "Lời nói đầu\n"
+            "Văn bản này quy định nguyên tắc chung.\n\n"
+            "Phạm vi điều chỉnh\n"
+            "Nội dung điều chỉnh của luật được áp dụng trên toàn quốc."
+        ),
+        file_format="txt",
+    )
+
+    result = chunk_clean_document(document)
+
+    assert result.parents
+    assert result.chunks
+    assert result.article_count == 0
+    assert result.review_reasons == ["fallback_chunked_no_article"]
+    assert result.requires_manual_review is True
+    assert result.parents[0].article in {
+        "Lời nói đầu",
+        "Phạm vi điều chỉnh",
+        "Phần mở đầu",
+    }
+    assert all(chunk.article == result.parents[0].article for chunk in result.chunks)
+    report = validate_chunking_results([result])
+    assert report.manual_review_documents == ["fallback"]
+    assert report.structured_document_count == 0
+    assert report.fallback_document_count == 1
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Chuong I Dieu\n1. Pham vi dieu chinh.",
+        "Muc 2 Dieu\n3. Noi dung ap dung.",
+    ],
+)
+def test_accentless_container_split_preserves_searchable_coverage(text):
+    document = CleanDocument(
+        doc_id="accentless-container",
+        source_path="data/raw/accentless-container.txt",
+        title="Van ban mau",
+        cleaned_text=text,
+        file_format="txt",
+    )
+
+    result = chunk_clean_document(document)
+
+    assert result.missing_source_token_count == 0
+    assert result.missing_source_bigram_count == 0
+
+
 def test_validation_reports_orphan_child_parent_link():
     result = chunk_clean_document(_document())
     result.chunks[0].parent_id = "missing_parent"

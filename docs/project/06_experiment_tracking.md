@@ -1,4 +1,4 @@
-# Experiment Tracking
+﻿# Experiment Tracking
 
 ## Mục tiêu
 
@@ -12,13 +12,13 @@ Mọi thành viên khi chạy xong một thí nghiệm **bắt buộc** thêm 1 
 <module>_<mô_tả_ngắn>_<vNN>
 ```
 
-Ví dụ: `retrieval_bkai_baseline_v1`, `chunk_512_overlap_80_v2`, `rerank_crossencoder_top20_v1`, `qa_qwen3_fewshot_v3`.
+Ví dụ: `retrieval_HCMUTE Embedding v2_baseline_v1`, `chunk_512_overlap_80_v2`, `rerank_crossencoder_top20_v1`, `qa_qwen3_fewshot_v3`.
 
 ## Bảng log thí nghiệm chính
 
 | Experiment Name | Module | Dataset | Config (Chunk Size/Overlap, top_k, model...) | Metrics | Result | Người thực hiện | Ngày | Ghi chú |
 |---|---|---|---|---|---|---|---|---|
-| retrieval_bkai_baseline_v1 | Retrieval (Dense) | `data/processed/chunks/v1` | chunk_size=512, overlap=80, top_k=10, model=bkai-bi-encoder | Recall@10, MRR@10 | Recall@10=0.71, MRR@10=0.58 | TV2 | 2026-07-01 | Baseline chưa hybrid |
+| retrieval_HCMUTE Embedding v2_baseline_v1 | Retrieval (Dense) | `data/processed/chunks/v1` | chunk_size=512, overlap=80, top_k=10, model=hcmute-embedding-v2 | Recall@10, MRR@10 | Recall@10=0.71, MRR@10=0.58 | TV2 | 2026-07-01 | Baseline chưa hybrid |
 | retrieval_hybrid_bm25_dense_v1 | Retrieval (Hybrid) | `data/processed/chunks/v1` | dense_weight=0.6, sparse_weight=0.4, top_k=10 | Recall@10, MRR@10 | Recall@10=0.79, MRR@10=0.64 | TV3 | 2026-07-05 | Cải thiện so với dense-only |
 | rerank_crossencoder_top20_v1 | Reranking | `data/processed/chunks/v1` | retrieve_top_k=20, rerank_top_k=5, model=cross-encoder | Recall@5, nDCG@5 | Recall@5=0.83, nDCG@5=0.77 | TV5 | 2026-07-10 | Baseline cross-encoder |
 | qa_qwen3_zero_shot_v1 | Generation | `data/eval/qa_set_v1` | model=qwen3-1.7b-legal, temperature=0.2 | EM, F1, Citation Accuracy | EM=0.42, F1=0.61, CitAcc=0.70 | TV3 | 2026-07-12 | Chưa few-shot |
@@ -44,7 +44,7 @@ Bảng riêng để so sánh trực quan tiến trình cải thiện pipeline re
 
 | Giai đoạn | Experiment Name | Recall@10 | MRR@10 | nDCG@10 | So với baseline |
 |---|---|---|---|---|---|
-| 1. Baseline Dense (BKAI) | retrieval_bkai_baseline_v1 | | | | — |
+| 1. Baseline Dense (HCMUTE Embedding v2) | retrieval_HCMUTE Embedding v2_baseline_v1 | | | | — |
 | 2. + Sparse (BM25) | retrieval_bm25_v1 | | | | |
 | 3. + Hybrid (Dense+Sparse) | retrieval_hybrid_bm25_dense_v1 | | | | |
 | 4. + Cross-Encoder Reranking | rerank_crossencoder_top20_v1 | | | | |
@@ -62,3 +62,4 @@ Bảng riêng để so sánh trực quan tiến trình cải thiện pipeline re
 - Version model dùng trong thí nghiệm: xem `docs/models/model_registry.md`.
 - Định dạng dữ liệu đầu vào: xem `docs/project/11_data_pipeline.md`.
 - Kiến trúc tổng thể: xem `docs/project/10_system_design.md`.
+

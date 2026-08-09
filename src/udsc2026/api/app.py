@@ -70,7 +70,7 @@ LOGGER = logging.getLogger(__name__)
 
 def _build_orchestrator() -> RAGOrchestrator:
     """Lazily build heavyweight pipeline dependencies on the first query."""
-    from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient
+    from udsc2026.infrastructure.embedding.client import EmbeddingClient
     from udsc2026.infrastructure.embedding.config import load_embedding_config
     from udsc2026.infrastructure.llm.client import LLMClient
     from udsc2026.infrastructure.reranker.config import load_reranker_settings

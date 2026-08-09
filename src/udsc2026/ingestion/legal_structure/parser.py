@@ -1,6 +1,7 @@
 """State-machine parser for the hierarchy of Vietnamese legal documents."""
 
 import re
+import unicodedata
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
 
@@ -18,11 +19,14 @@ from udsc2026.ingestion.legal_structure.patterns import (
     LABELED_CLAUSE,
     LABELED_POINT,
     PATTERNS,
+    STRUCTURE_PREFIX,
 )
 from udsc2026.ingestion.readers.models import RawDocument
 
 _UPPERCASE_LETTER = re.compile(r"[A-ZÀ-ỴĐ]")
-_STANDALONE_ARTICLE_LABEL = re.compile(r"^\s*Điều\s*$", re.IGNORECASE | re.UNICODE)
+_STANDALONE_ARTICLE_LABEL = re.compile(
+    r"^\s*(?:Điều|Dieu)\s*$", re.IGNORECASE | re.UNICODE
+)
 _ARTICLE_NUMBER_CONTINUATION = re.compile(
     r"^\s*\d+[a-zđ]?(?![\w,;/])(?:"
     r"[ \t]*[.:\-)](?:[ \t]*.*)?|"
@@ -34,31 +38,32 @@ _SPLIT_ARTICLE_NUMBER_CANDIDATE = re.compile(
     re.IGNORECASE | re.UNICODE,
 )
 _CONTAINER_WITH_TRAILING_ARTICLE = re.compile(
-    r"^\s*((?:Chương\s+(?:[IVXLCDM]+|\d+)|"
-    r"Mục\s+(?:[IVXLCDM]+|\d+)).*?)"
-    r"\s+Điều\s*$",
+    r"^\s*((?:(?:Chương|Chuong)\s+(?:[IVXLCDM]+|\d+)|"
+    r"(?:Mục|Muc)\s+(?:[IVXLCDM]+|\d+)).*?)"
+    r"\s+(Điều|Dieu)\s*$",
     re.IGNORECASE | re.UNICODE,
 )
-_ANY_TRAILING_ARTICLE = re.compile(r"\bĐiều\s*$", re.IGNORECASE | re.UNICODE)
+_ANY_TRAILING_ARTICLE = re.compile(r"\b(?:Điều|Dieu)\s*$", re.IGNORECASE | re.UNICODE)
 _ARTICLE_EXPLICIT_DELIMITER = re.compile(
-    r"^\s*[\"“”«]?Điều[ \t]+\d+[a-zđ]?[ \t]*[.:\-)]",
+    rf"{STRUCTURE_PREFIX}[\"“”«]?(?:Điều|Dieu)[ \t]+"
+    r"\d+[a-zđ]?[ \t]*[.:\-)]",
     re.IGNORECASE | re.UNICODE,
 )
 _ARTICLE_CITATION_TITLE = re.compile(
     r"^(?:"
-    r"như\s+sau\s*:?\s*$|"
-    r"(?:của\s+)?(?:Bộ\s+luật|Luật|Nghị\s+định|Thông\s+tư|"
-    r"Quyết\s+định|Pháp\s+lệnh|Hiến\s+pháp|Nghị\s+quyết|Quy\s+chế|"
-    r"văn\s+bản|điều\s+ước)\b|"
-    r"(?:và|hoặc|thì)\b|nêu\s+trên\b|"
-    r"được\s+(?:sửa\s+đổi|bổ\s+sung|thay\s+thế|nêu)\b|"
-    r"quy\s+định(?:\s+(?:này|tại|kèm\s+theo)\b|\s*:)"
+    r"nhu\s+sau\s*:?\s*$|"
+    r"(?:cua\s+)?(?:bo\s+luat|luat|nghi\s+dinh|thong\s+tu|"
+    r"quyet\s+dinh|phap\s+lenh|hien\s+phap|nghi\s+quyet|quy\s+che|"
+    r"van\s+ban|dieu\s+uoc)\b|"
+    r"(?:va|hoac|thi)\b|neu\s+tren\b|"
+    r"duoc\s+(?:sua\s+doi|bo\s+sung|thay\s+the|neu)\b|"
+    r"quy\s+dinh(?:\s+(?:nay|tai|kem\s+theo)\b|\s*:)"
     r")",
-    re.IGNORECASE | re.UNICODE,
+    re.IGNORECASE,
 )
 _APPENDIX_HEADING = re.compile(
-    r"^\s*PHỤ\s+LỤC(?:"
-    r"\s+(?:SỐ\s+)?(?:[IVXLCDM]+|\d+)(?=$|[\s.:(\-])|\s*\(|\s*$)",
+    rf"{STRUCTURE_PREFIX}(?:PHỤ\s+LỤC|PHU\s+LUC)(?:"
+    r"\s+(?:(?:SỐ|SO)\s+)?(?:[IVXLCDM]+|\d+)(?=$|[\s.:(\-])|\s*\(|\s*$)",
     re.IGNORECASE | re.UNICODE,
 )
 _DocumentInput = Union[str, RawDocument, CleanDocument]
@@ -77,6 +82,15 @@ class _LogicalLine:
 
 def _normalize_space(value: str) -> str:
     return " ".join(value.split())
+
+
+def _fold_vietnamese(value: str) -> str:
+    """Return an accentless form for conservative citation-title checks."""
+
+    decomposed = unicodedata.normalize("NFD", value.casefold())
+    return "".join(
+        char for char in decomposed if not unicodedata.combining(char)
+    ).replace("đ", "d")
 
 
 def infer_law_name(text: str, title: Optional[str] = None) -> Optional[str]:
@@ -248,7 +262,7 @@ class LegalStructureParser:
             if (
                 match
                 and not _ARTICLE_EXPLICIT_DELIMITER.match(line)
-                and _ARTICLE_CITATION_TITLE.match(match.group(2))
+                and _ARTICLE_CITATION_TITLE.match(_fold_vietnamese(match.group(2)))
             ):
                 # Amendment prose is often hard-wrapped as
                 # ``Bổ sung Điều 98a vào sau / Điều 98 như sau: / “Điều
@@ -408,7 +422,7 @@ def _logical_lines(text: str) -> Tuple[List[_LogicalLine], int]:
                 _LogicalLine(
                     start_line=line_number,
                     end_line=line_number + 1,
-                    text="Điều {0}".format(next_line.strip()),
+                    text="{0} {1}".format(container.group(2), next_line.strip()),
                     repaired_split_article=True,
                 )
             )

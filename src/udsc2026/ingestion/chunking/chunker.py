@@ -161,6 +161,29 @@ def chunk_clean_document(
             if warning not in parsed.review_reasons:
                 parsed.review_reasons.append(warning)
     if parsed.requires_manual_review and document.cleaned_text.strip():
+        # Keep origin/main's useful recovery for recognizable legal preambles,
+        # while retaining the V3 full-text fallback for every other parser miss.
+        # Source-family fallbacks stay reviewable because they can contain
+        # article-like citations that must not be promoted to legal structure.
+        if not assessment.force_fallback:
+            recovered = _chunk_manual_review_document(
+                document,
+                parsed,
+                effective_date=normalized_effective_date,
+                chunk_size=chunk_size,
+                chunk_overlap=chunk_overlap,
+            )
+            if recovered is not None:
+                _set_source_assignment_metrics(recovered, document.cleaned_text)
+                recovered.repaired_split_article_count = (
+                    parsed.repaired_split_article_count
+                )
+                recovered.suspected_split_article_count = (
+                    parsed.suspected_split_article_count
+                )
+                _set_searchable_content_coverage(recovered, document.cleaned_text)
+                _apply_structure_assessment(recovered, assessment)
+                return recovered
         fallback = _chunk_unstructured_document(
             document,
             parsed,
@@ -1006,3 +1029,166 @@ def _unique_id(candidate: str, occurrences: Dict[str, int]) -> str:
 
 def _label(prefix: str, identifier: str) -> str:
     return "{0} {1}".format(prefix, identifier)
+
+
+def _chunk_manual_review_document(
+    document: CleanDocument,
+    structure: LegalStructureDocument,
+    *,
+    effective_date: Optional[str],
+    chunk_size: int,
+    chunk_overlap: int,
+) -> Optional[ChunkingResult]:
+    """Recover a recognizable legal preamble without inventing article nodes."""
+    text = document.cleaned_text.strip()
+    if not text or not _looks_like_fallback_source(document):
+        return None
+
+    article_label = _fallback_article_label(document)
+    parent_id = "{0}_fallback".format(_safe_id(document.doc_id))
+    context = _ArticleContext(None, None)
+    parent_metadata = _metadata(
+        text,
+        structure.law_name,
+        context,
+        article_label,
+        None,
+        None,
+        structure.source_path,
+        document.abbreviations,
+        effective_date,
+    )
+    parent_metadata.update(
+        {
+            "fallback_chunking": True,
+            "fallback_mode": "manual_review_no_article",
+            "structure_type": "unstructured_fallback",
+            "review_reasons": list(structure.review_reasons),
+        }
+    )
+    parent = LegalParent(
+        parent_id=parent_id,
+        doc_id=document.doc_id,
+        text=text,
+        law_name=structure.law_name,
+        chapter=None,
+        section=None,
+        article=article_label,
+        source=structure.source_path,
+        metadata=parent_metadata,
+    )
+    result = ChunkingResult(
+        doc_id=document.doc_id,
+        # The searchable label is synthetic; do not count it as a parsed
+        # legal article or the document appears in both structured/fallback
+        # partitions.
+        article_count=0,
+        chunks=[],
+        parents=[parent],
+        # Recovery makes the document searchable, but it does not prove that
+        # its legal hierarchy was parsed correctly. Keep it in the review
+        # queue so the fallback bucket remains visible in corpus diagnostics.
+        requires_manual_review=True,
+        review_reasons=["fallback_chunked_no_article"],
+    )
+
+    for index, part in enumerate(
+        _fallback_text_parts(text, chunk_size, chunk_overlap), start=1
+    ):
+        chunk_id = "{0}_part_{1}".format(parent_id, index)
+        metadata = _metadata(
+            part,
+            structure.law_name,
+            context,
+            article_label,
+            None,
+            None,
+            structure.source_path,
+            document.abbreviations,
+            effective_date,
+        )
+        metadata.update(
+            {
+                "fallback_chunking": True,
+                "fallback_mode": "manual_review_no_article",
+                "structure_type": "unstructured_fallback",
+                "review_reasons": list(structure.review_reasons),
+            }
+        )
+        result.chunks.append(
+            LegalChunk(
+                chunk_id=chunk_id,
+                parent_id=parent_id,
+                doc_id=document.doc_id,
+                text=part,
+                parent_text=None,
+                law_name=parent.law_name,
+                chapter=None,
+                section=None,
+                article=article_label,
+                clause=None,
+                point=None,
+                effective_date=effective_date,
+                source=structure.source_path,
+                metadata=metadata,
+            )
+        )
+    result.fallback_chunk_count = len(result.chunks)
+    return result
+
+
+def _looks_like_fallback_source(document: CleanDocument) -> bool:
+    text = document.cleaned_text
+    fallback_markers = (
+        "lời nói đầu",
+        "phạm vi điều chỉnh",
+        "đối tượng áp dụng",
+        "giải thích từ ngữ",
+        "quy định chung",
+        "điều khoản thi hành",
+    )
+    lowered = text.casefold()
+    if any(marker in lowered for marker in fallback_markers):
+        return True
+    if document.title:
+        title = document.title.casefold()
+        legal_title_keywords = (
+            "luat",
+            "nghi dinh",
+            "nghi-quyet",
+            "thong tu",
+            "quyet dinh",
+            "huong dan",
+        )
+        if any(keyword in title for keyword in legal_title_keywords):
+            return any(marker in lowered for marker in fallback_markers)
+    return False
+
+
+def _fallback_article_label(document: CleanDocument) -> str:
+    lowered = document.cleaned_text.casefold()
+    for candidate in (
+        "Lời nói đầu",
+        "Phạm vi điều chỉnh",
+        "Đối tượng áp dụng",
+        "Giải thích từ ngữ",
+        "Quy định chung",
+        "Điều khoản thi hành",
+    ):
+        if candidate.casefold() in lowered:
+            return candidate
+    return "Phần mở đầu"
+
+
+def _fallback_text_parts(text: str, chunk_size: int, chunk_overlap: int) -> List[str]:
+    paragraphs = [part.strip() for part in re.split(r"\n\s*\n+", text) if part.strip()]
+    source_parts = paragraphs if paragraphs else [text]
+    chunks: List[str] = []
+    for part in source_parts:
+        if token_len(part) <= chunk_size:
+            chunks.append(part)
+        else:
+            chunks.extend(
+                split_by_sentence_with_overlap(part, chunk_size, chunk_overlap)
+            )
+    return chunks

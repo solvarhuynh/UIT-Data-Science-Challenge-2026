@@ -91,6 +91,10 @@ def test_pipeline_accepts_btc_contexts_and_writes_manifest_and_orphan_reports(tm
     assert result.chunked_document_count == 1
     assert result.manifest_path is not None
     assert result.orphan_report_path is not None
+    assert result.manual_review_breakdown_path is not None
+    assert result.regex_candidate_report_path is not None
+    assert result.cleaner_cleared_report_path is not None
+    assert result.ocr_noise_report_path is not None
     assert result.corpus_hash
     assert result.integrity_gate_passed is True
     assert result.semantic_completeness_gate_passed is True
@@ -129,6 +133,39 @@ def test_pipeline_accepts_btc_contexts_and_writes_manifest_and_orphan_reports(tm
     assert orphan_report["orphan_context_count"] == 0
     assert orphan_report["errors"] == []
     assert orphan_report["exact_duplicate_context_count"] == 1
+
+    breakdown = json.loads(
+        (processed_root / "metadata" / "manual_review_breakdown.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert breakdown["schema_version"] == "manual-review-breakdown-v1"
+
+
+def test_pipeline_keeps_recovered_fallback_in_manual_review_breakdown(tmp_path):
+    raw_directory = tmp_path / "raw"
+    raw_directory.mkdir()
+    (raw_directory / "fallback.txt").write_text(
+        "Lời nói đầu\n"
+        "Văn bản này trình bày các nguyên tắc áp dụng chung trên toàn quốc.\n"
+        "Phạm vi điều chỉnh\n"
+        "Các cơ quan, tổ chức và cá nhân có trách nhiệm thực hiện nội dung này.",
+        encoding="utf-8",
+    )
+    processed_root = tmp_path / "processed_v3"
+
+    result = run_ingestion_pipeline(raw_directory, processed_root)
+
+    assert result.validation_report.manual_review_documents == ["fallback"]
+    assert result.validation_report.structured_document_count == 0
+    assert result.validation_report.fallback_document_count == 1
+    breakdown = json.loads(
+        (processed_root / "metadata" / "manual_review_breakdown.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    buckets = {bucket["reason"]: bucket for bucket in breakdown["buckets"]}
+    assert buckets["fallback_chunkable_no_article"]["document_ids"] == ["fallback"]
 
 
 def test_pipeline_can_regenerate_a_hash_bound_streaming_benchmark(

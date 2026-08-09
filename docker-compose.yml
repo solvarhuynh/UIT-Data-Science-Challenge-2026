@@ -84,8 +84,8 @@ services:
         target: /app/models
         read_only: true
       - type: bind
-        source: ${PROCESSED_DATA_DIR:-./data/processed}
-        target: /app/data/processed
+        source: ${PROCESSED_DATA_DIR:-./data/processed_v3}
+        target: /app/data/processed_v3
         read_only: true
       - type: bind
         source: ${VECTOR_STORE_DIR:-./data/vector_store}
@@ -194,8 +194,8 @@ services:
         target: /app/models
         read_only: true
       - type: bind
-        source: ${PROCESSED_DATA_DIR:-./data/processed}
-        target: /app/data/processed
+        source: ${PROCESSED_DATA_DIR:-./data/processed_v3}
+        target: /app/data/processed_v3
         read_only: true
       - type: bind
         source: ${VECTOR_STORE_DIR:-./data/vector_store}

@@ -31,7 +31,7 @@ flowchart LR
     O --> Cache[(Redis / In-memory Cache)]
     O --> RP[Retrieval Pipeline - TV2]
     RP --> D[Dense Retrieval]
-    D --> E[BKAI Vietnamese Bi-Encoder]
+    D --> E[HCMUTE Embedding v2]
     D --> V[(Qdrant / FAISS)]
     RP --> S[BM25 Sparse Retrieval]
     RP --> H[Hybrid Fusion]
@@ -76,7 +76,7 @@ docker compose up -d
 Index dữ liệu và chạy toàn bộ test:
 
 ```powershell
-python scripts/data_prep/index_chunks.py --chunks-dir data/processed/chunks --vector-db-type faiss
+python scripts/data_prep/index_chunks.py --chunks-dir data/processed_v3/chunks --vector-db-type faiss
 python -m pytest -v --basetemp .pytest_tmp -p no:cacheprovider
 ```
 
@@ -108,7 +108,7 @@ Không phải thành viên nào cũng cần cài cả hai requirements:
 | Đối tượng | Dependency nên cài | Mục đích |
 |---|---|---|
 | TV1/backend/API | `requirements_runtime.txt` | Chạy FastAPI, orchestration và service runtime. |
-| TV2/retrieval | `requirements_dev.txt` | Runtime retrieval, BKAI, FAISS/Qdrant, BM25 và unit test. |
+| TV2/retrieval | `requirements_dev.txt` | Runtime retrieval, HCMUTE Embedding v2, FAISS/Qdrant, BM25 và unit test. |
 | TV3/QA-LLM | `requirements_dev.txt` | LLM local, prompt, citation và test QA. |
 | TV4/ingestion | `requirements_dev.txt` | Reader PDF/DOCX/JSON, cleaning, chunking và test ingestion. |
 | TV5/reranking/evaluation | `requirements_dev.txt` | Reranker, metrics, benchmark, submission và test. |
@@ -162,7 +162,7 @@ udsc2026/
 │   └── project/                     # Git workflow, coding convention, API contract
 ├── experiments/
 │   ├── tv1/                         # Thử nghiệm orchestration, API, cache, logging
-│   ├── tv2/                         # Thử nghiệm BKAI embedding, VectorDB, BM25, hybrid fusion
+│   ├── tv2/                         # Thử nghiệm HCMUTE Embedding v2 embedding, VectorDB, BM25, hybrid fusion
 │   ├── tv3/                         # Thử nghiệm Qwen3, prompt, citation, anti-hallucination
 │   ├── tv4/                         # Thử nghiệm ETL, parser, chunking, synthetic Q&A
 │   └── tv5/                         # Thử nghiệm rerank, evaluation, Docker, submission
@@ -181,7 +181,7 @@ udsc2026/
 │       ├── contracts/               # Pydantic schemas dùng chung
 │       ├── evaluation/              # TV5: metrics, reports, submission writer
 │       ├── infrastructure/
-│       │   ├── embedding/           # TV2: BKAI EmbeddingClient
+│       │   ├── embedding/           # TV2: HCMUTE Embedding v2 EmbeddingClient
 │       │   ├── llm/                 # TV3: Qwen3 transformers/vLLM client
 │       │   ├── persistence/         # Shared storage/cache/log helpers nếu cần
 │       │   ├── reranker/            # TV5: Cross-Encoder client
@@ -204,7 +204,7 @@ udsc2026/
 | Thành viên | Vai trò chính | Phạm vi kỹ thuật | Output bàn giao |
 | --- | --- | --- | --- |
 | TV1 - Long | Integration & Orchestration | FastAPI, Dependency Injection, RAG Orchestrator, async handling, cache, logging, latency | API endpoint ổn định, orchestration gọi retrieval, rerank và QA đúng contract |
-| TV2 - Nghĩa | Full Retrieval Specialist | `src/udsc2026/retrieval/dense/`, `sparse/`, `hybrid/`, BKAI bi-encoder, Qdrant/FAISS, BM25 tiếng Việt, Hybrid Fusion | `list[RetrievalHit]` đã normalize score, giữ metadata citation và sẵn sàng cho reranking |
+| TV2 - Nghĩa | Full Retrieval Specialist | `src/udsc2026/retrieval/dense/`, `sparse/`, `hybrid/`, HCMUTE embedding v2, Qdrant/FAISS, BM25 tiếng Việt, Hybrid Fusion | `list[RetrievalHit]` đã normalize score, giữ metadata citation và sẵn sàng cho reranking |
 | TV3 - Quân | QA & LLM Specialist | `src/udsc2026/qa/`, `src/udsc2026/infrastructure/llm/`, `prompts/`, Qwen3, prompt versioning, citation parser, anti-hallucination | `QAResponse` có answer, citation đã validate, prompt version, confidence và warnings |
 | TV4 - Trung Khang | Data & Benchmark Specialist | Legal ETL, parser cấu trúc luật, Unicode cleanup, Parent-Child Chunking, synthetic benchmark Q&A | Chunk/document JSONL sạch, metadata đầy đủ, benchmark dataset |
 | TV5 - Nguyên Khang | Reranking, Evaluation, MLOps & Web UI/UX | Cross-Encoder reranking, LegalIR macro Recall/Precision multi-gold, LegalQA METEOR/ROUGE-L, Docker, submission writer/validator; Web UI/UX là workstream demo riêng | Kết quả rerank, báo cáo evaluation, `submission.zip` tách riêng cho hai task và giao diện frontend |
@@ -236,7 +236,7 @@ Mỗi thành viên dùng branch/worktree riêng, thử nghiệm trong `experimen
 ## Roadmap
 
 1. Hoàn thiện ETL, legal parser, parent-child chunking và synthetic benchmark.
-2. Index dữ liệu bằng BKAI bi-encoder, VectorDB và BM25.
+2. Index dữ liệu bằng HCMUTE embedding v2, VectorDB và BM25.
 3. Tích hợp Hybrid Search trong Retrieval Pipeline và Cross-Encoder reranking.
 4. Tích hợp Qwen3 local với prompt versioning, citation parsing và anti-hallucination.
 5. Đánh giá LegalIR/LegalQA, tối ưu latency, Docker hóa và chuẩn bị

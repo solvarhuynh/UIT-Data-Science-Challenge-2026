@@ -62,4 +62,3 @@ reranker:
   max_length: 512
   top_n: 10
   local_files_only: true
-  use_fp16: false

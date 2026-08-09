@@ -9,7 +9,7 @@ hay cross-encoder reranking.
 | Nhóm | File chính | Tác dụng |
 |---|---|---|
 | Contract | `src/udsc2026/contracts/chunk.py` | Định nghĩa `LegalChunk`, input chung từ ingestion TV4 vào indexing TV2. |
-| Embedding | `src/udsc2026/infrastructure/embedding/bkai_client.py` | Load BKAI bi-encoder từ local path, encode query hoặc batch document thành vector float đã normalize. |
+| Embedding | `src/udsc2026/infrastructure/embedding/client.py` | Load HCMUTE embedding v2 từ local path, encode query hoặc batch document thành vector float đã normalize. |
 | Embedding config | `src/udsc2026/infrastructure/embedding/config.py` | Compatibility wrapper cho config embedding cũ. |
 | Config chung | `src/udsc2026/infrastructure/config.py` | Deep-merge `base.yaml` và `development.yaml`, tránh mỗi module tự đọc YAML. |
 | VectorDB interface | `infrastructure/vector_db/base.py` | Interface chung, payload mapping và chuyển payload thành `RetrievalHit`. |
@@ -27,7 +27,7 @@ upsert 23/23 và không skip lỗi schema.
 
 ## 2. TV2 có cần
 
-TV2 hiện dùng BKAI bi-encoder đã pretrained và chỉ làm inference để tạo embedding.
+TV2 hiện dùng HCMUTE embedding v2 đã pretrained và chỉ làm inference để tạo embedding.
 Khi có dữ liệu TV4, quy trình cần chạy là:
 
 1. TV4 sinh JSONL chunk hợp lệ.
@@ -101,7 +101,7 @@ Index dữ liệu TV4 hoặc sample dev:
 
 ```powershell
 python scripts/index_chunks.py `
-  --chunks-dir data/processed/chunks `
+  --chunks-dir data/processed_v3/chunks `
   --vector-db-type faiss
 ```
 
@@ -110,7 +110,7 @@ Script tạo:
 - `data/vector_store/faiss/legal_chunks/index.faiss`
 - `data/vector_store/faiss/legal_chunks/payloads.json`
 - `data/vector_store/bm25/legal_chunks.pkl`
-- `data/processed/metadata/index_errors.json`
+- `data/processed_v3/metadata/index_errors.json`
 
 Chạy test:
 
@@ -120,7 +120,7 @@ python -m pytest tests/retrieval/ -v
 | Tasks | Phạm vi | Verify sau khi hoàn tất |
 |---|---|---|
 | 0 | `LegalChunk` contract | `python -c "from udsc2026.contracts import LegalChunk, RetrievalHit; print('ok')"` |
-| 1 | `EmbeddingClient` BKAI local | `python -c "from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient; print('ok')"` |
+| 1 | `EmbeddingClient` HCMUTE Embedding v2 local | `python -c "from udsc2026.infrastructure.embedding import EmbeddingClient; print('ok')"` |
 | 2 | Qdrant/FAISS adapter | `python -c "from udsc2026.infrastructure.vector_db.factory import get_vector_db_adapter; print('ok')"` |
 | 3 | `DenseRetriever` | `python -c "from udsc2026.retrieval.dense.dense_retriever import DenseRetriever; print('ok')"` |
 | 4 | `BM25Retriever` + tokenizer | `python -c "from udsc2026.retrieval.sparse.tokenizer import tokenize_vi; print(tokenize_vi('Điều 10 Bộ luật Lao động'))"` |
@@ -136,7 +136,7 @@ tại còn fail.
 ## 3. Cấu trúc và trách nhiệm
 
 - `src/udsc2026/contracts/`: `LegalChunk` từ TV4 và `RetrievalHit` dùng chung.
-- `src/udsc2026/infrastructure/embedding/`: load BKAI bi-encoder local và encode query/chunks.
+- `src/udsc2026/infrastructure/embedding/`: load HCMUTE embedding v2 local và encode query/chunks.
 - `src/udsc2026/infrastructure/vector_db/`: interface backend-neutral, Qdrant và FAISS.
 - `src/udsc2026/retrieval/dense/`: query embedding và dense search.
 - `src/udsc2026/retrieval/sparse/`: tokenizer tiếng Việt và BM25 độc lập.
@@ -201,7 +201,7 @@ Lệnh `backend-smoke` dùng image backend và các volume đã khai báo trong
 
 ## Hướng dẫn chạy trên Corpus thật (Data từ TV4)
 
-Chunks thật đã có sẵn tại `data/processed/chunks/`. Với dữ liệu chính thức,
+Chunks thật đã có sẵn tại `data/processed_v3/chunks/`. Với dữ liệu chính thức,
 chạy toàn bộ chuỗi qua Docker/Qdrant theo đúng thứ tự:
 
 1. Đầu tiên chạy validate để kiểm tra mapping giữa chunk và ground-truth, đồng thời
@@ -211,14 +211,14 @@ chạy toàn bộ chuỗi qua Docker/Qdrant theo đúng thứ tự:
 
 ```powershell
 docker compose up -d qdrant qdrant-ready
-docker compose run --rm --volume "${PWD}/scripts:/app/scripts:ro" --volume "${PWD}/data/processed:/app/data/processed:ro" --volume "${PWD}/data/processed/metadata:/app/tv2_metadata" --volume "${PWD}/data/raw/btc:/app/data/raw/btc:ro" backend python /app/scripts/validate_chunk_mapping.py --chunks-dir /app/data/processed/chunks --ir-train-file /app/data/raw/btc/LegalIR/train.json --report /app/tv2_metadata/chunk_mapping_report.json
+docker compose run --rm --volume "${PWD}/scripts:/app/scripts:ro" --volume "${PWD}/data/processed_v3:/app/data/processed_v3:ro" --volume "${PWD}/data/processed_v3/metadata:/app/tv2_metadata" --volume "${PWD}/data/raw/btc:/app/data/raw/btc:ro" backend python /app/scripts/validate_chunk_mapping.py --chunks-dir /app/data/processed_v3/chunks --ir-train-file /app/data/raw/btc/LegalIR/train.json --report /app/tv2_metadata/chunk_mapping_report.json
 ```
 
 Lệnh này dùng để khởi động Qdrant và chạy validate trên corpus TV4. Nó sẽ kiểm tra mapping giữa chunk và ground-truth, đồng thời tạo report audit về các file JSONL rỗng, không có record hoặc sai schema. Ý nghĩa của lệnh này là xác nhận dữ liệu chunk đã sẵn sàng cho bước index hay chưa, nhưng không sửa dữ liệu và không ảnh hưởng tới các bước sau.
 
 Lệnh này sẽ sinh hai report:
-- `data/processed/metadata/chunk_mapping_report.json`: kết quả mapping chunk ↔ ground-truth.
-- `data/processed/metadata/chunk_file_audit.json`: danh sách file rỗng, không có record,
+- `data/processed_v3/metadata/chunk_mapping_report.json`: kết quả mapping chunk ↔ ground-truth.
+- `data/processed_v3/metadata/chunk_file_audit.json`: danh sách file rỗng, không có record,
   JSON lỗi hoặc record không đúng schema.
 
 2. Chỉ khi exit code 0 mới chạy bước index để build vector index và BM25 index.
@@ -226,11 +226,11 @@ Lệnh này sẽ sinh hai report:
 ```powershell
 docker compose run --rm `
   --volume "${PWD}/scripts:/app/scripts:ro" `
-  --volume "${PWD}/data/processed:/app/data/processed:ro" `
-  --volume "${PWD}/data/processed/metadata:/app/data/processed/metadata" `
+  --volume "${PWD}/data/processed_v3:/app/data/processed_v3:ro" `
+  --volume "${PWD}/data/processed_v3/metadata:/app/data/processed_v3/metadata" `
   --volume "${PWD}/data/vector_store:/app/data/vector_store" `
   backend python /app/scripts/data_prep/index_chunks.py `
-  --chunks-dir /app/data/processed/chunks `
+  --chunks-dir /app/data/processed_v3/chunks `
   --vector-db-type qdrant
 ```
 
@@ -241,35 +241,35 @@ Sau khi manifest xác nhận:
 ```powershell
 docker compose run --rm `
   --volume "${PWD}/scripts:/app/scripts:ro" `
-  --volume "${PWD}/data/processed:/app/data/processed:ro" `
+  --volume "${PWD}/data/processed_v3:/app/data/processed_v3:ro" `
   --volume "${PWD}/data/raw/btc:/app/data/raw/btc:ro" `
   --volume "${PWD}/data/reports:/app/data/reports" `
   backend python /app/scripts/benchmark_retrieval_internal.py `
-  --chunks-dir /app/data/processed/chunks `
+  --chunks-dir /app/data/processed_v3/chunks `
   --ir-train-file /app/data/raw/btc/LegalIR/train.json `
   --mode sparse `
   --top-k 5
 
   docker compose run --rm `
   --volume "${PWD}/scripts:/app/scripts:ro" `
-  --volume "${PWD}/data/processed:/app/data/processed:ro" `
+  --volume "${PWD}/data/processed_v3:/app/data/processed_v3:ro" `
   --volume "${PWD}/data/raw/btc:/app/data/raw/btc:ro" `
   --volume "${PWD}/data/reports:/app/data/reports" `
   --volume "${PWD}/data/vector_store:/app/data/vector_store:ro" `
   backend python /app/scripts/benchmark_retrieval_internal.py `
-  --chunks-dir /app/data/processed/chunks `
+  --chunks-dir /app/data/processed_v3/chunks `
   --ir-train-file /app/data/raw/btc/LegalIR/train.json `
   --mode dense `
   --top-k 5
 
   docker compose run --rm `
   --volume "${PWD}/scripts:/app/scripts:ro" `
-  --volume "${PWD}/data/processed:/app/data/processed:ro" `
+  --volume "${PWD}/data/processed_v3:/app/data/processed_v3:ro" `
   --volume "${PWD}/data/raw/btc:/app/data/raw/btc:ro" `
   --volume "${PWD}/data/reports:/app/data/reports" `
   --volume "${PWD}/data/vector_store:/app/data/vector_store:ro" `
   backend python /app/scripts/benchmark_retrieval_internal.py `
-  --chunks-dir /app/data/processed/chunks `
+  --chunks-dir /app/data/processed_v3/chunks `
   --ir-train-file /app/data/raw/btc/LegalIR/train.json `
   --mode hybrid `
   --top-k 5

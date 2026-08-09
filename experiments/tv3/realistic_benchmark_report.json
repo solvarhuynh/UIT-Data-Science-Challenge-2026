@@ -1,0 +1,13 @@
+{
+  "num_samples": 5,
+  "elapsed_seconds": 137.65491807299986,
+  "avg_seconds_per_sample": 27.530983614599972,
+  "metrics": {
+    "rougeL": 0.26177326428591097,
+    "meteor": 0.1594826602305039
+  },
+  "top_k": 3,
+  "quantization": "4bit",
+  "retriever": "MockBM25 (parents/*.jsonl)",
+  "timestamp": "2026-08-07 18:22:30"
+}

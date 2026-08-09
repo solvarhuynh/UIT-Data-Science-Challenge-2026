@@ -7,6 +7,7 @@ import json
 import logging
 import sys
 import time
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -18,24 +19,35 @@ if str(SRC_ROOT) not in sys.path:
 LOGGER = logging.getLogger("benchmark_embedding")
 
 
-def read_chunks(chunks_dir: Path) -> list[dict[str, str]]:
-    """Read valid chunk IDs and texts, skipping blank/comment lines."""
+def iter_chunks(chunks_dir: Path) -> Iterator[tuple[str, str]]:
+    """Yield valid chunk IDs and texts without retaining the corpus in RAM."""
     from udsc2026.contracts import LegalChunk
 
-    result: list[dict[str, str]] = []
     for path in sorted(chunks_dir.glob("*.jsonl")):
-        for line_number, raw in enumerate(
-            path.read_text(encoding="utf-8").splitlines(), 1
-        ):
-            if not raw.strip() or raw.lstrip().startswith("#"):
-                continue
-            try:
-                chunk = LegalChunk.model_validate(json.loads(raw))
-            except (json.JSONDecodeError, TypeError, ValueError) as exc:
-                LOGGER.warning("Skipping %s:%d: %s", path, line_number, exc)
-                continue
-            result.append({"chunk_id": chunk.chunk_id, "text": chunk.text})
-    return result
+        with path.open("r", encoding="utf-8") as stream:
+            for line_number, raw in enumerate(stream, 1):
+                if not raw.strip() or raw.lstrip().startswith("#"):
+                    continue
+                try:
+                    chunk = LegalChunk.model_validate(json.loads(raw))
+                except (json.JSONDecodeError, TypeError, ValueError) as exc:
+                    LOGGER.warning("Skipping %s:%d: %s", path, line_number, exc)
+                    continue
+                yield chunk.chunk_id, chunk.text
+
+
+def iter_batches(
+    items: Iterator[tuple[str, str]], batch_size: int
+) -> Iterator[list[tuple[str, str]]]:
+    """Yield bounded batches suitable for resilient embedding."""
+    batch: list[tuple[str, str]] = []
+    for item in items:
+        batch.append(item)
+        if len(batch) == batch_size:
+            yield batch
+            batch = []
+    if batch:
+        yield batch
 
 
 def parse_args() -> argparse.Namespace:
@@ -53,16 +65,13 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     from udsc2026.infrastructure.config import load_config
-    from udsc2026.infrastructure.embedding.bkai_client import EmbeddingClient
+    from udsc2026.infrastructure.embedding.client import EmbeddingClient
 
     config = load_config("development")
     embedding_config: dict[str, Any] = config.get("embedding", {})
     batch_size = args.batch_size or int(embedding_config.get("batch_size", 32))
     if batch_size <= 0:
         raise SystemExit("--batch-size must be greater than zero")
-    chunks = read_chunks(args.chunks_dir)
-    if not chunks:
-        raise SystemExit(f"No valid chunks found in {args.chunks_dir}")
     client = EmbeddingClient(
         model_path=str(embedding_config.get("model_path", "./models/dek21-v2")),
         device=str(embedding_config.get("device", "cpu")),
@@ -74,22 +83,32 @@ def main() -> int:
         window_overlap_tokens=int(embedding_config.get("window_overlap_tokens", 32)),
     )
     started = time.perf_counter()
-    encoded, errors = client.embed_documents_resilient(
-        [(item["chunk_id"], item["text"]) for item in chunks], batch_size=batch_size
-    )
+    chunk_count = 0
+    encoded_count = 0
+    batch_count = 0
+    errors: list[dict[str, str]] = []
+    for batch in iter_batches(iter_chunks(args.chunks_dir), batch_size):
+        encoded, batch_errors = client.embed_documents_resilient(
+            batch, batch_size=batch_size
+        )
+        chunk_count += len(batch)
+        encoded_count += len(encoded)
+        batch_count += 1
+        errors.extend(batch_errors)
+    if chunk_count == 0:
+        raise SystemExit(f"No valid chunks found in {args.chunks_dir}")
     elapsed = time.perf_counter() - started
     args.error_report.parent.mkdir(parents=True, exist_ok=True)
     args.error_report.write_text(
         json.dumps(errors, ensure_ascii=False, indent=2), encoding="utf-8"
     )
-    batches = (len(chunks) + batch_size - 1) // batch_size
-    print(f"Chunks: {len(chunks)}")
-    print(f"Encoded: {len(encoded)}")
+    print(f"Chunks: {chunk_count}")
+    print(f"Encoded: {encoded_count}")
     print(f"Failed: {len(errors)}")
     print(f"Elapsed seconds: {elapsed:.2f}")
-    print(f"Average seconds/batch: {elapsed / batches:.4f}")
+    print(f"Average seconds/batch: {elapsed / batch_count:.4f}")
     print(
-        f"Chunks/second: {len(encoded) / elapsed:.2f}"
+        f"Chunks/second: {encoded_count / elapsed:.2f}"
         if elapsed
         else "Chunks/second: inf"
     )

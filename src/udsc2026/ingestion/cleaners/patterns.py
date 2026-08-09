@@ -2,13 +2,23 @@
 
 import re
 
+_STRUCTURE_PREFIX = (
+    r"^\s*(?:(?:\d+(?:\.\d+)*|[IVXLCDM]+|[a-zđ])[.):\-–—]?\s*|"
+    r"[•‣▪◦●◆◇➢➤\-–—]+\s*){0,3}"
+)
+
 LEGAL_STRUCTURE_LINE = re.compile(
-    r"^\s*(?:(?:Chương|Mục|Điều|Khoản|Điểm|Phần|Phụ\s+lục)\s*$|"
-    r"Chương\s+(?:[IVXLCDM]+|\d+)|Mục\s+(?:[IVXLCDM]+|\d+)|"
-    r"Điều\s+\d+[a-zđ]?|Khoản\s+\d+[a-zđ]?|Điểm\s+[a-zđ]|"
-    r"Phần\s+(?:thứ\s+)?(?:[IVXLCDM]+|\d+)|"
-    r"Phụ\s+lục\s+(?:số\s+)?(?:[IVXLCDM]+|\d+)|"
-    r"\d+[a-zđ]?[.)]|[a-zđ][.)])(?:[.:)]\s*|\s|$)",
+    r"^\s*(?:(?:Chương|Chuong|Mục|Muc|Điều|Dieu|Khoản|Khoan|"
+    r"Điểm|Diem|Phần|Phan|Phụ\s+lục|Phu\s+luc)\s*$)|"
+    rf"{_STRUCTURE_PREFIX}(?:Chương|Chuong)\s+(?:[IVXLCDM]+|\d+)|"
+    rf"{_STRUCTURE_PREFIX}(?:Mục|Muc)\s+(?:[IVXLCDM]+|\d+)|"
+    rf"{_STRUCTURE_PREFIX}(?:Điều|Dieu)\s+\d+[a-zđ]?|"
+    rf"{_STRUCTURE_PREFIX}(?:Khoản|Khoan)\s+\d+[a-zđ]?|"
+    rf"{_STRUCTURE_PREFIX}(?:Điểm|Diem)\s+[a-zđ]|"
+    rf"{_STRUCTURE_PREFIX}(?:Phần|Phan)\s+(?:thứ\s+)?(?:[IVXLCDM]+|\d+)|"
+    rf"{_STRUCTURE_PREFIX}(?:Phụ\s+lục|Phu\s+luc)\s+"
+    r"(?:số\s+)?(?:[IVXLCDM]+|\d+)|"
+    r"^\s*\d+[a-zđ]?[.)]|^\s*[a-zđ][.)]",
     re.IGNORECASE | re.UNICODE,
 )
 PAGE_NUMBER_LINE = re.compile(

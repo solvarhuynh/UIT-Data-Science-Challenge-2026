@@ -1,5 +1,7 @@
 """Tests for rule-based Vietnamese legal-document parsing."""
 
+import pytest
+
 from udsc2026.ingestion.legal_structure import parse_legal_structure
 from udsc2026.ingestion.readers.models import RawDocument
 
@@ -262,3 +264,62 @@ def test_parser_keeps_fraction_codes_and_operators_as_content_not_hierarchy():
     assert [article.identifier for article in parsed.articles] == ["1"]
     for value in ("4/5", "12/2023", "8535/8536", "+", "%", "≤", "≥"):
         assert value in parsed.articles[0].content
+
+
+def test_parser_accepts_mid_line_prefixes_and_accentless_headings():
+    parsed = parse_legal_structure(
+        "BỘ LUẬT MINH HỌA\n"
+        "1. Dieu 1. Pham vi dieu chinh\n"
+        "2. Khoan 1. Quy dinh chung\n"
+        "3. Diem a) Noi dung diem a."
+    )
+
+    article = parsed.articles[0]
+    assert article.identifier == "1"
+    assert article.title == "Pham vi dieu chinh"
+    assert [clause.identifier for clause in article.clauses] == ["1"]
+    assert [point.identifier for point in article.clauses[0].points] == ["a"]
+
+
+@pytest.mark.parametrize("label", ["Điều", "Dieu"])
+def test_prefixed_explicit_article_is_not_rejected_as_citation(label):
+    parsed = parse_legal_structure(
+        f"1. {label} 1. Quy định này áp dụng trên toàn quốc.",
+    )
+
+    assert [article.identifier for article in parsed.articles] == ["1"]
+    assert parsed.requires_manual_review is False
+
+
+def test_parser_repairs_accentless_split_article_heading():
+    parsed = parse_legal_structure(
+        "DIEU\n1. Pham vi dieu chinh.",
+    )
+
+    assert [article.identifier for article in parsed.articles] == ["1"]
+    assert parsed.repaired_split_article_count == 1
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        "Dieu 1 cua Luat nay duoc ap dung.",
+        "1. Dieu 1 cua Luat nay duoc ap dung.",
+        "- Dieu 1 quy dinh tai van ban nay.",
+    ],
+)
+def test_accentless_article_references_are_not_promoted(line):
+    parsed = parse_legal_structure(line)
+
+    assert parsed.articles == []
+    assert parsed.requires_manual_review is True
+
+
+@pytest.mark.parametrize("heading", ["PHU LUC I", "1. PHU LUC I"])
+def test_accentless_appendix_is_a_terminal_structure_boundary(heading):
+    parsed = parse_legal_structure(
+        f"Dieu 1. Noi dung chinh.\n{heading}\nDieu 99. Vi du trong phu luc."
+    )
+
+    assert [article.identifier for article in parsed.articles] == ["1"]
+    assert parsed.appendix_boundary_count == 1

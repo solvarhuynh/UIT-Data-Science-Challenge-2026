@@ -184,7 +184,7 @@ docker compose down --volumes --remove-orphans
 
 Lệnh có `--volumes` xóa Qdrant index, Redis data, model cache và submission
 output trong named volumes; không thể hoàn tác bằng Compose. Các thư mục bind
-mount trên host (`models/`, `data/processed/`, `data/vector_store/`) không bị
+mount trên host (`models/`, `data/processed_v3/`, `data/vector_store/`) không bị
 xóa.
 
 ## 5. Smoke test bên trong image
@@ -212,7 +212,7 @@ models/
 data/task1/
 data/task2/
 data/raw/
-data/processed/
+data/processed_v3/
 data/vector_store/
 frontend/
 **/node_modules/
@@ -222,7 +222,7 @@ Backend nhận model và dữ liệu processed qua bind mount read-only:
 
 ```text
 ./models            -> /app/models
-./data/processed    -> /app/data/processed
+./data/processed_v3 -> /app/data/processed_v3
 ./data/vector_store -> /app/data/vector_store
 ```
 
@@ -280,7 +280,7 @@ nhất được nhóm dưới đây.
 | `BACKEND_PORT` | `8000` | Cổng backend trên host |
 | `UDSC2026_CONFIG_PATH` | `/app/configs/base.yaml` | Config runtime trong container |
 | `MODELS_DIR` | `./models` | Thư mục model mount read-only |
-| `PROCESSED_DATA_DIR` | `./data/processed` | Corpus mount read-only |
+| `PROCESSED_DATA_DIR` | `./data/processed_v3` | Corpus V3 mount read-only |
 | `VECTOR_STORE_DIR` | `./data/vector_store` | Vector index mount read-only |
 
 ### Runtime model và retrieval
