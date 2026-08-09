@@ -1,6 +1,8 @@
 import importlib.util
 from pathlib import Path
 
+import pytest
+
 from udsc2026.contracts.chunk import LegalChunk
 
 
@@ -45,3 +47,32 @@ def test_manifest_match_requires_all_version_keys(tmp_path):
     assert module.is_current_manifest(manifest_path, expected)
     changed = dict(expected, model_hash="changed")
     assert not module.is_current_manifest(manifest_path, changed)
+
+
+def test_batch_size_cli_override_accepts_positive_integer():
+    module = _load_index_script()
+
+    assert module.parse_args(["--batch-size", "128"]).batch_size == 128
+
+
+def test_batch_size_cli_defaults_to_config_value():
+    module = _load_index_script()
+
+    assert module.parse_args([]).batch_size is None
+    assert module.resolve_batch_size(None, {"batch_size": 64}) == 64
+    assert module.resolve_batch_size(128, {"batch_size": 64}) == 128
+
+
+def test_configured_batch_size_must_be_positive():
+    module = _load_index_script()
+
+    with pytest.raises(ValueError, match="batch_size must be greater than zero"):
+        module.resolve_batch_size(None, {"batch_size": 0})
+
+
+@pytest.mark.parametrize("invalid_value", ["0", "-1", "not-an-integer"])
+def test_batch_size_cli_rejects_invalid_values(invalid_value: str):
+    module = _load_index_script()
+
+    with pytest.raises(SystemExit):
+        module.parse_args(["--batch-size", invalid_value])

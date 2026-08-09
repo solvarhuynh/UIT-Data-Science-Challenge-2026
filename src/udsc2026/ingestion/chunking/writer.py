@@ -272,7 +272,10 @@ def _write_jsonl(path: Path, records: Iterable[BaseModel]) -> None:
         json.dumps(record.model_dump(), ensure_ascii=False, separators=(",", ":"))
         for record in records
     ]
-    path.write_text("\n".join(lines) + ("\n" if lines else ""), encoding="utf-8")
+    if not lines:
+        path.unlink(missing_ok=True)
+        return
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _write_json(path: Path, value: object) -> None:

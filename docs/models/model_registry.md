@@ -31,13 +31,13 @@ Ghi chú:
 
 | Checkpoint | Version | Params | Local path | Input format | Output format | Trạng thái |
 |---|---|---|---|---|---|---|
-| *(TV5 điền checkpoint cross-encoder cụ thể khi chốt)* | | phải < 4B | `./models/cross-encoder/` | `list[tuple[str, str]]` — cặp (query, chunk_text) | `list[float]` — điểm relevance dùng để sắp xếp lại top-k | Đang thử nghiệm |
+| [`BAAI/bge-reranker-v2-m3`](https://huggingface.co/BAAI/bge-reranker-v2-m3) | HuggingFace (resolved SHA được ghi khi tải) | ~0.6B | `./models/reranker/` | `list[tuple[str, str]]` — cặp (query, chunk_text) | `list[float]` — relevance logit | Đang dùng (reranker baseline) |
 
 ## Generator
 
 | Checkpoint | Version | Params | Local path | Input format | Output format | Trạng thái |
 |---|---|---|---|---|---|---|
-| `thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2` | HuggingFace (pinned commit khi tải) | 1.7B | `./models/qwen3-legal/` | Prompt string đã ghép: system prompt + context (top-k `RetrievalHit.text` sau rerank) + câu hỏi | `str` — câu trả lời có trích dẫn Điều/Khoản, hỗ trợ streaming token (SSE) | Đang dùng (baseline generator) |
+| `thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2` | HuggingFace (resolved SHA được ghi khi tải) | 1.7B | `./models/qwen3-legal/` | Prompt string: system prompt + bounded parent context sau rerank + câu hỏi | `str` — câu trả lời có trích dẫn Điều/Khoản, hỗ trợ streaming token (SSE) | Đang dùng (baseline generator) |
 
 Ghi chú:
 - Đây là model đã fine-tune (GRPO) trên domain pháp luật Việt Nam — vẫn tính là open-source vì checkpoint public trên HuggingFace và base model gốc (Qwen3) là open-source.

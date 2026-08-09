@@ -89,6 +89,22 @@ def test_cleaner_normalizes_eth_confusable_before_structure_line_merging():
     assert removed_lines == []
 
 
+def test_cleaner_repairs_unambiguous_ocr_markers_but_preserves_s0_codes():
+    raw_text = (
+        "Mã kỹ thuật S0 và literal D1EU 1\n"
+        "d1eu 1. Phạm vi\n"
+        "kh0an 1. Nội dung"
+    )
+
+    cleaned_text, removed_lines = clean_text(raw_text)
+
+    assert "S0" in cleaned_text
+    assert "literal D1EU 1" in cleaned_text
+    assert "điều 1. Phạm vi" in cleaned_text
+    assert "khoản 1. Nội dung" in cleaned_text
+    assert removed_lines == []
+
+
 def test_cleaner_keeps_numbered_appendix_boundary_separate_from_signature():
     raw_text = "KT. BỘ TRƯỞNG Tạ Anh Tuấn\nPHỤ LỤC SỐ 01\nBảng dữ liệu"
 

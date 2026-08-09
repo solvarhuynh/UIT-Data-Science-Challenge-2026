@@ -41,6 +41,13 @@ MULTIPLE_BLANK_LINES = re.compile(r"\n[ \t]*\n(?:[ \t]*\n)+")
 LEADING_BULLET = re.compile(r"^(\s*)[•‣▪◦●◆◇➢➤]\s*")
 ONLY_SYMBOLS = re.compile(r"^[\W_]+$", re.UNICODE)
 
+# Repair only legal-marker OCR errors at line-start before a numeric label.
+# Inline prose, table cells, product names, and codes are deliberately excluded.
+LIGHT_OCR_WORD_REPLACEMENTS = {
+    "d1eu": "điều",
+    "kh0an": "khoản",
+}
+
 ABBREVIATION_DEFINITION = re.compile(
     r"([A-ZĐÂÊÔƠƯ][^()]{3,80}?)\s*\(\s*"
     r"(?:sau đây (?:gọi là|gọi tắt là|viết tắt là))\s*"

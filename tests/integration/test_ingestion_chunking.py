@@ -12,6 +12,7 @@ from udsc2026.ingestion.chunking import (
     write_chunking_outputs_streaming,
 )
 from udsc2026.ingestion.chunking.chunker import _set_searchable_content_coverage
+from udsc2026.ingestion.chunking.writer import _write_jsonl
 from udsc2026.ingestion.cleaners.models import CleanDocument
 
 
@@ -453,3 +454,12 @@ def test_streaming_writer_matches_regular_validation_without_retaining_results(
     assert streaming_report == regular_report
     assert progress == [(1, "doc001")]
     assert len(regular_results) == 1
+
+
+def test_writer_does_not_leave_an_empty_or_stale_jsonl_file(tmp_path):
+    output_path = tmp_path / "empty.jsonl"
+    output_path.write_text("stale\n", encoding="utf-8")
+
+    _write_jsonl(output_path, [])
+
+    assert not output_path.exists()

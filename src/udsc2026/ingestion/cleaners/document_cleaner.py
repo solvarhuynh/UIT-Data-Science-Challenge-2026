@@ -12,6 +12,7 @@ from udsc2026.ingestion.cleaners.patterns import (
     HORIZONTAL_WHITESPACE,
     LEADING_BULLET,
     LEGAL_STRUCTURE_LINE,
+    LIGHT_OCR_WORD_REPLACEMENTS,
     MULTIPLE_BLANK_LINES,
     ONLY_SYMBOLS,
     PAGE_NUMBER_LINE,
@@ -91,6 +92,19 @@ def normalize_unicode_and_ocr(text: str) -> str:
     normalized = unicodedata.normalize("NFC", text)
     for source, replacement in OCR_REPLACEMENTS.items():
         normalized = normalized.replace(source, replacement)
+    for source, replacement in LIGHT_OCR_WORD_REPLACEMENTS.items():
+        normalized = re.sub(
+            (
+                rf"^(?P<prefix>[ \t]*(?:(?:[-–—•*]|\d+[.)])[ \t]*)?)"
+                rf"(?P<marker>{re.escape(source)})(?=[ \t]+\d)"
+            ),
+            lambda match: (
+                match.group("prefix")
+                + _match_case(match.group("marker"), replacement)
+            ),
+            normalized,
+            flags=re.IGNORECASE | re.MULTILINE,
+        )
     normalized = normalized.replace("\r\n", "\n").replace("\r", "\n")
     return normalize_vietnamese_vowels(normalized)
 

@@ -28,6 +28,21 @@ def _positive_int(value: str) -> int:
     return parsed
 
 
+def resolve_batch_size(
+    cli_batch_size: int | None,
+    embedding_config: dict[str, Any],
+) -> int:
+    """Resolve a validated CLI override or the configured embedding batch size."""
+    batch_size = (
+        cli_batch_size
+        if cli_batch_size is not None
+        else int(embedding_config.get("batch_size", 32))
+    )
+    if batch_size <= 0:
+        raise ValueError("embedding batch_size must be greater than zero")
+    return batch_size
+
+
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--chunks-dir", default="data/processed_v3/chunks")
@@ -37,12 +52,17 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--skip-bm25",
         action="store_true",
-        help="Build dense only; recommended for the 992k-chunk BTC corpus.",
+        help="Build dense only; useful when BM25 is built in a separate pass.",
     )
     parser.add_argument(
         "--max-chunks",
         type=_positive_int,
         help="Bound input size for a smoke run.",
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=_positive_int,
+        help="Override the configured embedding and vector upsert batch size.",
     )
     parser.add_argument(
         "--force",
@@ -260,7 +280,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     model_path = str(embedding_config.get("model_path", "./models/dek21-v2"))
     vector_type = str(vector_config.get("type", "faiss"))
     collection_name = str(vector_config["collection_name"])
-    batch_size = int(embedding_config.get("batch_size", 32))
+    batch_size = resolve_batch_size(args.batch_size, embedding_config)
     total_chunks = count_chunks(args.chunks_dir, args.max_chunks)
     if total_chunks == 0:
         LOGGER.error("No chunk records found in %s", args.chunks_dir)

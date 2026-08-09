@@ -5,7 +5,9 @@ Thư mục này gom toàn bộ tài liệu liên quan đến model, checkpoint, 
 ## Cấu trúc
 
 - `model_registry.md`: nguồn đăng ký checkpoint chính thức cho Retriever, Generator và Reranker.
-- `embedding_bge_m3.md`: ghi chú và hướng dẫn liên quan đến embedding model.
+- `DEk21_hcmute_embedding_v2.md`: thông tin và cách dùng embedding model chính thức.
+- `embedding_bge_m3.md`: ghi chú kiến trúc retrieval cũ, chỉ dùng để tham khảo.
+- `bge_reranker_v2_m3.md`: tổng quan và trade-off của cross-encoder reranker BAAI/bge-reranker-v2-m3.
 - `llm_optimization.md`: chiến lược tối ưu Qwen3, LoRA/QLoRA và inference.
 
 ## Quy ước
