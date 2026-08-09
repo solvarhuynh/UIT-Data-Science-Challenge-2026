@@ -10,9 +10,9 @@ from udsc2026.ingestion.cleaners.abbreviations import build_abbreviation_diction
 from udsc2026.ingestion.cleaners.models import CleanDocument
 from udsc2026.ingestion.cleaners.patterns import (
     HORIZONTAL_WHITESPACE,
+    LIGHT_OCR_WORD_REPLACEMENTS,
     LEADING_BULLET,
     LEGAL_STRUCTURE_LINE,
-    LIGHT_OCR_WORD_REPLACEMENTS,
     MULTIPLE_BLANK_LINES,
     ONLY_SYMBOLS,
     PAGE_NUMBER_LINE,
@@ -33,7 +33,17 @@ OCR_REPLACEMENTS = {
     "\ufb01": "fi",
     "\ufb02": "fl",
     "\ufffd": "",
+    # Latin eth is a recurring PDF/OCR confusable for Vietnamese D with
+    # stroke. Normalize it before structural-line detection so ``Ðiều`` is
+    # neither missed nor merged into the preceding chapter heading.
+    "Ð": "Đ",
+    "ð": "đ",
 }
+
+_BARE_NUMERIC_LINE = re.compile(r"^\d{1,4}$")
+_COMPACT_NUMERIC_DATA_LINE = re.compile(
+    r"^[+-]?\d+(?:[./:-]\d+)+(?:\s*(?:%|‰))?$", re.UNICODE
+)
 
 # These are whole-word substitutions only. Replacing the bare sequence ``uý``
 # would incorrectly turn valid words such as ``quý`` into ``qúy``.
@@ -84,10 +94,10 @@ def normalize_unicode_and_ocr(text: str) -> str:
         normalized = normalized.replace(source, replacement)
     for source, replacement in LIGHT_OCR_WORD_REPLACEMENTS.items():
         normalized = re.sub(
-            r"(?<!\w){0}(?!\w)".format(re.escape(source)),
+            rf"(?<!\w){re.escape(source)}(?!\w)",
             lambda match: _match_case(match.group(0), replacement),
             normalized,
-            flags=re.IGNORECASE | re.UNICODE,
+            flags=re.IGNORECASE,
         )
     normalized = normalized.replace("\r\n", "\n").replace("\r", "\n")
     return normalize_vietnamese_vowels(normalized)
@@ -106,7 +116,12 @@ def _page_edge_candidates(pages: Sequence[Sequence[str]]) -> Counter[str]:
         nonempty = [line for line in lines if line]
         edge_lines = {line.casefold(): line for line in nonempty[:3] + nonempty[-3:]}
         for line in edge_lines.values():
-            if len(line) <= 160 and not LEGAL_STRUCTURE_LINE.search(line):
+            if (
+                len(line) <= 160
+                and not LEGAL_STRUCTURE_LINE.match(line)
+                and not _is_atomic_data_line(line)
+                and not WATERMARK_LINE.match(line)
+            ):
                 candidates[line.casefold()] += 1
     return candidates
 
@@ -122,14 +137,21 @@ def repeated_page_edges(pages: Sequence[Sequence[str]]) -> Set[str]:
 
 def is_garbage_line(line: str, in_table_of_contents: bool) -> bool:
     """Identify non-legal noise without discarding legal structure or punctuation."""
-    if not line or PAGE_NUMBER_LINE.match(line) or WATERMARK_LINE.match(line):
+    if not line or PAGE_NUMBER_LINE.match(line):
         return True
     if in_table_of_contents and TOC_ENTRY.match(line):
         return True
-    is_short_symbol = len(line) <= 2 and ONLY_SYMBOLS.match(line)
-    if is_short_symbol and not LEGAL_STRUCTURE_LINE.search(line):
-        return True
     return False
+
+
+def _is_atomic_data_line(line: str) -> bool:
+    """Return whether a standalone line can be a meaningful table/formula cell."""
+
+    return bool(
+        _BARE_NUMERIC_LINE.fullmatch(line)
+        or _COMPACT_NUMERIC_DATA_LINE.fullmatch(line)
+        or ONLY_SYMBOLS.fullmatch(line)
+    )
 
 
 def _remove_repeated_noise(text: str) -> Tuple[str, List[str]]:
@@ -141,6 +163,7 @@ def _remove_repeated_noise(text: str) -> Tuple[str, List[str]]:
     cleaned_pages: List[str] = []
     removed_lines: List[str] = []
     in_table_of_contents = False
+    seen_repeated_edges: Set[str] = set()
 
     for page in pages:
         kept_lines: List[str] = []
@@ -153,13 +176,23 @@ def _remove_repeated_noise(text: str) -> Tuple[str, List[str]]:
             # ends the TOC block when it is a real structure line, not an entry.
             if (
                 in_table_of_contents
-                and LEGAL_STRUCTURE_LINE.search(line)
+                and LEGAL_STRUCTURE_LINE.match(line)
                 and not TOC_ENTRY.match(line)
             ):
                 in_table_of_contents = False
-            if line.casefold() in repeated_edges or is_garbage_line(
-                line, in_table_of_contents
-            ):
+            folded_line = line.casefold()
+            if is_garbage_line(line, in_table_of_contents):
+                if line:
+                    removed_lines.append(line)
+                continue
+            if folded_line in repeated_edges:
+                # Repeated page headers can still contain the document name or
+                # another useful retrieval term. Keep one canonical occurrence
+                # and remove only subsequent copies.
+                if folded_line not in seen_repeated_edges:
+                    seen_repeated_edges.add(folded_line)
+                    kept_lines.append(line)
+                    continue
                 if line:
                     removed_lines.append(line)
                 continue
@@ -172,9 +205,11 @@ def _should_merge(previous: str, current: str) -> bool:
     """Decide whether a PDF hard line break belongs inside one legal sentence."""
     if not previous or not current:
         return False
+    if _is_atomic_data_line(previous) or _is_atomic_data_line(current):
+        return False
     # Preserve a line that *starts* a new Điều/Khoản/Điểm. A structural line
     # may still have a hard-wrapped continuation on its following line.
-    if LEGAL_STRUCTURE_LINE.search(current):
+    if LEGAL_STRUCTURE_LINE.match(current):
         return False
     return previous[-1] not in ".;:?!"
 
@@ -220,6 +255,9 @@ def clean_document(document: RawDocument) -> CleanDocument:
             "cleaning": {
                 "unicode_normalization": "NFC",
                 "removed_line_count": len(removed_lines),
+                "removed_line_reason_counts": _removed_line_reason_counts(
+                    removed_lines
+                ),
                 "page_delimiter": "form_feed",
             }
         }
@@ -234,3 +272,20 @@ def clean_document(document: RawDocument) -> CleanDocument:
         abbreviations=abbreviations,
         removed_lines=removed_lines,
     )
+
+
+def _removed_line_reason_counts(lines: Sequence[str]) -> Dict[str, int]:
+    """Classify every removed line so corpus audits can reject new loss classes."""
+
+    counts: Counter[str] = Counter()
+    for line in lines:
+        if PAGE_NUMBER_LINE.fullmatch(line):
+            reason = "explicit_page_marker"
+        elif TABLE_OF_CONTENTS.fullmatch(line):
+            reason = "table_of_contents_header"
+        elif TOC_ENTRY.fullmatch(line):
+            reason = "table_of_contents_entry"
+        else:
+            reason = "repeated_page_edge_duplicate"
+        counts[reason] += 1
+    return dict(sorted(counts.items()))
