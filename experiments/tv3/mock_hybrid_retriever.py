@@ -12,14 +12,16 @@ NOT FOR PRODUCTION USE. This is a mock retriever for TV3 benchmark experiments.
 """
 
 import gc
+import hashlib
 import json
 import logging
 import math
 import re
+import tempfile
 import time
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 
@@ -42,6 +44,133 @@ except ImportError:
     _PYVI_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+_NPY_MAGIC = b"\x93NUMPY"
+
+
+def _contains_jsonl(directory: Path) -> bool:
+    """Return whether *directory* contains at least one JSONL corpus file."""
+
+    return directory.is_dir() and next(directory.glob("*.jsonl"), None) is not None
+
+
+def _resolve_parent_corpus(requested: Path) -> Path:
+    """Resolve a parent corpus without silently falling back to child chunks."""
+
+    candidates = [requested, _PROJECT_ROOT / "data/processed_v3/parents"]
+    kaggle_input = Path("/kaggle/input")
+    if kaggle_input.is_dir():
+        candidates.extend(sorted(kaggle_input.glob("**/processed_v3/parents")))
+        candidates.extend(sorted(kaggle_input.glob("**/parents")))
+
+    seen: set[Path] = set()
+    for candidate in candidates:
+        resolved = candidate.expanduser().resolve()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        if _contains_jsonl(resolved):
+            if resolved != requested.expanduser().resolve():
+                logger.warning(
+                    "Parent corpus '%s' is unavailable; using '%s'.",
+                    requested,
+                    resolved,
+                )
+            return resolved
+
+    raise FileNotFoundError(
+        "No parent JSONL corpus found. Pass --parents_dir pointing to "
+        "data/processed_v3/parents (or its copied equivalent)."
+    )
+
+
+def _corpus_cache_fingerprint(parents_dir: Path, max_docs: int) -> str:
+    """Build a stable cache key from the audited corpus and document limit."""
+
+    digest = hashlib.sha256()
+    manifest_path = parents_dir.parent / "metadata" / "processing_manifest.json"
+    manifest_hash = ""
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        value = manifest.get("processed_corpus_tree_hash")
+        if isinstance(value, str):
+            manifest_hash = value.strip()
+    except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
+        pass
+
+    if manifest_hash:
+        digest.update(manifest_hash.encode("ascii"))
+    else:
+        for path in sorted(parents_dir.glob("*.jsonl")):
+            stat = path.stat()
+            digest.update(path.name.encode("utf-8"))
+            digest.update(b"\0")
+            digest.update(str(stat.st_size).encode("ascii"))
+            digest.update(b"\0")
+            digest.update(str(stat.st_mtime_ns).encode("ascii"))
+
+    digest.update(f"\0max_docs={max_docs}".encode("ascii"))
+    return digest.hexdigest()[:16]
+
+
+def _finite_embedding_sample(array: np.ndarray) -> bool:
+    """Check representative rows without materializing a full mmap in RAM."""
+
+    if array.shape[0] == 0:
+        return False
+    indices = sorted({0, array.shape[0] // 2, array.shape[0] - 1})
+    return bool(np.isfinite(np.asarray(array[indices])).all())
+
+
+def _load_cached_embeddings(
+    cache_file: Path,
+    expected_rows: int,
+) -> np.ndarray | np.memmap | None:
+    """Load a validated standard NPY file or an exact legacy raw float32 mmap."""
+
+    if expected_rows <= 0 or not cache_file.is_file():
+        return None
+
+    try:
+        array = np.load(cache_file, mmap_mode="r", allow_pickle=False)
+    except (OSError, ValueError):
+        try:
+            with cache_file.open("rb") as stream:
+                magic = stream.read(len(_NPY_MAGIC))
+            size = cache_file.stat().st_size
+        except OSError:
+            return None
+
+        # A damaged standard NPY must be rebuilt, never reinterpreted with a
+        # shifted header. Only headerless legacy float32 memmaps are accepted.
+        if magic == _NPY_MAGIC:
+            return None
+        bytes_per_column = expected_rows * np.dtype(np.float32).itemsize
+        if size <= 0 or size % bytes_per_column != 0:
+            return None
+        dimension = size // bytes_per_column
+        if dimension <= 0 or dimension > 65_536:
+            return None
+        try:
+            legacy: np.memmap = np.memmap(
+                cache_file,
+                dtype=np.float32,
+                mode="r",
+                shape=(expected_rows, dimension),
+            )
+        except (OSError, ValueError):
+            return None
+        return legacy if _finite_embedding_sample(legacy) else None
+
+    if (
+        not isinstance(array, np.ndarray)
+        or array.ndim != 2
+        or array.shape[0] != expected_rows
+        or array.dtype != np.dtype(np.float32)
+    ):
+        return None
+    return array if _finite_embedding_sample(array) else None
 
 
 _STOPWORDS = {
@@ -93,7 +222,7 @@ def _tokenize_text(text: str) -> list[str]:
     text_clean = text.lower()
     if _PYVI_AVAILABLE:
         try:
-            return ViTokenizer.tokenize(text_clean).split()
+            return str(ViTokenizer.tokenize(text_clean)).split()
         except Exception:
             return text_clean.split()
     return text_clean.split()
@@ -107,7 +236,7 @@ class DiskBM25:
 
     def __init__(self, db_path: Path, parents_dir: Path, max_docs: int = 0, k1: float = 1.5, b: float = 0.75):
         self.db_path = Path(db_path)
-        self.parents_dir = Path(parents_dir)
+        self.parents_dir = _resolve_parent_corpus(Path(parents_dir))
         self.k1 = k1
         self.b = b
         self.max_docs = max_docs
@@ -151,28 +280,6 @@ class DiskBM25:
             self.avgdl = cursor.fetchone()[0]
 
     def _build_disk_index(self) -> None:
-        if not self.parents_dir.exists() or not list(self.parents_dir.glob("*.jsonl")):
-            candidate_paths = [
-                Path("/run/media/quan/New Volume/uit_data/processed/parents"),
-                Path("/run/media/quan/New Volume/uit_data/processed/chunks"),
-                Path("/kaggle/input/uit-data-processed/parents"),
-                Path("/kaggle/input/uit-data-processed/chunks"),
-                self.parents_dir.parent / "parents",
-                self.parents_dir.parent / "chunks",
-            ]
-            kaggle_input = Path("/kaggle/input")
-            if kaggle_input.exists():
-                for parent_match in kaggle_input.glob("**/parents"):
-                    candidate_paths.insert(0, parent_match)
-                for chunk_match in kaggle_input.glob("**/chunks"):
-                    candidate_paths.append(chunk_match)
-
-            for cand in candidate_paths:
-                if cand.exists() and list(cand.glob("*.jsonl")):
-                    self.parents_dir = cand
-                    logger.info("🎯 Tìm thấy thư mục corpus processed phù hợp: '%s'", cand)
-                    break
-
         logger.info("💾 Đang xây dựng Disk BM25 Index siêu tốc (executemany) từ '%s'...", self.parents_dir)
         files = sorted(self.parents_dir.glob("*.jsonl"))
         cursor = self.conn.cursor()
@@ -245,7 +352,7 @@ class DiskBM25:
             return []
 
         cursor = self.conn.cursor()
-        doc_scores = defaultdict(float)
+        doc_scores: defaultdict[int, float] = defaultdict(float)
 
         for q in query_tokens:
             cursor.execute("SELECT postings.doc_id, postings.tf, documents.doc_len FROM postings JOIN documents ON postings.doc_id = documents.id WHERE postings.term = ?;", (q,))
@@ -265,13 +372,19 @@ class DiskBM25:
         sorted_hits = sorted(doc_scores.items(), key=lambda x: x[1], reverse=True)[:top_k]
         return sorted_hits
 
-    def get_doc(self, doc_id: int) -> Optional[dict]:
+    def get_doc(self, doc_id: int) -> Optional[dict[str, Any]]:
         cursor = self.conn.cursor()
         cursor.execute("SELECT json_str FROM documents WHERE id = ?;", (doc_id,))
         row = cursor.fetchone()
         if row:
-            return json.loads(row[0])
+            payload = json.loads(row[0])
+            return payload if isinstance(payload, dict) else None
         return None
+
+    def close(self) -> None:
+        """Release the SQLite handle so temporary/removable caches can close."""
+
+        self.conn.close()
 
 
 class MockHybridRetriever:
@@ -286,45 +399,72 @@ class MockHybridRetriever:
         max_docs: int = 0,
         rrf_k: int = 60,
         alpha: float = 0.5,
+        enable_dense: bool = True,
+        enable_query_decomposition: bool = False,
     ) -> None:
-        self.parents_dir = Path(parents_dir)
+        if max_docs < 0:
+            raise ValueError("max_docs must be non-negative")
+        if rrf_k <= 0:
+            raise ValueError("rrf_k must be positive")
+        if not 0.0 <= alpha <= 1.0:
+            raise ValueError("alpha must be between 0 and 1")
+
+        self.parents_dir = _resolve_parent_corpus(Path(parents_dir))
         self.embedding_model_path = embedding_model_path
         self.device = device
-        
-        # Xử lý môi trường Kaggle / Read-only input filesystem:
-        # Nếu cache_dir không truyền vào, kiểm tra nếu parents_dir nằm trong thư mục Read-only (/kaggle/input)
-        # thì tự động fallback sang /tmp/cache hoặc ./data/cache trên đĩa có quyền ghi (Writable)
-        if cache_dir:
-            self.cache_dir = Path(cache_dir)
-        else:
-            candidate_dir = self.parents_dir.parent / "cache"
-            try:
-                candidate_dir.mkdir(parents=True, exist_ok=True)
-                # Kiểm tra quyền ghi thực tế bằng cách tạo file test tạm
-                test_file = candidate_dir / ".write_test"
-                test_file.touch()
-                test_file.unlink()
-                self.cache_dir = candidate_dir
-            except (OSError, PermissionError):
-                self.cache_dir = Path("/tmp/cache")
-                self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.enable_dense = enable_dense
+        self.enable_query_decomposition = enable_query_decomposition
+
+        # Keep generated caches outside the immutable processed_v3 corpus.
+        candidate_dir = (
+            Path(cache_dir)
+            if cache_dir is not None
+            else _PROJECT_ROOT / "artifacts/tv3/cache"
+        )
+        try:
+            candidate_dir.mkdir(parents=True, exist_ok=True)
+            test_file = candidate_dir / ".write_test"
+            test_file.touch()
+            test_file.unlink()
+            self.cache_dir = candidate_dir.resolve()
+        except OSError:
+            self.cache_dir = Path(tempfile.gettempdir()) / "udsc2026_tv3_cache"
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
 
         self.rrf_k = rrf_k
         self.alpha = alpha
         self.max_docs = max_docs
 
-        db_path = self.cache_dir / "bm25_db.sqlite"
+        self._corpus_cache_key = _corpus_cache_fingerprint(
+            self.parents_dir,
+            self.max_docs,
+        )
+        db_path = self.cache_dir / f"bm25_{self._corpus_cache_key}.sqlite"
         self._disk_bm25 = DiskBM25(db_path=db_path, parents_dir=self.parents_dir, max_docs=self.max_docs)
         self._doc_embeddings: Optional[np.ndarray] = None
         self._dense_model: Optional[SentenceTransformer] = None
 
         self._load_corpus()
-        self._build_dense_index()
+        if self.enable_dense:
+            self._build_dense_index()
 
     def _load_corpus(self) -> None:
         """Lazily set corpus size N from SQLite disk index to keep RAM under 200MB."""
         self.N = self._disk_bm25.N
         logger.info("Loaded %d documents from SQLite database into retriever.", self.N)
+
+    def close(self) -> None:
+        """Release model, mmap, and SQLite resources owned by this retriever."""
+
+        self.unload_dense_model()
+        self._doc_embeddings = None
+        self._disk_bm25.close()
+
+    def __enter__(self) -> "MockHybridRetriever":
+        return self
+
+    def __exit__(self, *_exc_info: object) -> None:
+        self.close()
 
     def _build_dense_index(self) -> None:
         """Load dense embedding model and compute cached embeddings with streaming to keep RAM under 300MB."""
@@ -332,13 +472,25 @@ class MockHybridRetriever:
             logger.warning("sentence-transformers not installed. Dense vector search disabled.")
             return
 
-        cache_file = self.cache_dir / f"parent_embeddings_{self.N}.npy"
+        model_cache_key = hashlib.sha256(
+            (
+                f"{self._corpus_cache_key}\0{self.embedding_model_path}"
+                f"\0rows={self.N}"
+            ).encode("utf-8")
+        ).hexdigest()[:16]
+        cache_file = self.cache_dir / f"parent_embeddings_{model_cache_key}.npy"
 
         if cache_file.exists():
             logger.info("⚡ Đã tìm thấy cache embeddings: '%s'. Đang nạp memory-mapped cực nhanh...", cache_file)
-            self._doc_embeddings = np.load(cache_file, mmap_mode="r")
-            logger.info("⚡ Nạp xong cache embeddings shape: %s trong 0.01 giây!", self._doc_embeddings.shape)
-            return
+            cached = _load_cached_embeddings(cache_file, self.N)
+            if cached is not None:
+                self._doc_embeddings = cached
+                logger.info(
+                    "⚡ Nạp xong cache embeddings shape: %s.",
+                    self._doc_embeddings.shape,
+                )
+                return
+            logger.warning("Cache embeddings không hợp lệ; sẽ build lại: '%s'", cache_file)
 
         model_name_or_path = str(self.embedding_model_path)
         logger.info("Loading embedding model from '%s' (device=%s)...", model_name_or_path, self.device)
@@ -353,15 +505,24 @@ class MockHybridRetriever:
         sample_vec = self._dense_model.encode(["test"], normalize_embeddings=True)
         emb_dim = sample_vec.shape[1]
 
-        tmp_cache_file = self.cache_dir / f"parent_embeddings_{self.N}.tmp.npy"
-        mmap_arr = np.memmap(tmp_cache_file, dtype="float32", mode="w+", shape=(self.N, emb_dim))
+        raw_cache_file = cache_file.with_suffix(".raw.tmp")
+        npy_cache_file = cache_file.with_suffix(".npy.tmp")
+        mmap_arr: np.memmap = np.memmap(
+            raw_cache_file,
+            dtype="float32",
+            mode="w+",
+            shape=(self.N, emb_dim),
+        )
 
         batch_sz = 256 if (_TORCH_AVAILABLE and "cuda" in str(self.device) and torch.cuda.is_available()) else 64
         chunk_size = 5000
         cursor = self._disk_bm25.conn.cursor()
 
         for offset in range(0, self.N, chunk_size):
-            cursor.execute("SELECT json_str FROM documents LIMIT ? OFFSET ?;", (chunk_size, offset))
+            cursor.execute(
+                "SELECT json_str FROM documents ORDER BY id LIMIT ? OFFSET ?;",
+                (chunk_size, offset),
+            )
             rows = cursor.fetchall()
             chunk_texts = []
             for (json_str,) in rows:
@@ -394,14 +555,17 @@ class MockHybridRetriever:
                 logger.info("Progress: %d / %d documents encoded into vector embeddings...", min(offset + chunk_size, self.N), self.N)
 
         mmap_arr.flush()
+        logger.info("💾 Đang xuất file vector cache chuẩn .npy...")
+        with npy_cache_file.open("wb") as stream:
+            np.save(stream, mmap_arr, allow_pickle=False)
         del mmap_arr
+        npy_cache_file.replace(cache_file)
+        raw_cache_file.unlink(missing_ok=True)
 
-        # Đổi tên file tạm thành file cache chính thức
-        if cache_file.exists():
-            cache_file.unlink()
-        tmp_cache_file.rename(cache_file)
+        self._doc_embeddings = _load_cached_embeddings(cache_file, self.N)
+        if self._doc_embeddings is None:
+            raise RuntimeError(f"Embedding cache validation failed: {cache_file}")
 
-        self._doc_embeddings = np.load(cache_file, mmap_mode="r")
         logger.info("🎉 Encoding finished in %.1fs. Saved memory-mapped cache to '%s'!", time.monotonic() - start, cache_file)
         
         # GIẢI PHÓNG GPU VRAM NGAY LẬP TỨC CHO QWEN LLM
@@ -417,74 +581,118 @@ class MockHybridRetriever:
                 torch.cuda.empty_cache()
             logger.info("🧹 Đã giải phóng hoàn toàn VRAM của model Embedding cho LLM!")
 
+    def _decompose_queries(self, query: str) -> list[str]:
+        """Create bounded experimental sub-queries while preserving intent words."""
+
+        original = query.strip()
+        queries = [original]
+
+        def append_unique(candidate: str) -> None:
+            normalized = " ".join(candidate.split())
+            if (
+                len(normalized) >= 10
+                and normalized.casefold() not in {item.casefold() for item in queries}
+                and len(queries) < 4
+            ):
+                queries.append(normalized)
+
+        # Clean query
+        clean_q = re.sub(r"\bnăm\s+(?:19|20)\d{2}\b", "", original, flags=re.IGNORECASE)
+        clean_q = re.sub(
+            r"\b(mới nhất|hiện hành|theo quy định mới)\b",
+            "",
+            clean_q,
+            flags=re.IGNORECASE,
+        )
+        append_unique(clean_q)
+
+        # Preserve the delimiter in the right-hand query; removing phrases such
+        # as "bị phạt" or "thủ tục" destroys the legal intent being retrieved.
+        split_pattern = re.compile(
+            r"\b(?:thì có|có được|bị phạt|bao nhiêu|như thế nào|thủ tục|thẩm quyền)\b",
+            flags=re.IGNORECASE,
+        )
+        match = split_pattern.search(original)
+        if match is not None:
+            append_unique(original[: match.start()])
+            append_unique(original[match.start() :])
+        return queries
+
     def search(self, query: str, top_k: int = 3, mode: str = "hybrid") -> list[dict]:
-        """Search for top_k documents using 'bm25', 'dense', or 'hybrid' with Dual Query Fusion."""
+        """Search parent records with optional, bounded multi-query retrieval."""
+
+        if not isinstance(query, str) or not query.strip():
+            raise ValueError("query must be a non-empty string")
+        if isinstance(top_k, bool) or not isinstance(top_k, int) or top_k <= 0:
+            raise ValueError("top_k must be a positive integer")
+        if mode not in {"bm25", "dense", "hybrid"}:
+            raise ValueError("mode must be one of: bm25, dense, hybrid")
+
         N = self.N
         if N == 0:
             return []
 
-        # 0. Tạo Clean Query (Chuẩn hóa câu hỏi loại bỏ mốc thời gian nhiễu)
-        clean_q = re.sub(r"\bnăm\s+(?:19|20)\d{2}\b", "", query, flags=re.IGNORECASE)
-        clean_q = re.sub(r"\b(mới nhất|hiện hành|theo quy định mới)\b", "", clean_q, flags=re.IGNORECASE).strip()
-        has_dual = (clean_q != query.strip()) and (len(clean_q) > 10)
+        sub_queries = (
+            self._decompose_queries(query)
+            if self.enable_query_decomposition
+            else [query.strip()]
+        )
 
         candidate_ids = set()
-        bm25_ranks = {}
-        dense_ranks = {}
+        bm25_scores: defaultdict[int, float] = defaultdict(float)
+        dense_scores_by_doc: defaultdict[int, float] = defaultdict(float)
+        k = self.rrf_k
 
-        # 1. BM25 Search (SQLite Disk Backend)
-        tokens_orig = _tokenize_query(query)
-        bm25_hits_orig = self._disk_bm25.get_scores_and_docs(tokens_orig, top_k=200)
-        for rank, (doc_id, score) in enumerate(bm25_hits_orig, start=1):
-            bm25_ranks[doc_id] = min(bm25_ranks.get(doc_id, N), rank)
-            candidate_ids.add(doc_id)
+        # 1. BM25 Search cho từng Sub-Query
+        if mode in {"bm25", "hybrid"}:
+            for query_index, sq in enumerate(sub_queries):
+                query_weight = 1.0 if query_index == 0 else 0.5
+                tokens = _tokenize_query(sq)
+                hits = self._disk_bm25.get_scores_and_docs(tokens, top_k=200)
+                for rank, (doc_id, _score) in enumerate(hits, start=1):
+                    bm25_scores[doc_id] += query_weight / (k + rank)
+                    candidate_ids.add(doc_id)
 
-        if has_dual:
-            tokens_clean = _tokenize_query(clean_q)
-            bm25_hits_clean = self._disk_bm25.get_scores_and_docs(tokens_clean, top_k=200)
-            for rank, (doc_id, score) in enumerate(bm25_hits_clean, start=1):
-                bm25_ranks[doc_id] = min(bm25_ranks.get(doc_id, N), rank)
-                candidate_ids.add(doc_id)
-
-        # 2. Dense Vector Search
-        if self._doc_embeddings is not None:
+        # 2. Dense Vector Search cho từng Sub-Query
+        if mode in {"dense", "hybrid"} and self._doc_embeddings is not None:
             if self._dense_model is None:
                 self._dense_model = SentenceTransformer(
                     str(self.embedding_model_path),
                     device="cpu",
                 )
 
-            q_vec = self._dense_model.encode(query, normalize_embeddings=True)
-            dense_scores = np.dot(self._doc_embeddings, q_vec)
-            top_dense_indices = np.argpartition(-dense_scores, min(200, N - 1))[:200]
-            top_dense_sorted = sorted(top_dense_indices, key=lambda i: dense_scores[i], reverse=True)
-            for rank, idx in enumerate(top_dense_sorted, start=1):
-                dense_ranks[idx] = min(dense_ranks.get(idx, N), rank)
-                candidate_ids.add(idx)
+            for query_index, sq in enumerate(sub_queries):
+                query_weight = 1.0 if query_index == 0 else 0.5
+                q_vec = self._dense_model.encode(sq, normalize_embeddings=True)
+                dense_scores = np.dot(self._doc_embeddings, q_vec)
+                dense_limit = min(200, N)
+                if dense_limit == N:
+                    top_indices = np.arange(N)
+                else:
+                    top_indices = np.argpartition(
+                        -dense_scores,
+                        dense_limit - 1,
+                    )[:dense_limit]
+                top_sorted = sorted(top_indices, key=lambda i: dense_scores[i], reverse=True)
+                for rank, idx in enumerate(top_sorted, start=1):
+                    doc_id = int(idx)
+                    dense_scores_by_doc[doc_id] += query_weight / (k + rank)
+                    candidate_ids.add(doc_id)
 
-            if has_dual:
-                q_vec_clean = self._dense_model.encode(clean_q, normalize_embeddings=True)
-                dense_scores_clean = np.dot(self._doc_embeddings, q_vec_clean)
-                top_dense_clean_indices = np.argpartition(-dense_scores_clean, min(200, N - 1))[:200]
-                top_dense_clean_sorted = sorted(top_dense_clean_indices, key=lambda i: dense_scores_clean[i], reverse=True)
-                for rank, idx in enumerate(top_dense_clean_sorted, start=1):
-                    dense_ranks[idx] = min(dense_ranks.get(idx, N), rank)
-                    candidate_ids.add(idx)
-
-        # 3. Combine with RRF over ONLY candidate_ids (tối đa ~400 items thay vì 1 triệu items!)
+        # 3. Combine with RRF over ONLY candidate_ids
         final_scores = []
-        k = self.rrf_k
         alpha = self.alpha
 
         for doc_id in candidate_ids:
-            b_rank = bm25_ranks.get(doc_id, N)
-            d_rank = dense_ranks.get(doc_id, N)
             if mode == "bm25":
-                rrf = 1.0 / (k + b_rank)
+                rrf = bm25_scores[doc_id]
             elif mode == "dense":
-                rrf = 1.0 / (k + d_rank)
+                rrf = dense_scores_by_doc[doc_id]
             else:  # hybrid
-                rrf = (1.0 - alpha) / (k + b_rank) + alpha / (k + d_rank)
+                rrf = (
+                    (1.0 - alpha) * bm25_scores[doc_id]
+                    + alpha * dense_scores_by_doc[doc_id]
+                )
             final_scores.append((rrf, doc_id))
 
         final_scores.sort(key=lambda x: x[0], reverse=True)

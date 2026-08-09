@@ -10,7 +10,6 @@ Usage:
     python experiments/tv3/generate_qa_submission.py --limit 0  # Full 4,002 questions
 """
 
-import os
 import sys
 import json
 import time
@@ -42,13 +41,29 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(
 logger = logging.getLogger("generate_qa_submission")
 
 
-async def main():
+def _configure_utf8_stdio() -> None:
+    """Keep Vietnamese CLI help/logs readable on legacy Windows code pages."""
+
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if callable(reconfigure):
+            reconfigure(encoding="utf-8", errors="replace")
+
+
+async def main() -> None:
+    _configure_utf8_stdio()
     parser = argparse.ArgumentParser(description="Generate Task 2 Submission Zip")
     parser.add_argument("--limit", type=int, default=10, help="Số lượng câu hỏi cần sinh (0 = tất cả câu trong public test)")
     parser.add_argument("--top_k", type=int, default=5, help="Số đoạn luật truyền cho LLM")
     parser.add_argument("--max_docs", type=int, default=0, help="Số parent docs tối đa để nạp (0 = nạp tất cả)")
     parser.add_argument("--test_file", type=str, default="", help="Đường dẫn file public_official.json")
     parser.add_argument("--parents_dir", type=str, default="", help="Đường dẫn thư mục parents")
+    parser.add_argument(
+        "--cache_dir",
+        type=str,
+        default=str(BASE_DIR / "artifacts/tv3/cache"),
+        help="Thư mục cache ngoài data/processed_v3",
+    )
     parser.add_argument("--model_path", type=str, default="thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2", help="Model LLM")
     parser.add_argument("--embedding_model", type=str, default="huyydangg/DEk21_hcmute_embedding_v2", help="Model Embedding")
     parser.add_argument("--output_zip", type=str, default="predictions/submission_task2.zip", help="Đường dẫn file zip đầu ra")
@@ -60,6 +75,7 @@ async def main():
     test_path = Path(args.test_file) if args.test_file else None
     if not test_path or not test_path.exists():
         candidates = [
+            BASE_DIR / "data/raw/btc/LegalQA/public-official.json",
             BASE_DIR / "data/task2/public/public-official.json",
             BASE_DIR / "data/task2/public/public_official.json",
             BASE_DIR / "data/task2/public/train.json",
@@ -89,25 +105,35 @@ async def main():
         logger.info("🚀 CHẾ ĐỘ THI ĐẤU THẬT: Sinh nộp bài cho toàn bộ %d câu", len(items))
 
     # 2. Khởi tạo Retriever
-    parents_dir = Path(args.parents_dir) if args.parents_dir else BASE_DIR / "data/processed/parents"
+    parents_dir = (
+        Path(args.parents_dir)
+        if args.parents_dir
+        else BASE_DIR / "data/processed_v3/parents"
+    )
     embedding_model_path = args.embedding_model
-    if not embedding_model_path.startswith("huyydangg/") and not Path(embedding_model_path).exists():
-        local_bkai = BASE_DIR / "models/bkai-bi-encoder"
-        if local_bkai.exists():
-            embedding_model_path = str(local_bkai)
+    local_dek21 = BASE_DIR / "models/dek21-v2"
+    if (
+        args.embedding_model == "huyydangg/DEk21_hcmute_embedding_v2"
+        and local_dek21.is_dir()
+    ):
+        embedding_model_path = str(local_dek21)
 
     logger.info("⏳ Đang khởi tạo MockHybridRetriever (embedding='%s')...", embedding_model_path)
     retriever = MockHybridRetriever(
         parents_dir=parents_dir,
         embedding_model_path=embedding_model_path,
         device=args.device if torch.cuda.is_available() else "cpu",
+        cache_dir=args.cache_dir,
         max_docs=args.max_docs,
     )
 
     # 3. Khởi tạo LLM (Ưu tiên thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2 hoặc local)
     model_path = args.model_path
     local_qwen = BASE_DIR / "models/qwen3-legal"
-    if local_qwen.exists():
+    if (
+        args.model_path == "thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2"
+        and local_qwen.is_dir()
+    ):
         model_path = str(local_qwen)
 
     logger.info("⏳ Đang khởi tạo LLM từ '%s' (quantization=%s)...", model_path, args.quantization)
@@ -123,39 +149,25 @@ async def main():
     llm_client = LLMClient(llm_config)
     qa_engine = QAEngine(llm_client=llm_client, use_chat_template=True)
 
-    # 4. Tích hợp RAGOrchestrator chính thức của TV5 và Cache
-    from udsc2026.api.cache import CacheClient
-    from udsc2026.api.orchestrator import RAGOrchestrator
-    from udsc2026.contracts.api import QueryRequest
-
-    class OfficialBridgeRetriever:
-        """Bridge Retriever kết hợp Selected Contexts của BTC và Hybrid Search cho TV5 RAGOrchestrator."""
-        def __init__(self, fallback_retriever):
-            self.fallback_retriever = fallback_retriever
-
-        def search(self, query: str, top_k: int, filters: dict | None = None) -> list[RetrievalHit]:
-            return self.fallback_retriever.search(query, top_k=top_k)
-
-    cache = CacheClient()
-    bridge_retriever = OfficialBridgeRetriever(retriever)
-    orchestrator = RAGOrchestrator(
-        retriever=bridge_retriever,
-        qa_engine=qa_engine,
-        cache=cache,
-    )
-
     submission_items = []
     start_time = time.monotonic()
 
     print("\n" + "=" * 70)
-    print("🚀 BẮT ĐẦU CHẠY PIPELINE CHÍNH THỨC TV5 + TV3 (LEGAL QA)")
+    print("🚀 BẮT ĐẦU CHẠY TV3 HYBRID RETRIEVAL + QA ENGINE (LEGAL QA)")
     print("=" * 70)
 
     for idx, (qid, data) in enumerate(items, start=1):
         question = data["question"] if isinstance(data, dict) else data
 
         # 1. Kiểm tra xem có Selected Context / Golden Context từ BTC cho QID này không
-        ctx_file = BASE_DIR / f"data/task2/public/selected-contexts/context_{qid}.json"
+        context_candidates = [
+            BASE_DIR / f"data/raw/btc/LegalQA/selected-contexts/context_{qid}.json",
+            BASE_DIR / f"data/task2/public/selected-contexts/context_{qid}.json",
+        ]
+        ctx_file = next(
+            (path for path in context_candidates if path.is_file()),
+            context_candidates[0],
+        )
         contexts = []
         if ctx_file.exists():
             try:
@@ -190,12 +202,20 @@ async def main():
                 char_limit = int(TOTAL_CHAR_BUDGET * weight)
                 contexts.append(
                     RetrievalHit(
-                        chunk_id=doc.get("parent_id", f"hit_{idx}"),
-                        doc_id=doc.get("doc_id", "doc"),
+                        chunk_id=doc.get("parent_id") or f"hit_{idx}_{rank}",
+                        parent_id=doc.get("parent_id"),
+                        doc_id=str(doc.get("doc_id") or "doc"),
                         text=doc["text"][:char_limit],
                         score=doc.get("retrieval_score", 0.0),
+                        source=doc.get("source"),
                         law_name=doc.get("law_name"),
                         article=doc.get("article"),
+                        clause=doc.get("clause"),
+                        metadata=(
+                            doc.get("metadata")
+                            if isinstance(doc.get("metadata"), dict)
+                            else {}
+                        ),
                     )
                 )
 
@@ -258,6 +278,8 @@ async def main():
         if btc_scoring_script.exists():
             import importlib.util
             spec = importlib.util.spec_from_file_location("btc_scoring", str(btc_scoring_script))
+            if spec is None or spec.loader is None:
+                raise RuntimeError(f"Không thể load scoring module: {btc_scoring_script}")
             btc_module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(btc_module)
             eval_qa = btc_module.eval_qa
