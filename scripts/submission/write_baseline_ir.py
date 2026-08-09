@@ -27,11 +27,17 @@ def parse_args() -> argparse.Namespace:
         default="data/raw/btc/LegalIR/public-official.json",
         help="LegalIR question JSON; data/task1/warmup.json is also supported.",
     )
-    parser.add_argument("--output-json", default="artifacts/task1/baseline_submission.json")
-    parser.add_argument("--output-zip", default="artifacts/task1/baseline_submission.zip")
+    parser.add_argument(
+        "--output-json", default="artifacts/task1/baseline_submission.json"
+    )
+    parser.add_argument(
+        "--output-zip", default="artifacts/task1/baseline_submission.zip"
+    )
     parser.add_argument("--top-k", type=int, default=20)
     parser.add_argument("--final-k", type=int, default=5)
-    parser.add_argument("--mode", choices=("hybrid", "sparse", "dense"), default="hybrid")
+    parser.add_argument(
+        "--mode", choices=("hybrid", "sparse", "dense"), default="hybrid"
+    )
     return parser.parse_args()
 
 
@@ -39,7 +45,10 @@ def load_questions(path: Path) -> list[tuple[str, str]]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(payload, dict):
         records = payload.items()
-        return [(str(question_id), str(record["question"])) for question_id, record in records]
+        return [
+            (str(question_id), str(record["question"]))
+            for question_id, record in records
+        ]
     if isinstance(payload, list):
         return [(str(record["id"]), str(record["question"])) for record in payload]
     raise ValueError("questions JSON must be an object or array")
@@ -72,6 +81,9 @@ def build_retriever(mode: str) -> Any:
             batch_size=embedding_config.get("batch_size", 32),
             max_length=embedding_config.get("max_length", 256),
             normalize_embeddings=embedding_config.get("normalize_embeddings", True),
+            output_dimension=embedding_config.get("output_dimension"),
+            window_long_texts=embedding_config.get("window_long_texts", False),
+            window_overlap_tokens=embedding_config.get("window_overlap_tokens", 32),
         )
         return DenseRetriever(client, get_vector_db_adapter(config))
 
@@ -92,6 +104,9 @@ def build_retriever(mode: str) -> Any:
         batch_size=embedding_config.get("batch_size", 32),
         max_length=embedding_config.get("max_length", 256),
         normalize_embeddings=embedding_config.get("normalize_embeddings", True),
+        output_dimension=embedding_config.get("output_dimension"),
+        window_long_texts=embedding_config.get("window_long_texts", False),
+        window_overlap_tokens=embedding_config.get("window_overlap_tokens", 32),
     )
     dense = DenseRetriever(client, get_vector_db_adapter(config))
     sparse = BM25Retriever(settings.bm25_index_path)
@@ -113,11 +128,15 @@ def hit_document_id(hit: Any) -> str:
         return parent_id
     doc_id = getattr(hit, "doc_id", None)
     if not isinstance(doc_id, str) or not doc_id.strip():
-        raise ValueError(f"retrieval hit {getattr(hit, 'chunk_id', '<unknown>')} has no doc_id")
+        raise ValueError(
+            f"retrieval hit {getattr(hit, 'chunk_id', '<unknown>')} has no doc_id"
+        )
     return doc_id
 
 
-def write_artifacts(records: list[dict[str, Any]], json_path: Path, zip_path: Path) -> None:
+def write_artifacts(
+    records: list[dict[str, Any]], json_path: Path, zip_path: Path
+) -> None:
     encoded = json.dumps(records, ensure_ascii=False, indent=2) + "\n"
     json_path.parent.mkdir(parents=True, exist_ok=True)
     zip_path.parent.mkdir(parents=True, exist_ok=True)

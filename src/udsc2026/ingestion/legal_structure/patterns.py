@@ -10,25 +10,31 @@ import re
 from typing import Dict, Pattern
 
 _FLAGS = re.MULTILINE | re.UNICODE | re.IGNORECASE
-_STRUCTURE_PREFIX = (
+STRUCTURE_PREFIX = (
     r"^\s*(?:(?:\d+(?:\.\d+)*|[IVXLCDM]+|[a-zđ])[.):\-–—]?\s*|"
     r"[•‣▪◦●◆◇➢➤\-–—]+\s*){0,3}"
 )
 
 PATTERNS: Dict[str, Pattern[str]] = {
     "chapter": re.compile(
-        rf"{_STRUCTURE_PREFIX}(?:Chương|Chuong|CHUONG)\s+([IVXLCDM]+|\d+)[\.:]?\s*(.*)$",
+        rf"{STRUCTURE_PREFIX}(?:Chương|Chuong)\s+"
+        r"([IVXLCDM]+|\d+)[\.:]?\s*(.*)$",
         _FLAGS,
     ),
     "section": re.compile(
-        rf"{_STRUCTURE_PREFIX}(?:Mục|Muc|MUC)\s+(\d+)[\.:]?\s*(.*)$",
+        rf"{STRUCTURE_PREFIX}(?:Mục|Muc)\s+"
+        r"([IVXLCDM]+|\d+)[\.:]?\s*(.*)$",
         _FLAGS,
     ),
     "article": re.compile(
-        rf"{_STRUCTURE_PREFIX}(?:Điều|Dieu|DIEU)\s+(\d+)[\.:]?\s*(.*)$",
+        rf"{STRUCTURE_PREFIX}[\"“”«]?(?:Điều|Dieu)[ \t]+"
+        r"(\d+[a-zđ]?)(?![\w,;/])(?:"
+        r"[ \t]*[.:\-)][ \t]*|"
+        r"(?=[ \t]+[^ \t,;/])[ \t]+|"
+        r"[ \t]*(?=$))(.*)$",
         _FLAGS,
     ),
-    "clause": re.compile(r"^\s*(\d+)[\.\)]\s+(.*)$", _FLAGS),
+    "clause": re.compile(r"^\s*(\d+[a-zđ]?)[\.\)]\s+(.*)$", _FLAGS),
     "point": re.compile(r"^\s*([a-zđ])[\.\)]\s+(.*)$", _FLAGS),
 }
 
@@ -36,10 +42,11 @@ PATTERNS: Dict[str, Pattern[str]] = {
 # changing the public, compact patterns above (whose first capture group is
 # consistently the identifier).
 LABELED_CLAUSE = re.compile(
-    rf"{_STRUCTURE_PREFIX}(?:Khoản|Khoan|KHOAN)\s*(\d+)[\.:\)]?\s*(.*)$",
+    rf"{STRUCTURE_PREFIX}(?:Khoản|Khoan)\s*"
+    r"(\d+[a-zđ]?)[\.:\)]?\s*(.*)$",
     _FLAGS,
 )
 LABELED_POINT = re.compile(
-    rf"{_STRUCTURE_PREFIX}(?:Điểm|Diem|DIEM)\s*([a-zđ])[\.:\)]?\s*(.*)$",
+    rf"{STRUCTURE_PREFIX}(?:Điểm|Diem)\s*([a-zđ])[\.:\)]?\s*(.*)$",
     _FLAGS,
 )

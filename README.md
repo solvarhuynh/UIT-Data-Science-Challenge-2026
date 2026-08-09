@@ -1,4 +1,4 @@
-﻿# HCMUTE-SHIPCODE - UDSC2026
+# HCMUTE-SHIPCODE - UDSC2026
 
  **LegalIR & LegalQA**: Hệ thống RAG pháp luật Việt Nam cho DSC2026, xử lý dữ liệu pháp luật, truy hồi dense/sparse/hybrid, reranking, sinh câu trả lời bằng LLM local, citation chính xác, benchmark và đóng gói submission.
 
@@ -76,7 +76,7 @@ docker compose up -d
 Index dữ liệu và chạy toàn bộ test:
 
 ```powershell
-python scripts/data_prep/index_chunks.py --chunks-dir data/processed/chunks --vector-db-type faiss
+python scripts/data_prep/index_chunks.py --chunks-dir data/processed_v3/chunks --vector-db-type faiss
 python -m pytest -v --basetemp .pytest_tmp -p no:cacheprovider
 ```
 
@@ -97,7 +97,7 @@ npm run dev
 Model được tải vào:
 
 ```text
-models/hcmute-embedding-v2/
+models/dek21-v2/
 models/qwen3-legal/
 ```
 
@@ -168,7 +168,7 @@ udsc2026/
 │   └── tv5/                         # Thử nghiệm rerank, evaluation, Docker, submission
 ├── frontend/                        # Web frontend do nhân sự riêng phụ trách
 ├── models/
-│   ├── hcmute-embedding-v2/             # Local embedder
+│   ├── dek21-v2/                    # DEk21 v2 local embedder
 │   └── qwen3-legal/                 # Local generator
 ├── prompts/
 │   ├── README.md                    # Prompt registry
@@ -241,4 +241,3 @@ Mỗi thành viên dùng branch/worktree riêng, thử nghiệm trong `experimen
 4. Tích hợp Qwen3 local với prompt versioning, citation parsing và anti-hallucination.
 5. Đánh giá LegalIR/LegalQA, tối ưu latency, Docker hóa và chuẩn bị
    `submission.zip` đúng schema riêng của từng task.
-

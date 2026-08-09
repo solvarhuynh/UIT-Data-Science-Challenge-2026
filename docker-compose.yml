@@ -1,4 +1,4 @@
-﻿name: ${COMPOSE_PROJECT_NAME:-udsc2026}
+name: ${COMPOSE_PROJECT_NAME:-udsc2026}
 
 x-backend-build: &backend-build
   context: .
@@ -27,12 +27,15 @@ services:
       UDSC2026_CONFIG_PATH: ${UDSC2026_CONFIG_PATH:-/app/configs/base.yaml}
       UDSC2026_PROMPTS_PATH: /app/prompts
       LOG_LEVEL: ${LOG_LEVEL:-info}
-      MODEL_EMBEDDER_PATH: ${MODEL_EMBEDDER_PATH:-/app/models/hcmute-embedding-v2}
+      MODEL_EMBEDDER_PATH: ${MODEL_EMBEDDER_PATH:-/app/models/dek21-v2}
       MODEL_LLM_PATH: ${MODEL_LLM_PATH:-/app/models/qwen3-legal}
       EMBEDDING_DEVICE: ${EMBEDDING_DEVICE:-cpu}
       EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-32}
       EMBEDDING_MAX_LENGTH: ${EMBEDDING_MAX_LENGTH:-256}
+      EMBEDDING_OUTPUT_DIMENSION: ${EMBEDDING_OUTPUT_DIMENSION:-768}
       EMBEDDING_NORMALIZE_EMBEDDINGS: ${EMBEDDING_NORMALIZE_EMBEDDINGS:-true}
+      EMBEDDING_WINDOW_LONG_TEXTS: ${EMBEDDING_WINDOW_LONG_TEXTS:-true}
+      EMBEDDING_WINDOW_OVERLAP_TOKENS: ${EMBEDDING_WINDOW_OVERLAP_TOKENS:-32}
       LLM_BACKEND: ${LLM_BACKEND:-transformers}
       LLM_DEVICE: ${LLM_DEVICE:-cpu}
       LLM_DTYPE: ${LLM_DTYPE:-float32}
@@ -81,8 +84,8 @@ services:
         target: /app/models
         read_only: true
       - type: bind
-        source: ${PROCESSED_DATA_DIR:-./data/processed}
-        target: /app/data/processed
+        source: ${PROCESSED_DATA_DIR:-./data/processed_v3}
+        target: /app/data/processed_v3
         read_only: true
       - type: bind
         source: ${VECTOR_STORE_DIR:-./data/vector_store}
@@ -191,8 +194,8 @@ services:
         target: /app/models
         read_only: true
       - type: bind
-        source: ${PROCESSED_DATA_DIR:-./data/processed}
-        target: /app/data/processed
+        source: ${PROCESSED_DATA_DIR:-./data/processed_v3}
+        target: /app/data/processed_v3
         read_only: true
       - type: bind
         source: ${VECTOR_STORE_DIR:-./data/vector_store}
@@ -213,4 +216,3 @@ volumes:
   qdrant-data:
   redis-data:
   submission-output:
-

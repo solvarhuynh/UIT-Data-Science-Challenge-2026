@@ -1,4 +1,4 @@
-﻿# Thiết kế hệ thống LegalIR & LegalQA
+# Thiết kế hệ thống LegalIR & LegalQA
 
 ## 1. Phạm vi
 
@@ -114,7 +114,7 @@ QAResponse       = answer, citations[], usage, latency
 
 ```text
 models/
-├── hcmute-embedding-v2/  # huyydangg/DEk21_hcmute_embedding_v2
+├── dek21-v2/         # huyydangg/DEk21_hcmute_embedding_v2
 └── qwen3-legal/      # thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2
 ```
 
@@ -160,4 +160,3 @@ api            chỉ orchestration, validation và transport
 ```
 
 Các ranh giới này giúp nhóm phát triển song song, benchmark riêng LegalIR/LegalQA và thay đổi model mà không phá vỡ API.
-

@@ -1,4 +1,4 @@
-﻿# TV5 MLOps Runbook
+# TV5 MLOps Runbook
 
 Tài liệu này mô tả cách đóng gói và kiểm tra backend LegalIR/LegalQA ở môi
 trường local hoặc CI. Cấu hình hiện tại ưu tiên khả năng tái lập, an toàn và
@@ -184,7 +184,7 @@ docker compose down --volumes --remove-orphans
 
 Lệnh có `--volumes` xóa Qdrant index, Redis data, model cache và submission
 output trong named volumes; không thể hoàn tác bằng Compose. Các thư mục bind
-mount trên host (`models/`, `data/processed/`, `data/vector_store/`) không bị
+mount trên host (`models/`, `data/processed_v3/`, `data/vector_store/`) không bị
 xóa.
 
 ## 5. Smoke test bên trong image
@@ -212,7 +212,7 @@ models/
 data/task1/
 data/task2/
 data/raw/
-data/processed/
+data/processed_v3/
 data/vector_store/
 frontend/
 **/node_modules/
@@ -222,7 +222,7 @@ Backend nhận model và dữ liệu processed qua bind mount read-only:
 
 ```text
 ./models            -> /app/models
-./data/processed    -> /app/data/processed
+./data/processed_v3 -> /app/data/processed_v3
 ./data/vector_store -> /app/data/vector_store
 ```
 
@@ -280,14 +280,14 @@ nhất được nhóm dưới đây.
 | `BACKEND_PORT` | `8000` | Cổng backend trên host |
 | `UDSC2026_CONFIG_PATH` | `/app/configs/base.yaml` | Config runtime trong container |
 | `MODELS_DIR` | `./models` | Thư mục model mount read-only |
-| `PROCESSED_DATA_DIR` | `./data/processed` | Corpus mount read-only |
+| `PROCESSED_DATA_DIR` | `./data/processed_v3` | Corpus V3 mount read-only |
 | `VECTOR_STORE_DIR` | `./data/vector_store` | Vector index mount read-only |
 
 ### Runtime model và retrieval
 
 | Biến | Mặc định | Ý nghĩa |
 | --- | --- | --- |
-| `MODEL_EMBEDDER_PATH` | `/app/models/hcmute-embedding-v2` | Checkpoint bi-encoder |
+| `MODEL_EMBEDDER_PATH` | `/app/models/dek21-v2` | Checkpoint DEk21 v2 |
 | `MODEL_LLM_PATH` | `/app/models/qwen3-legal` | Checkpoint Qwen3 |
 | `EMBEDDING_DEVICE` | `cpu` | Device embedding |
 | `EMBEDDING_BATCH_SIZE` | `32` | Batch embedding |
@@ -437,4 +437,3 @@ hiện lúc backend startup.
 
 Đổi `BACKEND_PORT`, `QDRANT_HTTP_PORT` hoặc `REDIS_PORT` trong `.env`. URL nội
 bộ container vẫn giữ cổng `8000`, `6333` và `6379`.
-

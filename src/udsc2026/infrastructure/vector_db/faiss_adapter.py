@@ -33,6 +33,14 @@ def _reject_json_constant(value: str) -> None:
     raise ValueError(f"non-finite JSON constant is not allowed: {value}")
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
 class FaissAdapter(VectorDBAdapter):
     """Store normalized vectors in FAISS and payloads beside the index on disk."""
 
@@ -46,6 +54,8 @@ class FaissAdapter(VectorDBAdapter):
         self.index: faiss.Index | None = None
         self.payloads: dict[int, dict[str, Any]] = {}
         self.distance = "cosine"
+        self._bulk_previous: tuple[Any, ...] | None = None
+        self._bulk_chunk_ids: set[str] = set()
         self._load()
 
     def _load(self) -> None:
@@ -58,16 +68,21 @@ class FaissAdapter(VectorDBAdapter):
             )
         if index_file.exists() and payload_file.exists():
             try:
-                serialized_bytes = index_file.read_bytes()
-                serialized = np.frombuffer(serialized_bytes, dtype=np.uint8)
-                loaded_index = faiss.deserialize_index(serialized)
+                try:
+                    loaded_index = faiss.read_index(str(index_file))
+                except RuntimeError:
+                    # Some Windows FAISS wheels cannot open Unicode paths.
+                    with index_file.open("rb") as index_stream:
+                        serialized = np.fromfile(index_stream, dtype=np.uint8)
+                    loaded_index = faiss.deserialize_index(serialized)
             except (OSError, RuntimeError, ValueError) as exc:
                 raise ValueError(f"invalid FAISS index file: {index_file}") from exc
             try:
-                raw_store: object = json.loads(
-                    payload_file.read_text(encoding="utf-8"),
-                    parse_constant=_reject_json_constant,
-                )
+                with payload_file.open("r", encoding="utf-8") as payload_stream:
+                    raw_store: object = json.load(
+                        payload_stream,
+                        parse_constant=_reject_json_constant,
+                    )
             except (OSError, UnicodeError, ValueError) as exc:
                 raise ValueError(f"invalid FAISS payload file: {payload_file}") from exc
             if not isinstance(raw_store, dict):
@@ -93,7 +108,7 @@ class FaissAdapter(VectorDBAdapter):
                 raise ValueError(
                     f"unsupported FAISS payload schema version: {schema_version!r}"
                 )
-            expected_checksum = hashlib.sha256(serialized_bytes).hexdigest()
+            expected_checksum = _sha256_file(index_file)
             if raw_store["index_sha256"] != expected_checksum:
                 raise ValueError(
                     "FAISS index and payload checksum do not match; "
@@ -162,6 +177,8 @@ class FaissAdapter(VectorDBAdapter):
         self, name: str, vector_size: int, distance: str = "cosine"
     ) -> None:
         """Create a persistent FAISS collection."""
+        if self._bulk_previous is not None:
+            raise RuntimeError("cannot create a collection during bulk replacement")
         validated_name = validate_collection_name(name)
         validate_vector_size(vector_size)
         if distance not in _SUPPORTED_DISTANCES:
@@ -208,30 +225,122 @@ class FaissAdapter(VectorDBAdapter):
                     pass
             raise
 
+    def begin_bulk_replace(
+        self,
+        name: str,
+        vector_size: int,
+        distance: str = "cosine",
+    ) -> None:
+        """Start a streaming replacement without touching the on-disk index.
+
+        ``append_bulk`` adds new vectors in O(batch) time. ``commit_bulk`` then
+        persists the complete replacement exactly once, which is suitable for
+        million-chunk offline indexing jobs.
+        """
+
+        if self._bulk_previous is not None:
+            raise RuntimeError("a FAISS bulk replacement is already active")
+        validated_name = validate_collection_name(name)
+        validate_vector_size(vector_size)
+        if distance not in _SUPPORTED_DISTANCES:
+            raise ValueError("FAISS adapter supports cosine/dot distance only")
+        self._bulk_previous = (
+            self.root,
+            self.collection_name,
+            self.index,
+            self.payloads,
+            self.distance,
+        )
+        self.root = self._index_base / validated_name
+        self.collection_name = validated_name
+        self.index = faiss.IndexFlatIP(vector_size)
+        self.payloads = {}
+        self.distance = distance
+        self._bulk_chunk_ids = set()
+
+    def append_bulk(
+        self,
+        chunks: list[LegalChunk],
+        embeddings: list[list[float]],
+    ) -> None:
+        """Append one validated batch to an active streaming replacement."""
+
+        if self._bulk_previous is None or self.index is None:
+            raise RuntimeError("begin_bulk_replace must be called first")
+        if len(chunks) != len(embeddings):
+            raise ValueError("chunks and embeddings must have the same length")
+        if not chunks:
+            return
+        batch_ids: list[str] = []
+        prepared: list[np.ndarray] = []
+        for item_index, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
+            if not isinstance(chunk, LegalChunk):
+                raise TypeError(f"chunks[{item_index}] must be a LegalChunk")
+            chunk_id = chunk.chunk_id.strip()
+            if not chunk_id:
+                raise ValueError(f"chunks[{item_index}].chunk_id must not be blank")
+            if chunk_id in self._bulk_chunk_ids or chunk_id in batch_ids:
+                raise ValueError(f"duplicate chunk_id during bulk build: {chunk_id}")
+            validate_query_vector(embedding)
+            if len(embedding) != self.index.d:
+                raise ValueError(
+                    f"embeddings[{item_index}] must have dimension {self.index.d}"
+                )
+            batch_ids.append(chunk_id)
+            prepared.append(
+                self._prepare_vector(
+                    embedding,
+                    label=f"embeddings[{item_index}]",
+                )
+            )
+
+        start = self.index.ntotal
+        self.index.add(np.asarray(prepared, dtype="float32"))
+        for offset, chunk in enumerate(chunks):
+            self.payloads[start + offset] = chunk_payload(chunk)
+        self._bulk_chunk_ids.update(batch_ids)
+
+    def commit_bulk(self) -> None:
+        """Atomically persist and finish an active bulk replacement."""
+
+        if self._bulk_previous is None:
+            raise RuntimeError("no FAISS bulk replacement is active")
+        previous = self._bulk_previous
+        try:
+            self._persist()
+        except BaseException:
+            (
+                self.root,
+                self.collection_name,
+                self.index,
+                self.payloads,
+                self.distance,
+            ) = previous
+            raise
+        finally:
+            self._bulk_previous = None
+            self._bulk_chunk_ids = set()
+
+    def abort_bulk(self) -> None:
+        """Discard an in-memory bulk replacement and restore prior state."""
+
+        if self._bulk_previous is None:
+            return
+        (
+            self.root,
+            self.collection_name,
+            self.index,
+            self.payloads,
+            self.distance,
+        ) = self._bulk_previous
+        self._bulk_previous = None
+        self._bulk_chunk_ids = set()
+
     def _persist(self) -> None:
         if self.index is None:
             return
         index_target = self.root / "index.faiss"
         payload_target = self.root / "payloads.json"
-        serialized_index = faiss.serialize_index(self.index).tobytes()
-        payload_store = {
-            "schema_version": _INDEX_SCHEMA_VERSION,
-            "index_sha256": hashlib.sha256(serialized_index).hexdigest(),
-            "distance": self.distance,
-            "vector_size": self.index.d,
-            "vector_count": self.index.ntotal,
-            "payloads": self.payloads,
-        }
-        serialized_payloads = (
-            json.dumps(
-                payload_store,
-                ensure_ascii=False,
-                sort_keys=True,
-                separators=(",", ":"),
-                allow_nan=False,
-            )
-            + "\n"
-        )
         root_existed = self.root.exists()
         self.root.mkdir(parents=True, exist_ok=True)
         descriptors = [-1, -1]
@@ -254,11 +363,26 @@ class FaissAdapter(VectorDBAdapter):
                 dir=str(self.root),
             )
             staged_paths.append(Path(payload_temporary_name))
-            with os.fdopen(descriptors[0], "wb") as index_stream:
-                descriptors[0] = -1
-                index_stream.write(serialized_index)
-                index_stream.flush()
+            os.close(descriptors[0])
+            descriptors[0] = -1
+            try:
+                faiss.write_index(self.index, str(staged_paths[0]))
+            except RuntimeError:
+                # Preserve Unicode-path support without a second ``bytes`` copy.
+                serialized = faiss.serialize_index(self.index)
+                with staged_paths[0].open("wb") as index_stream:
+                    index_stream.write(memoryview(serialized))
+            with staged_paths[0].open("r+b") as index_stream:
                 os.fsync(index_stream.fileno())
+            index_checksum = _sha256_file(staged_paths[0])
+            payload_store = {
+                "schema_version": _INDEX_SCHEMA_VERSION,
+                "index_sha256": index_checksum,
+                "distance": self.distance,
+                "vector_size": self.index.d,
+                "vector_count": self.index.ntotal,
+                "payloads": self.payloads,
+            }
             with os.fdopen(
                 descriptors[1],
                 "w",
@@ -266,7 +390,15 @@ class FaissAdapter(VectorDBAdapter):
                 newline="\n",
             ) as payload_stream:
                 descriptors[1] = -1
-                payload_stream.write(serialized_payloads)
+                json.dump(
+                    payload_store,
+                    payload_stream,
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    allow_nan=False,
+                )
+                payload_stream.write("\n")
                 payload_stream.flush()
                 os.fsync(payload_stream.fileno())
             for staged_path in staged_paths:
@@ -338,6 +470,8 @@ class FaissAdapter(VectorDBAdapter):
 
     def upsert(self, chunks: list[LegalChunk], embeddings: list[list[float]]) -> None:
         """Insert or update chunks in the active FAISS collection."""
+        if self._bulk_previous is not None:
+            raise RuntimeError("use append_bulk during a bulk replacement")
         if len(chunks) != len(embeddings):
             raise ValueError("chunks and embeddings must have the same length")
         if not chunks:

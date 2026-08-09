@@ -94,8 +94,14 @@ def test_dense_retriever_rejects_invalid_inputs(query: str, top_k: Any) -> None:
 
 
 def test_fusion_is_deterministic_for_equal_scores_and_preserves_metadata() -> None:
-    dense = [_hit("dense-first", dense_score=5), _hit("both", dense_score=5)]
-    sparse = [_hit("both", sparse_score=7), _hit("sparse-only", sparse_score=7)]
+    dense = [
+        _hit("dense-first", dense_score=5),
+        _hit("both", dense_score=5).model_copy(update={"parent_id": "parent-both"}),
+    ]
+    sparse = [
+        _hit("both", sparse_score=7).model_copy(update={"parent_id": "parent-both"}),
+        _hit("sparse-only", sparse_score=7),
+    ]
 
     first = fuse_scores(dense, sparse)
     second = fuse_scores(dense, sparse)
@@ -107,6 +113,7 @@ def test_fusion_is_deterministic_for_equal_scores_and_preserves_metadata() -> No
     ]
     assert [hit.model_dump() for hit in second] == [hit.model_dump() for hit in first]
     assert [hit.rank for hit in first] == [1, 2, 3]
+    assert first[0].parent_id == "parent-both"
     assert first[0].metadata == {"citation": "both"}
 
 
@@ -131,6 +138,15 @@ def test_fusion_rejects_duplicates_conflicts_and_invalid_weights() -> None:
     )
     with pytest.raises(ValueError, match="conflicting metadata"):
         fuse_scores([dense_metadata], [sparse_metadata])
+
+    dense_parent = _hit("parent", dense_score=1).model_copy(
+        update={"parent_id": "dense-parent"}
+    )
+    sparse_parent = _hit("parent", sparse_score=1).model_copy(
+        update={"parent_id": "sparse-parent"}
+    )
+    with pytest.raises(ValueError, match="conflicting parent_id"):
+        fuse_scores([dense_parent], [sparse_parent])
 
     with pytest.raises(ValueError, match="sum to 1"):
         fuse_scores([], [], dense_weight=0.8, sparse_weight=0.8)

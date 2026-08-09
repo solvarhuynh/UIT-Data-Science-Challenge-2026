@@ -78,7 +78,7 @@ def test_mock_generator_preserves_unrelated_files(
 
 
 def test_default_output_is_resolved_from_repository() -> None:
-    expected = Path(__file__).resolve().parent.parent / "data" / "raw" / "btc" / "mock"
+    expected = Path(__file__).resolve().parents[2] / "data" / "raw" / "btc" / "mock"
 
     assert generator.DEFAULT_OUTPUT_DIR == expected
 

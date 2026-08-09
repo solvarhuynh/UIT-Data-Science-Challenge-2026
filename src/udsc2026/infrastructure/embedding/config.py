@@ -12,9 +12,18 @@ _ENVIRONMENT_FIELDS = {
     "EMBEDDING_DEVICE": "device",
     "EMBEDDING_BATCH_SIZE": "batch_size",
     "EMBEDDING_MAX_LENGTH": "max_length",
+    "EMBEDDING_OUTPUT_DIMENSION": "output_dimension",
     "EMBEDDING_NORMALIZE_EMBEDDINGS": "normalize_embeddings",
+    "EMBEDDING_WINDOW_LONG_TEXTS": "window_long_texts",
+    "EMBEDDING_WINDOW_OVERLAP_TOKENS": "window_overlap_tokens",
 }
-_INTEGER_FIELDS = {"batch_size", "max_length"}
+_INTEGER_FIELDS = {
+    "batch_size",
+    "max_length",
+    "output_dimension",
+    "window_overlap_tokens",
+}
+_BOOLEAN_FIELDS = {"normalize_embeddings", "window_long_texts"}
 
 
 def load_embedding_config(
@@ -38,7 +47,7 @@ def load_embedding_config(
     for variable, field_name in _ENVIRONMENT_FIELDS.items():
         if variable in environment:
             raw_value = environment[variable]
-            if field_name == "normalize_embeddings":
+            if field_name in _BOOLEAN_FIELDS:
                 normalized = raw_value.strip().casefold()
                 if normalized not in {"true", "false"}:
                     raise ValueError(f"{variable} must be 'true' or 'false'")
@@ -69,8 +78,13 @@ def load_embedding_config(
             if not isinstance(value, str) or not value.strip():
                 raise ValueError(f"embedding.{text_field} must be a non-empty string")
             embedding[text_field] = value.strip()
-    if "normalize_embeddings" in embedding and not isinstance(
-        embedding["normalize_embeddings"], bool
-    ):
-        raise ValueError("embedding.normalize_embeddings must be a boolean")
+    for boolean_field in _BOOLEAN_FIELDS:
+        if boolean_field in embedding and not isinstance(
+            embedding[boolean_field], bool
+        ):
+            raise ValueError(f"embedding.{boolean_field} must be a boolean")
+    if embedding.get("window_overlap_tokens", 0) >= embedding.get("max_length", 256):
+        raise ValueError(
+            "embedding.window_overlap_tokens must be less than embedding.max_length"
+        )
     return embedding

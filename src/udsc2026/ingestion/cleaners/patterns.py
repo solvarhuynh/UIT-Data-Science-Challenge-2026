@@ -8,16 +8,22 @@ _STRUCTURE_PREFIX = (
 )
 
 LEGAL_STRUCTURE_LINE = re.compile(
-    rf"{_STRUCTURE_PREFIX}(?:Chương|Chuong|CHUONG)\s+(?:[IVXLCDM]+|\d+)|"
-    rf"{_STRUCTURE_PREFIX}(?:Mục|Muc|MUC)\s+\d+|"
-    rf"{_STRUCTURE_PREFIX}(?:Điều|Dieu|DIEU)\s+\d+|"
-    rf"{_STRUCTURE_PREFIX}(?:Khoản|Khoan|KHOAN)\s+\d+|"
-    rf"{_STRUCTURE_PREFIX}(?:Điểm|Diem|DIEM)\s+[a-zđ]|"
-    r"^\s*\d+[.)]|^\s*[a-zđ][.)]",
+    r"^\s*(?:(?:Chương|Chuong|Mục|Muc|Điều|Dieu|Khoản|Khoan|"
+    r"Điểm|Diem|Phần|Phan|Phụ\s+lục|Phu\s+luc)\s*$)|"
+    rf"{_STRUCTURE_PREFIX}(?:Chương|Chuong)\s+(?:[IVXLCDM]+|\d+)|"
+    rf"{_STRUCTURE_PREFIX}(?:Mục|Muc)\s+(?:[IVXLCDM]+|\d+)|"
+    rf"{_STRUCTURE_PREFIX}(?:Điều|Dieu)\s+\d+[a-zđ]?|"
+    rf"{_STRUCTURE_PREFIX}(?:Khoản|Khoan)\s+\d+[a-zđ]?|"
+    rf"{_STRUCTURE_PREFIX}(?:Điểm|Diem)\s+[a-zđ]|"
+    rf"{_STRUCTURE_PREFIX}(?:Phần|Phan)\s+(?:thứ\s+)?(?:[IVXLCDM]+|\d+)|"
+    rf"{_STRUCTURE_PREFIX}(?:Phụ\s+lục|Phu\s+luc)\s+"
+    r"(?:số\s+)?(?:[IVXLCDM]+|\d+)|"
+    r"^\s*\d+[a-zđ]?[.)]|^\s*[a-zđ][.)]",
     re.IGNORECASE | re.UNICODE,
 )
 PAGE_NUMBER_LINE = re.compile(
-    r"^\s*(?:trang\s*)?\d{1,4}(?:\s*(?:/|trên)\s*\d{1,4})?\s*$",
+    r"^\s*(?:trang|page)\s*[:#-]?\s*\d{1,4}"
+    r"(?:\s*(?:/|trên|of)\s*\d{1,4})?\s*$",
     re.IGNORECASE | re.UNICODE,
 )
 TABLE_OF_CONTENTS = re.compile(r"^\s*mục\s+lục\s*$", re.IGNORECASE | re.UNICODE)
@@ -34,6 +40,14 @@ HORIZONTAL_WHITESPACE = re.compile(r"[^\S\r\n]+", re.UNICODE)
 MULTIPLE_BLANK_LINES = re.compile(r"\n[ \t]*\n(?:[ \t]*\n)+")
 LEADING_BULLET = re.compile(r"^(\s*)[•‣▪◦●◆◇➢➤]\s*")
 ONLY_SYMBOLS = re.compile(r"^[\W_]+$", re.UNICODE)
+
+# Repair only unambiguous whole-word OCR errors in legal markers.  General
+# prose is deliberately excluded so source meaning cannot be rewritten.
+LIGHT_OCR_WORD_REPLACEMENTS = {
+    "s0": "số",
+    "d1eu": "điều",
+    "kh0an": "khoản",
+}
 
 ABBREVIATION_DEFINITION = re.compile(
     r"([A-ZĐÂÊÔƠƯ][^()]{3,80}?)\s*\(\s*"

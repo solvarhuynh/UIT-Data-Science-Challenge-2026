@@ -205,9 +205,7 @@ class BM25Retriever:
             _to_hit(self._chunks[index], score) for index, score in eligible[:top_k]
         ]
         if len(results) > top_k:
-            raise RuntimeError(
-                f"BM25 returned {len(results)} hits for top_k={top_k}"
-            )
+            raise RuntimeError(f"BM25 returned {len(results)} hits for top_k={top_k}")
         return results
 
     @property
@@ -240,6 +238,7 @@ def _to_hit(chunk: LegalChunk, score: float) -> RetrievalHit:
             metadata.setdefault(field, value)
     return RetrievalHit(
         chunk_id=chunk.chunk_id,
+        parent_id=chunk.parent_id,
         doc_id=chunk.doc_id,
         text=chunk.text,
         score=score,

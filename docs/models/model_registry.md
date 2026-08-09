@@ -1,4 +1,4 @@
-﻿# Model Registry
+# Model Registry
 
 ## Mục tiêu
 
@@ -20,7 +20,7 @@ Quản lý tập trung mọi phiên bản mô hình (Retriever, Generator, Reran
 
 | Checkpoint | Version | Params | Local path | Input format | Output format | Trạng thái |
 |---|---|---|---|---|---|---|
-| `huyydangg/DEk21_hcmute_embedding_v2` | HuggingFace (pinned commit khi tải) | ~135M | `./models/hcmute-embedding-v2/` | `str` (câu hỏi hoặc đoạn văn bản tiếng Việt, đã qua cleaning) | `list[float]` — vector embedding đã normalize (dùng cosine distance) | Đang dùng (baseline dense) |
+| `huyydangg/DEk21_hcmute_embedding_v2` | HuggingFace (resolved SHA được ghi khi tải) | ~135M | `./models/dek21-v2/` | Văn bản tiếng Việt đã word-segment bằng PyVi | Vector 768 chiều đã normalize, cosine similarity | Đang dùng (dense v2) |
 
 Ghi chú:
 - Encode query và encode chunk dùng chung 1 model (symmetric bi-encoder).
@@ -31,7 +31,7 @@ Ghi chú:
 
 | Checkpoint | Version | Params | Local path | Input format | Output format | Trạng thái |
 |---|---|---|---|---|---|---|
-| *(TV5 điền checkpoint cross-encoder cụ thể khi chốt)* | | phải < 4B | `./models/cross-encoder/` | `list[tuple[str, str]]` — cặp (query, chunk_text) | `list[float]` — điểm relevance dùng để sắp xếp lại top-k | Đang thử nghiệm |
+| [`BAAI/bge-reranker-v2-m3`](https://huggingface.co/BAAI/bge-reranker-v2-m3) | HuggingFace (nên pin revision khi tải) | ~0.6B | `./models/cross-encoder/bge-reranker-v2-m3/` | `list[tuple[str, str]]` — cặp (query, chunk_text) | `list[float]` — relevance logit, có thể sigmoid về `[0, 1]` | Đang đánh giá (Evaluating) |
 
 ## Generator
 
@@ -60,4 +60,3 @@ Ghi chú:
 - Log thí nghiệm dùng các model này: xem `docs/project/06_experiment_tracking.md`.
 - Kiến trúc và luồng dữ liệu: xem `docs/project/10_system_design.md`.
 - Chi tiết LoRA/QLoRA cho Qwen3: xem `docs/models/llm_optimization.md`.
-

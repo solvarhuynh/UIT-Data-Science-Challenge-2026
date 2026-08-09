@@ -1,4 +1,4 @@
-﻿"""Embedding infrastructure for local retrieval models."""
+"""Embedding infrastructure for local retrieval models."""
 
 from typing import TYPE_CHECKING, Any
 
@@ -15,5 +15,3 @@ def __getattr__(name: str) -> Any:
 
         return EmbeddingClient
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-
-

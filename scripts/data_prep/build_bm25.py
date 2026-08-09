@@ -122,7 +122,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--chunks",
         type=Path,
-        default=Path("data/processed/chunks"),
+        default=Path("data/processed_v3/chunks"),
         help="LegalChunk .json/.jsonl file or directory.",
     )
     parser.add_argument(

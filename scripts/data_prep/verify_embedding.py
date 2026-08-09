@@ -1,4 +1,4 @@
-﻿"""Manual smoke check for the local HCMUTE Embedding v2 embedding client."""
+"""Manual smoke check for the configured Vietnamese embedding client."""
 
 from udsc2026.infrastructure.config import load_config
 from udsc2026.infrastructure.embedding import EmbeddingClient
@@ -13,6 +13,9 @@ def main() -> None:
         batch_size=embedding.get("batch_size", 32),
         max_length=embedding.get("max_length", 256),
         normalize_embeddings=embedding.get("normalize_embeddings", True),
+        output_dimension=embedding.get("output_dimension"),
+        window_long_texts=embedding.get("window_long_texts", False),
+        window_overlap_tokens=embedding.get("window_overlap_tokens", 32),
     )
     query_vector = client.embed_query("Điều 10 Bộ luật Lao động quy định gì?")
     document_vectors = client.embed_documents(["a", "b"], batch_size=2)
@@ -24,4 +27,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

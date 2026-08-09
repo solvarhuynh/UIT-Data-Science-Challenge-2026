@@ -63,8 +63,8 @@ Nguyên tắc:
 Baseline:
 
 ```yaml
-chunk_size: 512
-chunk_overlap: 80
+chunk_size: 192
+chunk_overlap: 32
 ```
 
 ## Định dạng JSONL cho retrieval

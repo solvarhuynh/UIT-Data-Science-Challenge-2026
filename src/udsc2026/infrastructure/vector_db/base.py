@@ -68,7 +68,6 @@ def chunk_payload(chunk: LegalChunk) -> dict[str, Any]:
         "parent_id": chunk.parent_id,
         "doc_id": chunk.doc_id,
         "text": chunk.text,
-        "parent_text": chunk.parent_text,
         "law_name": chunk.law_name,
         "chapter": chunk.chapter,
         "section": chunk.section,
@@ -94,12 +93,12 @@ def payload_to_hit(payload: dict[str, Any], score: float) -> RetrievalHit:
         "effective_date",
         "point",
         "parent_id",
-        "parent_text",
     ):
         if payload.get(field) is not None:
             metadata.setdefault(field, payload[field])
     return RetrievalHit(
         chunk_id=payload["chunk_id"],
+        parent_id=payload.get("parent_id"),
         doc_id=payload["doc_id"],
         text=payload["text"],
         score=float(score),

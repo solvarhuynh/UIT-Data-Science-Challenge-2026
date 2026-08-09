@@ -71,7 +71,15 @@ def fuse_scores(
         if dense_hit is not None and sparse_hit is not None:
             _validate_matching_candidate(dense_hit, sparse_hit)
         values: dict[str, Any] = {}
-        for field in ("doc_id", "text", "source", "law_name", "article", "clause"):
+        for field in (
+            "parent_id",
+            "doc_id",
+            "text",
+            "source",
+            "law_name",
+            "article",
+            "clause",
+        ):
             values[field] = getattr(primary, field) or (
                 getattr(secondary, field) if secondary else None
             )
@@ -136,7 +144,15 @@ def _validate_matching_candidate(
     dense_hit: RetrievalHit,
     sparse_hit: RetrievalHit,
 ) -> None:
-    for field in ("doc_id", "text", "source", "law_name", "article", "clause"):
+    for field in (
+        "parent_id",
+        "doc_id",
+        "text",
+        "source",
+        "law_name",
+        "article",
+        "clause",
+    ):
         dense_value = getattr(dense_hit, field)
         sparse_value = getattr(sparse_hit, field)
         if (

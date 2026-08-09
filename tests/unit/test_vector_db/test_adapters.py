@@ -140,6 +140,46 @@ def test_faiss_upsert_replaces_existing_chunk_without_duplicate(
     assert replaced_hit.text == "Nội dung đã cập nhật."
 
 
+def test_faiss_bulk_replace_appends_batches_and_persists_once(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    adapter = FaissAdapter(str(tmp_path), "legal")
+    persist_calls = 0
+    real_persist = adapter._persist
+
+    def counted_persist() -> None:
+        nonlocal persist_calls
+        persist_calls += 1
+        real_persist()
+
+    monkeypatch.setattr(adapter, "_persist", counted_persist)
+    chunks = _chunks()
+    adapter.begin_bulk_replace("legal", vector_size=2)
+    adapter.append_bulk([chunks[0]], [[1.0, 0.0]])
+    adapter.append_bulk([chunks[1]], [[0.0, 1.0]])
+    adapter.commit_bulk()
+
+    assert persist_calls == 1
+    assert adapter.index is not None
+    assert adapter.index.ntotal == 2
+    restored = FaissAdapter(str(tmp_path), "legal")
+    assert [hit.chunk_id for hit in restored.search([1.0, 0.0], 2)] == [
+        "article-1",
+        "article-2",
+    ]
+
+
+def test_faiss_bulk_abort_restores_previous_collection(tmp_path: Path) -> None:
+    adapter = FaissAdapter(str(tmp_path), "legal")
+    adapter.upsert([_chunks()[0]], [[1.0, 0.0]])
+    adapter.begin_bulk_replace("legal", vector_size=2)
+    adapter.append_bulk([_chunks()[1]], [[0.0, 1.0]])
+    adapter.abort_bulk()
+
+    assert [hit.chunk_id for hit in adapter.search([1.0, 0.0], 1)] == ["article-1"]
+
+
 @pytest.mark.parametrize(
     "embeddings",
     [

@@ -90,3 +90,29 @@ def test_is_busy_reflects_an_in_flight_generation() -> None:
     assert client._generation_lock.acquire(timeout=1.0)  # type: ignore[attr-defined]
     client._generation_lock.release()  # type: ignore[attr-defined]
     assert client.is_busy() is False
+
+
+def test_qwen_chat_messages_use_tokenizer_template() -> None:
+    seen: dict[str, object] = {}
+
+    class FakeTokenizer:
+        def apply_chat_template(self, messages, **kwargs):  # type: ignore[no-untyped-def]
+            seen["messages"] = messages
+            seen["kwargs"] = kwargs
+            return "rendered-chat-prompt"
+
+    client = object.__new__(LLMClient)
+    client._tokenizer = FakeTokenizer()  # type: ignore[attr-defined]
+
+    rendered = client._render_chat_messages(
+        [
+            {"role": "system", "content": "Ground answers."},
+            {"role": "user", "content": "Question"},
+        ]
+    )
+
+    assert rendered == "rendered-chat-prompt"
+    assert seen["kwargs"] == {
+        "tokenize": False,
+        "add_generation_prompt": True,
+    }

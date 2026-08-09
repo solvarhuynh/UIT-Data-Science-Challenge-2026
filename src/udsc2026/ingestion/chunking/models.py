@@ -16,6 +16,29 @@ class ChunkingResult(BaseModel):
     parents: List[LegalParent] = Field(default_factory=list)
     requires_manual_review: bool = False
     review_reasons: List[str] = Field(default_factory=list)
+    structured_chunk_count: int = 0
+    fallback_chunk_count: int = 0
+    supplemental_chunk_count: int = 0
+    empty_source_placeholder_chunk_count: int = 0
+    source_nonempty_line_count: int = 0
+    assigned_source_line_count: int = 0
+    supplemented_source_line_count: int = 0
+    unassigned_source_line_count: int = 0
+    source_character_count: int = 0
+    assigned_source_character_count: int = 0
+    supplemented_source_character_count: int = 0
+    repaired_split_article_count: int = 0
+    suspected_split_article_count: int = 0
+    source_content_empty: bool = False
+    structure_status: str = "structured"
+    source_family: str = "unknown"
+    structure_warnings: List[str] = Field(default_factory=list)
+    source_unique_token_count: int = 0
+    missing_source_token_count: int = 0
+    source_intraline_bigram_count: int = 0
+    missing_source_bigram_count: int = 0
+    missing_source_token_examples: List[str] = Field(default_factory=list)
+    missing_source_bigram_examples: List[str] = Field(default_factory=list)
 
 
 class ValidationReport(BaseModel):
@@ -41,3 +64,36 @@ class ValidationReport(BaseModel):
     orphan_chunk_ids: List[str] = Field(default_factory=list)
     invalid_json_chunk_ids: List[str] = Field(default_factory=list)
     manual_review_documents: List[str] = Field(default_factory=list)
+    structured_document_count: int = 0
+    fallback_document_count: int = 0
+    empty_source_document_count: int = 0
+    empty_document_output_count: int = 0
+    structured_chunk_count: int = 0
+    fallback_chunk_count: int = 0
+    supplemental_chunk_count: int = 0
+    empty_source_placeholder_chunk_count: int = 0
+    source_nonempty_line_count: int = 0
+    assigned_source_line_count: int = 0
+    supplemented_source_line_count: int = 0
+    unassigned_source_line_count: int = 0
+    source_character_count: int = 0
+    assigned_source_character_count: int = 0
+    supplemented_source_character_count: int = 0
+    source_assignment_coverage_ratio: float = 1.0
+    repaired_split_article_count: int = 0
+    suspected_split_article_count: int = 0
+    empty_document_output_ids: List[str] = Field(default_factory=list)
+    empty_source_document_ids: List[str] = Field(default_factory=list)
+    suspected_split_article_documents: List[str] = Field(default_factory=list)
+    quality_gate_passed: bool = False
+    quality_gate_failures: List[str] = Field(default_factory=list)
+    partial_structure_document_count: int = 0
+    partial_structure_documents: List[str] = Field(default_factory=list)
+    structure_warning_document_count: int = 0
+    structure_warning_documents: List[str] = Field(default_factory=list)
+    source_unique_token_count: int = 0
+    missing_source_token_count: int = 0
+    source_intraline_bigram_count: int = 0
+    missing_source_bigram_count: int = 0
+    missing_source_token_documents: List[str] = Field(default_factory=list)
+    missing_source_bigram_documents: List[str] = Field(default_factory=list)

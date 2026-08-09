@@ -4,14 +4,15 @@ import json
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence
 
 from pydantic import BaseModel, Field
 
 from udsc2026.ingestion.cleaners.models import CleanDocument
 
 _PRACTICAL_FALLBACK_MARKERS = re.compile(
-    r"(?im)\b(?:Lời nói đầu|Phạm vi điều chỉnh|Đối tượng áp dụng|Giải thích từ ngữ|Quy định chung|Điều khoản thi hành)\b"
+    r"(?im)\b(?:Lời nói đầu|Phạm vi điều chỉnh|Đối tượng áp dụng|"
+    r"Giải thích từ ngữ|Quy định chung|Điều khoản thi hành)\b"
 )
 _ARTICLE_LIKE_MARKERS = re.compile(
     r"(?im)(?:^|\s)(?:Điều|Dieu|DIEU)\s+\d+|(?:^|\s)(?:Khoản|Khoan|KHOAN)\s+\d+|(?:^|\s)(?:Điểm|Diem|DIEM)\s+[a-zđ]"
@@ -96,7 +97,9 @@ def build_manual_review_breakdown(
             sample_document_ids=doc_ids[:sample_size],
             recommendation=_recommendation_for(reason),
         )
-        for reason, doc_ids in sorted(grouped.items(), key=lambda item: (-len(item[1]), item[0]))
+        for reason, doc_ids in sorted(
+            grouped.items(), key=lambda item: (-len(item[1]), item[0])
+        )
     ]
     return ManualReviewBreakdown(
         total_documents=len(manual_review_ids),
@@ -159,15 +162,17 @@ def write_manual_review_document_report(
     return target
 
 
-def classify_manual_review_document(document: CleanDocument) -> tuple[str, Optional[str]]:
+def classify_manual_review_document(
+    document: CleanDocument,
+) -> tuple[str, Optional[str]]:
     """Assign one primary reason for a manual-review document."""
     text = document.cleaned_text.strip()
     char_count = len(text)
     token_count = _token_count(text)
     removed_line_count = len(document.removed_lines)
 
-    if char_count == 0 or token_count < 20:
-        return "cleaner_cleared_text", "cleaned text is empty or too small to recover"
+    if char_count == 0:
+        return "cleaner_cleared_text", "cleaned text is empty"
 
     if _looks_like_fallback_candidate(document):
         return (
@@ -184,6 +189,9 @@ def classify_manual_review_document(document: CleanDocument) -> tuple[str, Optio
     if _looks_like_ocr_noise(text, removed_line_count):
         return "ocr_noise", "high noise density or table-like OCR artefacts"
 
+    if token_count < 20:
+        return "cleaner_cleared_text", "cleaned text is too small to recover safely"
+
     return "no_article_structure", "content is real but lacks article-level structure"
 
 
@@ -193,32 +201,70 @@ def _looks_like_fallback_candidate(document: CleanDocument) -> bool:
         return True
     if document.title:
         title = document.title.casefold()
-        if any(keyword in title for keyword in ("luat", "nghi dinh", "nghi-quyet", "thong tu", "quyet dinh", "huong dan")):
-            return bool(re.search(r"(?i)\b(?:phạm vi điều chỉnh|đối tượng áp dụng|giải thích từ ngữ)\b", text))
+        if any(
+            keyword in title
+            for keyword in (
+                "luat",
+                "nghi dinh",
+                "nghi-quyet",
+                "thong tu",
+                "quyet dinh",
+                "huong dan",
+            )
+        ):
+            return bool(
+                re.search(
+                    r"(?i)\b(?:phạm vi điều chỉnh|đối tượng áp dụng|"
+                    r"giải thích từ ngữ)\b",
+                    text,
+                )
+            )
     return False
 
 
 def _looks_like_ocr_noise(text: str, removed_line_count: int) -> bool:
     total = max(len(text), 1)
     digit_ratio = sum(char.isdigit() for char in text) / total
-    symbol_ratio = sum((not char.isalnum()) and not char.isspace() for char in text) / total
-    short_line_ratio = 0
+    symbol_ratio = (
+        sum((not char.isalnum()) and not char.isspace() for char in text) / total
+    )
+    short_line_ratio = 0.0
     lines = [line.strip() for line in text.splitlines() if line.strip()]
     if lines:
         short_line_ratio = sum(len(line) <= 4 for line in lines) / len(lines)
-    return digit_ratio > 0.12 or symbol_ratio > 0.18 or short_line_ratio > 0.4 or removed_line_count > 40
+    return (
+        digit_ratio > 0.12
+        or symbol_ratio > 0.18
+        or short_line_ratio > 0.4
+        or removed_line_count > 40
+    )
 
 
 def _recommendation_for(reason: str) -> str:
     if reason == "cleaner_cleared_text":
-        return "Inspect cleaner rules for over-removal; keep legal headings and short preambles."
+        return (
+            "Inspect cleaner rules for over-removal; keep legal headings and short "
+            "preambles."
+        )
     if reason == "ocr_noise":
-        return "Expand OCR/format heuristics and preserve legal heading line breaks before parsing."
+        return (
+            "Expand OCR/format heuristics and preserve legal heading line breaks "
+            "before parsing."
+        )
     if reason == "regex_recoverable":
-        return "Relax structure regex for accentless/OCR variants and pre-heading separators."
+        return (
+            "Relax structure regex for accentless/OCR variants and pre-heading "
+            "separators."
+        )
     if reason == "fallback_chunkable_no_article":
-        return "Apply fallback chunking at paragraph/sentence level with a synthetic preamble article label."
-    return "Keep in manual review unless a new rule is explicitly justified by sample evidence."
+        return (
+            "Apply fallback chunking at paragraph/sentence level with a synthetic "
+            "preamble article label."
+        )
+    return (
+        "Keep in manual review unless a new rule is explicitly justified by sample "
+        "evidence."
+    )
 
 
 def _token_count(text: str) -> int:

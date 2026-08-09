@@ -84,6 +84,29 @@ def test_read_btc_context_json_uses_passage_and_context_metadata(tmp_path):
     assert document.metadata["source_name"] == "Quyet-dinh-36-2012-QD-TTg"
 
 
+def test_read_btc_empty_passage_does_not_index_json_or_url_as_content(tmp_path):
+    path = tmp_path / "context_22.json"
+    path.write_text(
+        json.dumps(
+            {
+                "id": 22,
+                "name": "Van-ban-khong-co-passage",
+                "link": "https://example.invalid/context/22",
+                "passage": "",
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    document = extract_raw_document(str(path))
+
+    assert document.raw_text == ""
+    assert document.metadata["content_field"] == "passage"
+    assert document.metadata["source_content_empty"] is True
+    assert "example.invalid" not in document.raw_text
+
+
 def test_read_jsonl_reports_record_count(tmp_path):
     path = tmp_path / "records.jsonl"
     path.write_text('{"id": "one"}\n{"id": "two"}\n', encoding="utf-8")

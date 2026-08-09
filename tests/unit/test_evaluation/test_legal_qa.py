@@ -107,7 +107,7 @@ def test_warmup_loader_rejects_duplicate_keys_and_nonstandard_constants(
         load_legal_qa_warmup(nested_duplicate)
 
     nonstandard = tmp_path / "nan.json"
-    nonstandard.write_text('{"q":{"question":"Hỏi?","answer":NaN}}')
+    nonstandard.write_text('{"q":{"question":"Hỏi?","answer":NaN}}', encoding="utf-8")
     with pytest.raises(ValueError, match="non-standard JSON constant"):
         load_legal_qa_warmup(nonstandard)
 

@@ -5,7 +5,12 @@ from udsc2026.contracts.chunk import LegalChunk
 
 
 def _load_index_script():
-    path = Path(__file__).resolve().parents[3] / "scripts" / "data_prep" / "index_chunks.py"
+    path = (
+        Path(__file__).resolve().parents[3]
+        / "scripts"
+        / "data_prep"
+        / "index_chunks.py"
+    )
     spec = importlib.util.spec_from_file_location("index_chunks", path)
     assert spec and spec.loader
     module = importlib.util.module_from_spec(spec)

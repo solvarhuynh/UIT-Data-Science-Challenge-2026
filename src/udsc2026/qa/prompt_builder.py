@@ -76,15 +76,33 @@ class PromptBuilder:
         Returns:
             Fully rendered prompt string ready to be fed to ``LLMClient.generate``.
         """
+        messages = self.build_messages(
+            question=question,
+            contexts=contexts,
+            prompt_version=prompt_version,
+            rag_template=rag_template,
+        )
+        return "\n\n".join(message["content"] for message in messages)
+
+    def build_messages(
+        self,
+        question: str,
+        contexts: list[RetrievalHit],
+        prompt_version: str = "legal_qa_v1",
+        rag_template: str = "default_rag_v1",
+    ) -> list[dict[str, str]]:
+        """Render separate system/user turns for tokenizer chat templates."""
+
         system_text = self._load_template("system", prompt_version)
         rag_text = self._load_template("rag_templates", rag_template)
-
         context_block = _build_context_block(contexts)
         user_turn = rag_text.replace("{context_block}", context_block).replace(
             "{question}", question
         )
-
-        return f"{system_text}\n\n{user_turn}"
+        return [
+            {"role": "system", "content": system_text},
+            {"role": "user", "content": user_turn},
+        ]
 
     def get_prompt_version_id(self, prompt_version: str) -> str:
         """Return a stable identifier for the given prompt version.

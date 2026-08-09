@@ -5,7 +5,7 @@ import logging
 import math
 import re
 import uuid
-from typing import Optional
+from typing import Optional, Protocol
 
 from udsc2026.contracts.qa import QAResponse
 from udsc2026.contracts.retrieval import RetrievalHit
@@ -32,6 +32,13 @@ _CONTINUATION_PATTERN = re.compile(
     r"(?:\n\s*\[\d+\]\s*\(|\nCÂU HỎi:|\nTRẢ LỜI:|\n\s*\[\d{1,3}\]\s*law_name)",
     re.IGNORECASE,
 )
+
+
+class ContextExpander(Protocol):
+    """Post-rerank context expansion interface used only for prompt input."""
+
+    def expand(self, hits: list[RetrievalHit]) -> list[RetrievalHit]:
+        """Return bounded prompt contexts without mutating original hits."""
 
 
 class QAEngine:
@@ -63,6 +70,7 @@ class QAEngine:
         prompt_builder: Optional[PromptBuilder] = None,
         citation_parser: Optional[CitationParser] = None,
         min_context_score: float = _MIN_CONTEXT_SCORE,
+        context_expander: Optional[ContextExpander] = None,
         use_chat_template: bool = True,
     ) -> None:
         """Initialise the QA Engine with its dependencies."""
@@ -78,6 +86,7 @@ class QAEngine:
         self._prompt_builder = prompt_builder or PromptBuilder()
         self._citation_parser = citation_parser or CitationParser()
         self._min_score = float(raw_min_context_score)
+        self._context_expander = context_expander
         self._use_chat_template = use_chat_template
 
     # ------------------------------------------------------------------
@@ -136,35 +145,44 @@ class QAEngine:
                 trace_id=tid,
             )
 
-        # 1.5. Lost-in-the-Middle Re-ordering (Liu et al., Stanford/Berkeley)
-        contexts = _reorder_contexts_lost_in_the_middle(contexts)
+        prompt_contexts = (
+            self._context_expander.expand(contexts)
+            if self._context_expander is not None
+            else contexts
+        )
+        if not prompt_contexts:
+            prompt_contexts = contexts
 
-        #  2. Build prompt
-        if self._use_chat_template and hasattr(self._llm, "generate_chat"):
-            system_text = self._prompt_builder._load_template("system", prompt_version)
-            rag_text = self._prompt_builder._load_template("rag_templates", rag_template)
-            from udsc2026.qa.prompt_builder import _build_context_block
-            context_block = _build_context_block(contexts)
-            user_content = (
-                rag_text
-                .replace("{context_block}", context_block)
-                .replace("{question}", question)
-            )
-            messages = [
-                {"role": "system", "content": system_text},
-                {"role": "user", "content": user_content},
-            ]
-            raw_answer = await asyncio.to_thread(self._llm.generate_chat, messages)
+        # Put the strongest contexts at the beginning and end of the prompt,
+        # while retaining the original ranked child hits for citations and
+        # response provenance.
+        prompt_contexts = _reorder_contexts_lost_in_the_middle(prompt_contexts)
+
+        #  2. Build both compatibility text and native chat turns. The real
+        # Qwen client consumes messages; lightweight mocks keep using text.
+        prompt = self._prompt_builder.build_prompt(
+            question=question,
+            contexts=prompt_contexts,
+            prompt_version=prompt_version,
+            rag_template=rag_template,
+        )
+        messages = self._prompt_builder.build_messages(
+            question=question,
+            contexts=prompt_contexts,
+            prompt_version=prompt_version,
+            rag_template=rag_template,
+        )
+        logger.debug("trace_id=%s | Prompt length: %d chars.", tid, len(prompt))
+
+        #  3. Call LLM
+        generate_messages = getattr(self._llm, "generate_messages", None)
+        generate_chat = getattr(self._llm, "generate_chat", None)
+        if self._use_chat_template and callable(generate_messages):
+            raw_answer = await asyncio.to_thread(generate_messages, messages)
+        elif self._use_chat_template and callable(generate_chat):
+            raw_answer = await asyncio.to_thread(generate_chat, messages)
         else:
-            prompt = self._prompt_builder.build_prompt(
-                question=question,
-                contexts=contexts,
-                prompt_version=prompt_version,
-                rag_template=rag_template,
-            )
-            logger.debug("trace_id=%s | Prompt length: %d chars.", tid, len(prompt))
             raw_answer = await asyncio.to_thread(self._llm.generate, prompt)
-
         logger.debug("trace_id=%s | Raw answer length: %d chars.", tid, len(raw_answer))
 
         #  3.5 Post-process: trim continuation artifacts, preambles & duplicate lines
@@ -262,24 +280,25 @@ def _trim_continuation(text: str) -> str:
     return text
 
 
-def _reorder_contexts_lost_in_the_middle(contexts: list) -> list:
-    """
-    Re-orders retrieved contexts according to 'Lost in the Middle' (Liu et al., Stanford/Berkeley):
-    Places Rank 1 context at index 0 (Primacy bias) and Rank 2 context at index -1 (Recency bias),
-    putting lower-ranked distractors in the middle.
-    """
+def _reorder_contexts_lost_in_the_middle(
+    contexts: list[RetrievalHit],
+) -> list[RetrievalHit]:
+    """Place stronger contexts at prompt edges to reduce middle-position loss."""
+
     if len(contexts) <= 2:
-        return contexts
-    reordered = [None] * len(contexts)
+        return list(contexts)
+    reordered: list[RetrievalHit] = []
     left = 0
     right = len(contexts) - 1
-    for i, item in enumerate(contexts):
-        if i % 2 == 0:
-            reordered[left] = item
+    slots: list[Optional[RetrievalHit]] = [None] * len(contexts)
+    for index, item in enumerate(contexts):
+        if index % 2 == 0:
+            slots[left] = item
             left += 1
         else:
-            reordered[right] = item
+            slots[right] = item
             right -= 1
+    reordered.extend(item for item in slots if item is not None)
     return reordered
 
 
@@ -301,16 +320,20 @@ def _clean_conversational_preamble(text: str) -> str:
     if not text:
         return text
     text = text.strip()
-    if text.startswith("Dựa trên dữ liệu pháp lý được cung cấp, ") and len(text) > 90 and "không có đủ căn cứ" not in text:
-        text = text[len("Dựa trên dữ liệu pháp lý được cung cấp, "):].lstrip()
+    if (
+        text.startswith("Dựa trên dữ liệu pháp lý được cung cấp, ")
+        and len(text) > 90
+        and "không có đủ căn cứ" not in text
+    ):
+        text = text[len("Dựa trên dữ liệu pháp lý được cung cấp, ") :].lstrip()
         if text and text[0].islower():
             text = text[0].upper() + text[1:]
     match = _PREAMBLE_PATTERNS.match(text)
     if match:
-        text = text[match.end():].lstrip()
+        text = text[match.end() :].lstrip()
     if text.lower().startswith("trả lời:"):
-        text = text[len("trả lời:"):].lstrip()
-    
+        text = text[len("trả lời:") :].lstrip()
+
     tail_patterns = [
         r"\n+lưu ý rằng context chỉ cung cấp[^\n]*$",
         r"\n+hy vọng rằng đáp án trên giúp bạn[^\n]*$",
@@ -323,7 +346,7 @@ def _clean_conversational_preamble(text: str) -> str:
 
 
 def _deduplicate_repeated_lines(text: str) -> str:
-    """Remove consecutive duplicate lines or repeated bullet points (anti-loop filter)."""
+    """Remove consecutive duplicate lines or repeated bullet points."""
     if not text:
         return text
     lines = text.splitlines()

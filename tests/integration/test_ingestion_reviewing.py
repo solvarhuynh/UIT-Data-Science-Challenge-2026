@@ -32,7 +32,10 @@ def test_manual_review_classifier_distinguishes_common_reasons():
     )
 
     assert classify_manual_review_document(empty_doc)[0] == "cleaner_cleared_text"
-    assert classify_manual_review_document(fallback_doc)[0] == "fallback_chunkable_no_article"
+    assert (
+        classify_manual_review_document(fallback_doc)[0]
+        == "fallback_chunkable_no_article"
+    )
     assert classify_manual_review_document(regex_doc)[0] == "regex_recoverable"
 
 

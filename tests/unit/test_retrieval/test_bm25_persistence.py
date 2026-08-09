@@ -49,6 +49,8 @@ def test_bm25_json_round_trip_preserves_search_and_contracts(
     restored.load()
     after = restored.search("đơn phương chấm dứt hợp đồng", top_k=2)
 
+    assert before[0].parent_id == "labor"
+    assert after[0].parent_id == "labor"
     assert [hit.model_dump() for hit in after] == [hit.model_dump() for hit in before]
 
 

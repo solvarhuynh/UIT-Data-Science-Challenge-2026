@@ -21,7 +21,7 @@ faiss-cpu==1.8.0
 # faiss-cpu 1.8.0 is built against NumPy 1.x on this Python/Windows setup.
 numpy==1.26.4
 scipy<1.14
-sentence-transformers==3.0.1
+sentence-transformers==5.4.1
 rank-bm25==0.2.2
 pyvi==0.1.1
 
