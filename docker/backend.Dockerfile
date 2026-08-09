@@ -72,7 +72,7 @@ RUN apt-get update \
         --no-create-home \
         --shell /usr/sbin/nologin \
         app \
-    && mkdir -p /app/cache/huggingface /app/data/processed /app/models /app/output \
+    && mkdir -p /app/cache/huggingface /app/data/processed_v3 /app/models /app/output \
     && chown -R app:app /app
 
 RUN --mount=type=bind,from=wheel-builder,source=/wheels,target=/wheels \

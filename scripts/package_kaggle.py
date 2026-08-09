@@ -7,7 +7,6 @@ Creates 'tv3_kaggle_bundle.zip' containing all necessary code:
 - docs/Scoring-Program-Task-LegalQA/ (BTC scoring code)
 """
 
-import sys
 import zipfile
 from pathlib import Path
 
@@ -21,7 +20,8 @@ DIRS_TO_INCLUDE = [
     "docs/Scoring-Program-Task-LegalQA",
 ]
 
-def main():
+
+def main() -> None:
     print(f"📦 Packaging TV3 Kaggle Bundle into '{OUTPUT_ZIP.name}'...")
     with zipfile.ZipFile(OUTPUT_ZIP, "w", zipfile.ZIP_DEFLATED) as zf:
         for rel_dir in DIRS_TO_INCLUDE:
@@ -30,14 +30,20 @@ def main():
                 print(f"⚠️ Warning: Directory '{rel_dir}' not found, skipping.")
                 continue
             for file_path in target_dir.rglob("*"):
-                if file_path.is_file() and not file_path.name.endswith(".pyc") and "__pycache__" not in str(file_path):
+                if (
+                    file_path.is_file()
+                    and not file_path.name.endswith(".pyc")
+                    and "__pycache__" not in str(file_path)
+                ):
                     arcname = file_path.relative_to(BASE_DIR)
                     zf.write(file_path, arcname)
                     print(f"  + Added: {arcname}")
 
     print("\n" + "=" * 60)
-    print(f"🎉 SUCCESS: Bundle created at '{OUTPUT_ZIP}' ({OUTPUT_ZIP.stat().st_size / (1024*1024):.2f} MB)")
+    size_mib = OUTPUT_ZIP.stat().st_size / (1024 * 1024)
+    print(f"🎉 SUCCESS: Bundle created at '{OUTPUT_ZIP}' ({size_mib:.2f} MB)")
     print("=" * 60)
+
 
 if __name__ == "__main__":
     main()

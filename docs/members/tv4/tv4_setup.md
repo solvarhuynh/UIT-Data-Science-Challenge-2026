@@ -1,217 +1,165 @@
-# TV4 Setup — Legal ETL & Synthetic Benchmark
+# TV4 Setup — Legal ETL và synthetic benchmark
 
-TV4 chịu trách nhiệm biến văn bản pháp luật thô thành dữ liệu có cấu trúc cho
-Retrieval, Reranking, QA và Evaluation. Phạm vi là ETL, chunking, validation và
-synthetic benchmark; TV4 không làm Web Frontend, FastAPI router, retrieval,
-vector search, reranking hoặc LLM inference.
+TV4 chịu trách nhiệm biến dữ liệu BTC thô thành corpus có thể kiểm tra, truy vết
+và bàn giao cho indexing/evaluation. ETL luôn ghi vào một thư mục ứng viên mới;
+không thành phần nào được ghi trực tiếp vào corpus chính thức.
 
-## 1. Luồng dữ liệu TV4 bàn giao
+## Quy ước thư mục
+
+| Đường dẫn | Vai trò | Quyền ghi |
+| --- | --- | --- |
+| `data/raw/btc` | Nguồn LegalIR/LegalQA của BTC | Chỉ đọc khi chạy ETL |
+| `data/processed_candidate` | Kết quả của một lần ETL mới | Chỉ pipeline ingestion ghi |
+| `data/processed_v3` | Corpus đã audit và được phát hành | Bất biến, mọi consumer chỉ đọc |
+
+`run_ingestion_pipeline()` và CLI đều từ chối chạy nếu output đã có dữ liệu.
+Muốn chạy lại, hãy chọn một đường dẫn ứng viên mới hoặc chủ động dọn đúng thư
+mục ứng viên; không trộn hai lần chạy và không ghi đè V3.
+
+## Luồng bàn giao
 
 ```mermaid
 flowchart LR
-    A[data/raw/btc] --> B[Readers]
-    B --> C[RawDocument]
-    C --> D[Cleaners]
-    D --> E[CleanDocument]
-    E --> F[Legal Structure Parser]
-    F --> G[LegalStructureDocument]
-    G --> H[Parent-Child Chunking]
-    H --> I[data/processed/chunks/*.jsonl]
-    H --> J[data/processed/parents/*.jsonl]
-    H --> K[data/processed/metadata/*.json]
-    I --> L[TV2: embedding + VectorDB]
-    J --> M[TV3: QA parent context]
-    I --> N[Synthetic Generator]
-    N --> O[data/processed/benchmarks/synthetic_qa.jsonl]
-    O --> P[TV5: Retrieval/Rerank evaluation]
+    RAW[data/raw/btc] --> ETL[Extract + clean + parse + chunk]
+    ETL --> CAND[data/processed_candidate]
+    CAND --> AUDIT[Disk audit + integrity gates]
+    AUDIT --> BENCH[Synthetic benchmark + hashes]
+    BENCH --> PROMOTE[Promote nguyên cây]
+    PROMOTE --> V3[data/processed_v3 — read-only]
+    V3 --> TV2[TV2: index/retrieval]
+    V3 --> TV3[TV3: parent context/QA]
+    V3 --> TV5[TV5: rerank/evaluation]
 ```
 
-Luồng chạy đầy đủ được cung cấp bởi:
+## Cài đặt
 
-```python
-from udsc2026.ingestion import run_ingestion_pipeline
-
-result = run_ingestion_pipeline(
-    raw_directory="data/raw/btc",
-    processed_root="data/processed",
-)
-```
-
-`run_ingestion_pipeline()` lần lượt gọi extract, clean, parse/chunk, ghi JSONL
-và validation report. Các lỗi riêng lẻ khi extract/clean được ghi log, không làm
-dừng toàn bộ corpus.
-
-## 2. Cài đặt môi trường
-
-- Python 3.10 trở lên.
-- Cài dependency phát triển và chạy test:
-
-  ```powershell
-  py -3.10 -m pip install -r requirements_dev.txt
-  ```
-
-- Các thư viện ETL chính: `pydantic`, `charset-normalizer`, `python-docx` và
-  `pdfplumber`. `python-docx` chỉ cần khi đọc/sinh DOCX; `pdfplumber` chỉ cần
-  khi đọc PDF.
-- Khi chạy trực tiếp từ repository trên PowerShell, đặt `PYTHONPATH`:
-
-  ```powershell
-  $env:PYTHONPATH = "src"
-  ```
-
-## 3. Những phần đã hoàn thành
-
-### Readers — nhận dữ liệu BTC
-
-Vị trí: `src/udsc2026/ingestion/readers/`
-
-- Đọc `.txt`, `.json`, `.jsonl`, `.docx` và `.pdf` theo phần mở rộng.
-- BTC context files `context_<id>.json` trong `LegalIR/selected-contexts/` và `LegalQA/selected-contexts/` được đọc trực tiếp, giữ `id` làm khóa truy vết và lấy `passage` làm văn bản đầu vào.
-- Chuẩn hoá đầu ra thành `RawDocument`: `doc_id`, `source_path`, `title`,
-  `raw_text`, `file_format`, `metadata`.
-- JSON/JSONL có field `content`, `text`, `body`, `raw_text` hoặc
-  `document_text` được lấy đúng nội dung pháp luật để các bước sau parse được.
-- Batch extraction bỏ qua file lỗi, phát hiện `doc_id` trùng và ghi
-  `data/processed/metadata/extract_errors.json`.
-
-### Cleaners — làm sạch nhưng không phá cấu trúc luật
-
-Vị trí: `src/udsc2026/ingestion/cleaners/`
-
-- Chuẩn hoá Unicode NFC, khoảng trắng, lỗi OCR phổ biến và một số cách đặt dấu
-  tiếng Việt cũ.
-- Bỏ watermark, số trang, header/footer lặp và mục lục nhiễu.
-- Giữ xuống dòng mở đầu Điều/Khoản/Điểm để parser vẫn nhận diện được cấu trúc.
-- Trích từ viết tắt theo từng văn bản, ví dụ `BLLĐ → Bộ luật Lao động`.
-- Ghi tài liệu đã clean vào `data/processed/documents/<doc_id>.json` và lỗi vào
-  `data/processed/metadata/clean_errors.json`.
-
-### Legal structure parser — cây phân cấp pháp luật
-
-Vị trí: `src/udsc2026/ingestion/legal_structure/`
-
-- Dùng state machine và regex neo đầu dòng để nhận diện `law_name`, Chương,
-  Mục, Điều, Khoản, Điểm.
-- Hỗ trợ các dạng phổ biến: `Chương I`, `Mục 1`, `Điều 10.`, `1.`, `a)`;
-  giữ đúng thứ tự xuất hiện trong `entries`.
-- Chỉ coi `1.` và `a)` là Khoản/Điểm sau khi đang ở trong một Điều, giảm false
-  positive từ danh sách thường.
-- Văn bản không có Điều được gắn `requires_manual_review`; chunker không cắt
-  mù các văn bản này.
-
-### Parent-child chunking — dữ liệu cho Retrieval và QA
-
-Vị trí: `src/udsc2026/ingestion/chunking/`
-
-- Parent là toàn bộ Điều (`LegalParent`); child ưu tiên Khoản/Điểm (`LegalChunk`)
-  hoặc `_body` nếu Điều không có Khoản.
-- Child giữ `chunk_id`, `parent_id`, `doc_id`, `parent_text` cùng metadata
-  `law_name`, `chapter`, `section`, `article`, `clause`, `point`, `source`,
-  `expanded_terms`, số ký tự và token.
-- Chunk dài tách theo câu với overlap; nếu một câu duy nhất vượt giới hạn, chỉ
-  fallback theo ranh giới token trong chính câu đó, không cắt ký tự và không
-  vượt sang Khoản/Điểm khác.
-- Validation kiểm tra chunk rỗng/quá dài, metadata thiếu, Unicode, ID trùng,
-  child không có parent và khả năng ghi JSONL.
-- Khi corpus BTC được đưa vào, `context_id` được giữ nhất quán qua `doc_id`, `parent_id` và `chunk_id` để TV2/TV5 khớp scorer mà không cần sửa tay.
-- Với văn bản không có `Điều/Khoản` nhưng có nội dung pháp lý quan trọng như `Lời nói đầu`, `Phạm vi điều chỉnh` hoặc `Giải thích từ ngữ`, chunker dùng fallback chunking theo đoạn/câu và gắn nhãn `Phần mở đầu` hoặc heading tương ứng thay vì bỏ rơi toàn bộ tài liệu.
-
-### BTC manifest và orphan report — kiểm kê corpus chính thức
-
-Vị trí: `src/udsc2026/ingestion/btc.py`
-
-- TV4 quét đệ quy `LegalIR` và `LegalQA`, chỉ chunk các `context_*.json`.
-- Sinh `data/processed/metadata/manifest.json` chứa `schema_version`, `corpus_hash`, danh sách context đã nhận và tổng quan các fixture `train.json` / `public-official.json`.
-- Sinh `data/processed/metadata/orphan_contexts.json` để ghi nhận các `context_id` bị rớt, lỗi schema hoặc trùng ID trong lúc extract.
-- Sinh `data/processed/metadata/manual_review_breakdown.json` để phân nhóm manual review thành `cleaner_cleared_text`, `ocr_noise`, `regex_recoverable`, `fallback_chunkable_no_article` và `no_article_structure`.
-- Sinh thêm `data/processed/metadata/manual_review_regex_candidates.json` để TV4 tinh chỉnh regex cho nhóm còn cứu được, cùng `data/processed/metadata/manual_review_cleaner_cleared_text.json` và `data/processed/metadata/manual_review_ocr_noise.json` để đánh giá phần cần fallback hoặc cleanup tiếp.
-- TV4 chỉ kiểm tra schema và manifest của `train.json` / `public-official.json`; không sinh prediction cho LegalQA.
-
-### Synthetic benchmark generator — dữ liệu đánh giá
-
-Vị trí: `src/udsc2026/evaluation/synthetic_generator.py`
-
-- Đọc `LegalChunk` từ một file hoặc thư mục JSONL đã chunk.
-- Sinh chính xác 100–200 Q&A có `question_id`, `question`, `answer`,
-  `gold_chunk_ids`, `gold_citations`, `law_name`, `article`, `difficulty` và
-  `question_type`.
-- Nhóm câu hỏi: `definition`, `condition`, `rights_obligations`, `penalty`,
-  `procedure`, `comparison`, `multi_clause`.
-- Câu trả lời là trích xuất chuẩn hoá từ gold chunk; so sánh/nhiều khoản luôn
-  trỏ tới tối thiểu hai chunk/citation. Không dùng LLM hoặc tự thêm fact.
-- Đã tinh chỉnh `_format_answer()` trong `src/udsc2026/evaluation/synthetic_generator.py` để answer synthetic giữ văn phong văn xuôi ổn định cho benchmark và thi đấu, đồng thời đối chiếu theo `warmup Task 2.json` để khớp style câu trả lời tham chiếu, nhưng vẫn giữ nguyên schema `gold_chunk_ids` và `gold_citations`.
-- Benchmark chuẩn được ghi ra `data/processed/benchmarks/synthetic_qa.jsonl` để TV5 dùng trực tiếp.
-
-### Test tự động và mock corpus
-
-- Unit/integration test nằm ở `tests/`: readers, cleaners, parser, chunking,
-  ETL pipeline và synthetic generator.
-- Entry point mock corpus: `scripts/data_prep/generate_mock_btc_data.py`. Script này gọi
-  generator corpus giả lập hiện có, không dùng dữ liệu BTC thật.
-- Khi chạy, corpus mock được ghi vào `data/raw/btc/mock/`, gồm:
-  `mock_btc_law.txt`, `mock_btc_law.json`, `mock_btc_laws.jsonl` và
-  `mock_btc_law_docx.docx` nếu có `python-docx`.
-- Corpus mock có watermark `DỰ THẢO`, từ viết tắt BLLĐ, kiểu dấu cũ `hoà/uý`
-  và cấu trúc Chương → Mục → Điều → Khoản → Điểm để thử toàn bộ ETL.
-
-## 4. Output và đơn vị nhận bàn giao
-
-| Output | Nội dung | Bên sử dụng |
-| --- | --- | --- |
-| `data/processed/documents/<doc_id>.json` | CleanDocument để audit/trace nguồn | TV4, TV1 |
-| `data/processed/chunks/<doc_id>.jsonl` | LegalChunk nhỏ để embedding, BM25, dense/hybrid retrieval | TV2; TV5 benchmark/rerank |
-| `data/processed/parents/<doc_id>.jsonl` | Toàn bộ Điều theo `parent_id`, context rộng cho QA | TV3; TV5 |
-| `data/processed/metadata/extract_errors.json` | File lỗi hoặc `doc_id` trùng khi extract | TV4, TV1 |
-| `data/processed/metadata/clean_errors.json` | Tài liệu lỗi khi clean | TV4, TV1 |
-| `data/processed/metadata/validation_report.json` | Thống kê document/article/chunk và chỉ số lỗi | TV1, TV4, TV5 |
-| `data/processed/metadata/manual_review_documents.json` | Văn bản không có Điều, cần xử lý thủ công | TV4 |
-| `data/processed/metadata/manifest.json` | Corpus manifest có `schema_version`, `corpus_hash`, context/QA fixture manifest | TV4, TV1, TV5 |
-| `data/processed/metadata/orphan_contexts.json` | Báo cáo `context_id` bị rớt/mồ côi trong BTC extract | TV4 |
-| `data/processed/benchmarks/synthetic_qa.jsonl` | 100–200 Q&A có gold chunk/citation | TV5; TV1/TV2/TV3 để smoke test |
-
-TV2 index child chunks vào Qdrant/FAISS/BM25 và phải bảo toàn citation metadata.
-TV3 dùng `parent_id` hoặc `parent_text` khi cần context Điều đầy đủ để trả lời.
-TV5 dùng benchmark của TV4 để đo Recall@K, MRR, chất lượng rerank và latency.
-TV1 gọi pipeline hoặc đọc các output chuẩn để tích hợp backend end-to-end.
-
-## 5. Chạy thử ETL và benchmark
-
-### Bước 1 - Chuẩn bị dữ liệu BTC thật
-
-*Lưu ý quan trọng: Không chạy script sinh dữ liệu giả lập (`generate_mock_btc_data.py`) nữa. Hãy giải nén `selected-contexts.zip` cùng các file BTC vào đúng cấu trúc `data/raw/btc/LegalIR` và `data/raw/btc/LegalQA`. Nếu trước đó đã chạy mock data thì dọn sạch `data/raw/btc/mock/` và các thư mục trong `data/processed/`.*
-
-### Bước 2 - Chạy ETL
-
-Pipeline hiện tại đã được tích hợp BTC Adapter mới. Hệ thống sẽ tự động quét đệ quy cả 2 thư mục `LegalIR` và `LegalQA` để trực tiếp đọc các file `context_<id>.json` mà không cần cấu hình thêm.
+Khuyến nghị Python 3.11 (hỗ trợ 3.10–3.12):
 
 ```powershell
-$env:PYTHONPATH = "src"
-py -3.10 -c "from udsc2026.ingestion import run_ingestion_pipeline; print(run_ingestion_pipeline())"
+py -3.11 -m venv .venv
+Set-ExecutionPolicy -Scope Process Bypass
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements_dev.txt
+$env:PYTHONPATH = "$PWD\src"
 ```
 
-Sau bước này kiểm tra `chunks/`, `parents/`, `documents/`, `metadata/validation_report.json`, `metadata/manifest.json`, `metadata/orphan_contexts.json` và `metadata/manual_review_breakdown.json` trong `data/processed_v3/`.
+## Chạy ETL chính thức
 
-### Bước 3 - Sinh benchmark 100 Q&A
-
-Corpus chuẩn cần có căn cứ cho đủ bảy nhóm câu hỏi. Generator sẽ báo rõ nhóm thiếu thay vì tạo câu hỏi không có căn cứ.
+Từ repository root, bảo đảm `data/processed_candidate` chưa tồn tại hoặc đang
+rỗng rồi chạy entry point hiện hành:
 
 ```powershell
-$env:PYTHONPATH = "src"
-py -3.10 -m udsc2026.evaluation.synthetic_generator `
-  --chunks-dir data/processed/chunks `
-  --output data/processed/benchmarks/synthetic_qa.jsonl `
-  --count 100
+python scripts/data_prep/run_ingestion.py `
+  --raw-directory data/raw/btc `
+  --processed-root data/processed_candidate `
+  --chunk-size 192 `
+  --chunk-overlap 32 `
+  --benchmark-count 100 `
+  --benchmark-seed 2026 `
+  --progress-every 100
 ```
 
-Với corpus nhỏ chỉ để khám phá module, có thể dùng `--allow-missing-types`. Không dùng chế độ này làm benchmark nghiệm thu vì có thể thiếu một số nhóm câu hỏi pháp lý.
+CLI stream từng document, in tiến độ, chạy audit sau khi ghi đĩa và sinh
+benchmark khi integrity gate đạt. Exit code khác 0 nghĩa là chưa được promote.
+Không dùng `--allow-missing-benchmark-types` cho corpus nghiệm thu.
 
-### Bước 4 - Chạy test
+## Contract chunk và parent
+
+- Child chunk ưu tiên ranh giới Điều/Khoản/Điểm; đoạn dài mới chia theo câu/token
+  với `chunk_size=192`, `chunk_overlap=32`.
+- Child chứa `parent_id` nhưng `parent_text` luôn là `null`; nội dung parent chỉ
+  được lưu một lần trong `parents/<doc_id>.jsonl`.
+- Retrieval/index chỉ dùng child. Sau rerank, QA tra `parent_id` trong parent
+  store để mở rộng context có giới hạn.
+- Không nhúng nguyên `parent_text` vào từng child vì sẽ phình corpus và làm sai
+  contract lưu trữ V3.
+
+### Trường hợp cấu trúc không chắc chắn
+
+- `structured`: parser nhận diện cấu trúc pháp luật đủ tin cậy.
+- `partial`: vẫn giữ các chunk hợp lệ nhưng gắn cảnh báo và đưa document vào báo
+  cáo review.
+- `unstructured_fallback`: văn bản có nội dung nhưng không thể parse Điều ổn
+  định; pipeline chunk theo đoạn/câu, giữ toàn văn có thể tìm kiếm và gắn
+  `fallback_chunking=true`.
+- `empty_source`: passage chính thức rỗng từ nguồn; pipeline tạo một chunk có
+  `structure_type=empty_source_placeholder` và `synthetic_placeholder=true` để
+  không làm mất ID. Đây là cảnh báo semantic, không phải nội dung pháp luật được
+  suy diễn.
+
+Các trạng thái trên phải được giữ nguyên trong metadata. Document bị gắn cờ
+review không đồng nghĩa với bị loại khỏi corpus.
+
+## Output của một candidate hoàn chỉnh
+
+```text
+data/processed_candidate/
+├── documents/                       # CleanDocument để audit nguồn
+├── chunks/                          # Child LegalChunk cho retrieval/rerank
+├── parents/                         # LegalParent, lưu text riêng
+├── benchmarks/synthetic_qa.jsonl    # Benchmark synthetic có provenance
+└── metadata/
+    ├── manifest.json
+    ├── processing_manifest.json
+    ├── disk_audit_report.json
+    ├── validation_report.json
+    ├── orphan_contexts.json
+    └── manual_review_*.json
+```
+
+Các nguồn sự thật vận hành:
+
+- `manifest.json`: hash corpus nguồn và thống kê context/QA BTC.
+- `validation_report.json`: số document/chunk/parent, lỗi schema, fallback,
+  partial và placeholder.
+- `disk_audit_report.json`: đọc lại toàn bộ output; kiểm tra ID, parent mapping,
+  metadata, zero-loss token/bigram, task coverage và `corpus_tree_hash`.
+- `processing_manifest.json`: Git commit, cấu hình 192/32, counts, tree hash,
+  các gate và SHA-256/provenance của benchmark.
+
+Log tiến trình là artifact vận hành và nên đặt dưới `outputs/`; không ghi thêm
+vào V3 sau khi phát hành.
+
+## Gate và promote
+
+Chỉ promote khi đồng thời thỏa các điều kiện sau:
+
+1. CLI kết thúc thành công và `integrity_gate_passed=true` trong cả
+   `disk_audit_report.json` lẫn `processing_manifest.json`.
+2. `integrity_failures` rỗng; counts document/chunk/parent khớp file trên đĩa.
+3. Benchmark tồn tại, đủ loại câu hỏi yêu cầu, và hash/count trong
+   `processing_manifest.json` khớp artifact.
+4. Các `semantic_issues`, placeholder, partial và manual-review đã được đọc và
+   chấp nhận có căn cứ. Không sửa tay file trong candidate sau audit.
+
+Promotion là thao tác phát hành có chủ đích: đích V3 phải chưa tồn tại và phải
+di chuyển **nguyên cây** candidate, không copy lẻ `chunks` hoặc `metadata`:
 
 ```powershell
-$env:PYTHONPATH = "src"
-py -3.10 -m pytest -q -o addopts=''
+if (Test-Path -LiteralPath data/processed_v3) {
+  throw "data/processed_v3 đã tồn tại; không được ghi đè corpus bất biến"
+}
+Move-Item -LiteralPath data/processed_candidate -Destination data/processed_v3
 ```
 
-## 6. Ranh giới trách nhiệm TV4
+Sau promotion, tất cả TV1/TV2/TV3/TV5 chỉ đọc `data/processed_v3`. Nếu cần thay
+corpus, tạo candidate mới, audit lại từ đầu và thực hiện một đợt phát hành mới.
 
-TV4 cung cấp dữ liệu, schema và benchmark có thể tái lập. TV4 không phụ trách Web Frontend, FastAPI endpoint, embedding model, VectorDB indexing, retrieval, reranking hay sinh câu trả lời LLM. Các module đó thuộc lần lượt TV1, TV2, TV5 và TV3; TV4 chỉ bảo đảm input cho họ sạch, có cấu trúc và truy vết được.
+## Kiểm thử
+
+```powershell
+python -m pytest tests/integration/test_ingestion_pipeline.py `
+  tests/integration/test_ingestion_chunking.py `
+  tests/unit/test_gpu_preflight.py -q -o addopts=''
+```
+
+## Tài liệu liên quan
+
+- [Nhiệm vụ TV4](tv4.md)
+- [Thiết kế pipeline chi tiết](../../project/11_data_pipeline.md)
+- [Kiến trúc data pipeline](../../architecture/data_pipeline.md)
+- [TV2 setup](../tv2/tv2_setup.md)
+- [TV5 GPU runbook](../tv5/tv5_gpu_runbook.md)
+
+TV4 không phụ trách embedding, VectorDB, retrieval, reranking hay LLM inference;
+TV4 bàn giao corpus V3 sạch, truy vết được và có benchmark/hash tái lập.

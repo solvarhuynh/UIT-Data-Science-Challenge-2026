@@ -9,7 +9,7 @@ vào ba trải nghiệm chính:
 
 ## Chạy dự án
 
-Yêu cầu Node.js 20 trở lên.
+Yêu cầu Node.js `^20.19.0` hoặc `>=22.12.0`.
 
 ```powershell
 npm install

@@ -5,7 +5,7 @@ trong thư mục `giao dien`.
 
 ## Chạy local
 
-Yêu cầu Node.js 20 trở lên.
+Yêu cầu Node.js `^20.19.0` hoặc `>=22.12.0`.
 
 ```powershell
 cd "frontend/giao dien"

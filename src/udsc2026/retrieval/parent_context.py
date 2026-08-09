@@ -48,6 +48,8 @@ class JsonlParentStore:
     def __init__(
         self, parents_dir: str | Path, *, max_cached_documents: int = 128
     ) -> None:
+        """Initialize a validated parent root and bounded document cache."""
+
         if max_cached_documents < 1:
             raise ValueError("max_cached_documents must be positive")
         self._root = Path(parents_dir).resolve()
@@ -135,6 +137,8 @@ class ParentContextExpander:
         max_parent_tokens: int = 2048,
         max_total_tokens: int = 7000,
     ) -> None:
+        """Initialize expansion with per-parent and total token limits."""
+
         if max_parent_tokens < 1 or max_total_tokens < 1:
             raise ValueError("parent context token limits must be positive")
         if max_parent_tokens > max_total_tokens:

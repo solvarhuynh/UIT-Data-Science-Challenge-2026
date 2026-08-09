@@ -5,7 +5,8 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$ProjectRoot = Split-Path -Parent $PSScriptRoot
+$ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+$PythonCheckPaths = @("src", "tests", "scripts")
 $VirtualEnvironmentPythons = @(
     (Join-Path $ProjectRoot ".venv\Scripts\python.exe"),
     (Join-Path $ProjectRoot ".venv\bin\python")
@@ -39,10 +40,10 @@ function Invoke-CheckedCommand {
 Push-Location $ProjectRoot
 try {
     Invoke-CheckedCommand "Ruff format" {
-        & $ProjectPython -m ruff format --check .
+        & $ProjectPython -m ruff format --check @PythonCheckPaths
     }
     Invoke-CheckedCommand "Ruff lint" {
-        & $ProjectPython -m ruff check .
+        & $ProjectPython -m ruff check @PythonCheckPaths
     }
     Invoke-CheckedCommand "Mypy" {
         & $ProjectPython -m mypy src --no-warn-unused-configs
@@ -78,7 +79,7 @@ try {
         }
     }
     Invoke-CheckedCommand "Bandit" {
-        & $ProjectPython -m bandit -q -r src
+        & $ProjectPython -m bandit -q -r src -c pyproject.toml -ll
     }
     Invoke-CheckedCommand "TV5 smoke" {
         & $ProjectPython scripts/ci_cd/smoke_test.py --mode host

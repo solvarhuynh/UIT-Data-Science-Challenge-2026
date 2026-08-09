@@ -46,8 +46,9 @@ Chỉ cần fine-tune nếu benchmark cho thấy embedding pretrained chưa đ�
 - Đã kiểm tra 4 file JSONL và 20 record TV4 trước sample dev.
 - Không phát hiện field thiếu hoặc field thừa so với `LegalChunk`.
 - Validation report của TV4 không có missing metadata, duplicate chunk ID hay orphan chunk.
-- Các field mở rộng `parent_id`, `parent_text`, `section`, `effective_date` cũng đã được
-  giữ trong contract/payload mapping.
+- Các field `parent_id`, `section`, `effective_date` được giữ trong contract/payload
+  mapping. Child có `parent_text=null`; QA tra nội dung cha từ
+  `data/processed_v3/parents` qua `parent_id` sau reranking.
 
 Vì vậy hiện tại TV2 và TV4 đã khớp. Tuy nhiên, khi TV4 đổi schema JSONL, hai thành viên
 phải đối chiếu lại trước khi merge; không tự sửa một bên.
@@ -122,8 +123,8 @@ Script tạo:
 
 - `data/vector_store/faiss/legal_chunks/index.faiss`
 - `data/vector_store/faiss/legal_chunks/payloads.json`
-- `data/vector_store/bm25/legal_chunks.pkl`
-- manifest đi kèm dense index trong `data/vector_store/faiss/`
+- `data/vector_store/bm25/index.json` (khi không dùng `--skip-bm25`)
+- `data/vector_store/faiss/legal_chunks/manifest.json`
 
 Chạy test:
 
@@ -268,16 +269,20 @@ docker compose build --no-cache backend
    biết còn những file nào cần TV4 sửa trước khi index.
 
 ```powershell
+New-Item -ItemType Directory -Force artifacts/tv2/data_audit | Out-Null
 docker compose up -d qdrant qdrant-ready
-docker compose run --rm --volume "${PWD}/scripts:/app/scripts:ro" --volume "${PWD}/data/processed_v3:/app/data/processed_v3:ro" --volume "${PWD}/data/processed_v3/metadata:/app/tv2_metadata" --volume "${PWD}/data/raw/btc:/app/data/raw/btc:ro" backend python /app/scripts/validate_chunk_mapping.py --chunks-dir /app/data/processed_v3/chunks --ir-train-file /app/data/raw/btc/LegalIR/train.json --report /app/tv2_metadata/chunk_mapping_report.json --audit-report /app/tv2_metadata/chunk_file_audit.json
+docker compose run --rm --volume "${PWD}/scripts:/app/scripts:ro" --volume "${PWD}/data/processed_v3:/app/data/processed_v3:ro" --volume "${PWD}/artifacts:/app/artifacts" --volume "${PWD}/data/raw/btc:/app/data/raw/btc:ro" backend python /app/scripts/validate_chunk_mapping.py --chunks-dir /app/data/processed_v3/chunks --ir-train-file /app/data/raw/btc/LegalIR/train.json --report /app/artifacts/tv2/data_audit/chunk_mapping_report.json --audit-report /app/artifacts/tv2/data_audit/chunk_file_audit.json
 ```
 
 Lệnh này dùng để khởi động Qdrant và chạy validate trên corpus TV4. Nó sẽ kiểm tra mapping giữa chunk và ground-truth, đồng thời tạo report audit về các file JSONL rỗng, không có record hoặc sai schema. Ý nghĩa của lệnh này là xác nhận dữ liệu chunk đã sẵn sàng cho bước index hay chưa, nhưng không sửa dữ liệu và không ảnh hưởng tới các bước sau.
 
 Lệnh này sẽ sinh hai report:
-- `data/processed_v3/metadata/chunk_mapping_report.json`: kết quả mapping chunk ↔ ground-truth.
-- `data/processed_v3/metadata/chunk_file_audit.json`: danh sách file rỗng, không có record,
+- `artifacts/tv2/data_audit/chunk_mapping_report.json`: kết quả mapping chunk ↔ ground-truth.
+- `artifacts/tv2/data_audit/chunk_file_audit.json`: danh sách file rỗng, không có record,
   JSON lỗi hoặc record không đúng schema.
+
+Không ghi report vận hành vào `data/processed_v3/metadata`; corpus đã audit là
+immutable và mọi file thêm vào đó sẽ làm đổi tree hash.
 
 3. Chỉ khi exit code 0 mới chạy bước index để build vector index và BM25 index.
 
@@ -285,41 +290,28 @@ Lệnh này sẽ sinh hai report:
 docker compose run --rm `
   --volume "${PWD}/scripts:/app/scripts:ro" `
   --volume "${PWD}/data/processed_v3:/app/data/processed_v3:ro" `
-  --volume "${PWD}/data/processed_v3/metadata:/app/data/processed_v3/metadata" `
   --volume "${PWD}/data/vector_store:/app/data/vector_store" `
+  --volume "${PWD}/artifacts:/app/artifacts" `
   backend python /app/scripts/data_prep/index_chunks.py `
   --chunks-dir /app/data/processed_v3/chunks `
   --vector-db-type qdrant `
   --batch-size 128 `
+  --skip-bm25 `
+  --error-report /app/artifacts/tv2/index_errors.json `
   --force
 ```
 
-Lệnh này dùng để build index dense/sparse từ các chunk đã qua validate. Ý nghĩa của lệnh này là tạo vector index và BM25 index cho corpus, để các bước retrieval sau này có thể dùng được. Tác dụng chính là chuẩn bị dữ liệu truy vấn cho TV2.
+Lệnh này build dense index từ các chunk đã qua validate. Full BM25 bằng
+`rank_bm25` không chạy chung trên máy RAM 28 GB; pipeline GPU chính dùng dense
+top-50 rồi chuyển candidate cho reranker.
 
 `--batch-size 128` là mức khởi đầu an toàn cho CPU. Nếu container còn dư RAM và
 không có lỗi out-of-memory, tăng lần lượt lên `256` rồi `512`; không chạy nhiều
 process embedding song song vì mỗi process sẽ nạp một bản model vào RAM.
 
-4. Sau khi manifest xác nhận, chạy benchmark sparse:
-
-```powershell
-docker compose run --rm `
-  --volume "${PWD}/scripts:/app/scripts:ro" `
-  --volume "${PWD}/data/processed_v3:/app/data/processed_v3:ro" `
-  --volume "${PWD}/data/raw/btc:/app/data/raw/btc:ro" `
-  --volume "${PWD}/data/reports:/app/data/reports" `
-  backend python /app/scripts/benchmark_retrieval_internal.py `
-  --chunks-dir /app/data/processed_v3/chunks `
-  --ir-train-file /app/data/raw/btc/LegalIR/train.json `
-  --mode sparse `
-  --top-k 5
-
-```
-
-`benchmark_retrieval_internal.py` hiện chỉ triển khai `sparse`; không chạy
-`--mode dense` hoặc `--mode hybrid` vì script sẽ chủ động báo lỗi. Hai benchmark
-này chỉ được thêm vào hướng dẫn khi đã có implementation dùng configured vector
-index và hybrid retriever.
+4. Sau khi manifest xác nhận, dùng
+`scripts/evaluation/generate_dense_candidates.py` để sinh dense top-50. Quy trình
+full và tham số RTX nằm trong `docs/members/tv5/tv5_gpu_runbook.md`.
 
 Nếu thiếu model/backend, giữ nguyên lỗi môi trường và báo cụ thể; không nới lỏng validation.
 

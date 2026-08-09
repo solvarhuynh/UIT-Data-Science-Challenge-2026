@@ -18,7 +18,7 @@ READERS = {
     ".txt": read_txt,
 }
 
-DEFAULT_ERROR_PATH = Path("data/processed/metadata/extract_errors.json")
+DEFAULT_ERROR_PATH = Path("data/processed_candidate/metadata/extract_errors.json")
 
 
 def extract_raw_document(
@@ -55,8 +55,9 @@ def extract_raw_documents(
     """Extract all files in a BTC directory without stopping on individual errors.
 
     Unsupported/unparseable files and duplicate ``doc_id`` values are written to
-    ``data/processed/metadata/extract_errors.json`` by default. Documents whose
-    ids collide are omitted so every returned document has a unique identifier.
+    ``data/processed_candidate/metadata/extract_errors.json`` by default.
+    Documents whose ids collide are omitted so every returned document has a
+    unique identifier.
     """
     source_directory = Path(raw_directory)
     output_path = Path(errors_path) if errors_path else DEFAULT_ERROR_PATH

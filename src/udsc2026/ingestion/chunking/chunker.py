@@ -452,7 +452,7 @@ def _build_chunk(
         parent_id=parent.parent_id,
         doc_id=doc_id,
         text=text.strip(),
-        # Parent content is written once to data/processed/parents. Repeating it
+        # Parent content is written once to the configured parent store. Repeating it
         # in every child made the BTC processed corpus grow to tens of GB.
         parent_text=None,
         law_name=law_name,

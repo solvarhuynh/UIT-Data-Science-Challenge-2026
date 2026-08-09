@@ -2,8 +2,24 @@
 
 import json
 
+import pytest
+
 from udsc2026.evaluation.synthetic_generator import SyntheticBenchmarkArtifact
 from udsc2026.ingestion import run_ingestion_pipeline
+
+
+def test_pipeline_refuses_to_mix_with_a_nonempty_output_root(tmp_path):
+    raw_directory = tmp_path / "raw"
+    raw_directory.mkdir()
+    processed_root = tmp_path / "processed"
+    processed_root.mkdir()
+    sentinel = processed_root / "existing.json"
+    sentinel.write_text("keep", encoding="utf-8")
+
+    with pytest.raises(FileExistsError, match="output root is not empty"):
+        run_ingestion_pipeline(raw_directory, processed_root)
+
+    assert sentinel.read_text(encoding="utf-8") == "keep"
 
 
 def test_pipeline_chains_raw_clean_chunk_and_audit_outputs(tmp_path):

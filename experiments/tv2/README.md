@@ -1,38 +1,77 @@
-﻿# TV2 retrieval experiment
+# TV2 retrieval experiments
 
-Đây là smoke test thủ công cho pipeline retrieval của TV2; logic ổn định nằm trong `src/` và `scripts/`.
+Thư mục này dành cho smoke test và thử nghiệm retrieval của TV2. Mã production
+nằm trong `src/udsc2026/retrieval/`, `src/udsc2026/infrastructure/embedding/` và
+`scripts/data_prep/index_chunks.py`.
 
-## Đầu vào
+## Đầu vào chính thức
 
-- JSONL tại `data/processed/chunks/*.jsonl`.
-- Mỗi dòng phải là một `LegalChunk` theo schema TV4/TV2: `chunk_id`, `doc_id`, `text` và metadata citation.
-- Model HCMUTE Embedding v2 local tại `models/hcmute-embedding-v2/` nếu chạy dense/hybrid.
+- Chunks: `data/processed_v3/chunks/*.jsonl`.
+- Benchmark: `data/processed_v3/benchmarks/synthetic_qa.jsonl`.
+- Embedding model: `models/dek21-v2`.
+- Vector store local: `data/vector_store/`.
+- Artifact/log thử nghiệm: `artifacts/tv2/`.
 
-## Chạy
+Không dùng `data/processed` hoặc model path cũ
+`models/hcmute-embedding-v2`. Không ghi report vận hành vào
+`data/processed_v3/metadata`, vì thao tác đó sẽ làm thay đổi tree hash của corpus
+đã audit.
 
-Từ thư mục gốc repository:
+## Dense FAISS smoke
+
+Từ root repository:
 
 ```powershell
 $env:PYTHONPATH = "$PWD\src"
-python scripts/index_chunks.py --chunks-dir data/processed/chunks --vector-db-type faiss
+python scripts/data_prep/index_chunks.py `
+  --chunks-dir data/processed_v3/chunks `
+  --config-env development `
+  --vector-db-type faiss `
+  --max-chunks 10000 `
+  --batch-size 32 `
+  --skip-bm25 `
+  --error-report artifacts/tv2/smoke_index_errors.json `
+  --force
 ```
 
-Lệnh trên đọc JSONL, validate `LegalChunk`, tạo embedding theo batch, ghi FAISS vào
-`data/vector_store/faiss/` và BM25 vào `data/vector_store/bm25/`. Dòng JSONL lỗi được ghi
-ở `data/processed/metadata/index_errors.json` và không làm dừng toàn bộ indexing.
+Lệnh này giới hạn 10.000 chunks để kiểm schema, embedding, batch và FAISS trước
+khi chạy full corpus. Manifest nằm cùng collection trong
+`data/vector_store/faiss/`; lỗi record nằm ngoài corpus tại `artifacts/tv2/`.
 
-Sau khi index, có thể smoke-test BM25 bằng module Python:
+## Candidate benchmark
 
 ```powershell
-python -c "from udsc2026.retrieval.sparse.bm25_retriever import BM25Retriever; b=BM25Retriever('data/vector_store/bm25/legal_chunks.pkl'); b.load('data/vector_store/bm25/legal_chunks.pkl'); print(b.search('Điều 10 hợp đồng lao động', 3))"
+python scripts/evaluation/generate_dense_candidates.py `
+  --benchmark data/processed_v3/benchmarks/synthetic_qa.jsonl `
+  --config-env development `
+  --candidate-k 50 `
+  --limit 10 `
+  --benchmark-subset artifacts/tv2/smoke_benchmark.jsonl `
+  --output artifacts/tv2/smoke_dense_predictions.jsonl `
+  --manifest artifacts/tv2/smoke_dense_manifest.json
 ```
 
-## Đầu ra cần kiểm tra
+Kết quả phải giữ nguyên `chunk_id`, `parent_id`, `doc_id`, text và citation
+metadata. Cache/index chỉ được tái sử dụng khi corpus hash, model identity,
+collection và `max_chunks` đều khớp manifest.
 
-- `data/vector_store/faiss/`: index vector và side-store metadata.
-- `data/vector_store/bm25/legal_chunks.pkl`: sparse index và danh sách `LegalChunk`.
-- Kết quả truy vấn là `list[RetrievalHit]`, có score và citation metadata; `text` phải giữ nguyên dấu tiếng Việt.
+## BM25 nhỏ
 
-Đây là bước kiểm tra thủ công khi có dữ liệu mới, không phải unit test chính thức. Unit test
-chạy bằng một lệnh chung ở README gốc.
+Full BM25 bằng `rank_bm25` không phù hợp với RAM 28 GB. Chỉ chạy corpus giới hạn
+để kiểm thử:
+
+```powershell
+python scripts/data_prep/index_chunks.py `
+  --chunks-dir data/processed_v3/chunks `
+  --config-env development `
+  --vector-db-type faiss `
+  --max-chunks 5000 `
+  --bm25-index-path data/vector_store/bm25/tv2_smoke.json `
+  --error-report artifacts/tv2/bm25_smoke_index_errors.json `
+  --force
+```
+
+BM25 được lưu bằng JSON có version, không dùng pickle. Với full RTX pipeline,
+thực hiện theo [TV5 GPU Runbook](../../docs/members/tv5/tv5_gpu_runbook.md):
+dense FAISS top-50 rồi chuyển candidate cho TV5 rerank top-5.
 

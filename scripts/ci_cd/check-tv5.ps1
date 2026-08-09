@@ -5,7 +5,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$ProjectRoot = Split-Path -Parent $PSScriptRoot
+$ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
 $VirtualEnvironmentPythonCandidates = @(
     (Join-Path $ProjectRoot ".venv\Scripts\python.exe"),
     (Join-Path $ProjectRoot ".venv/bin/python")

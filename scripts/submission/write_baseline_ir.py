@@ -1,4 +1,4 @@
-﻿"""Write a TV2-only baseline submission for Task 1 (LegalIR).
+"""Write a TV2-only baseline submission for Task 1 (LegalIR).
 
 This script intentionally does not import or call any reranker. It searches with
 HybridRetriever when dense and sparse indexes are available, and falls back to
@@ -190,5 +190,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
-

@@ -8,8 +8,8 @@ from udsc2026.ingestion.cleaners.document_cleaner import clean_document
 from udsc2026.ingestion.cleaners.models import CleanDocument
 from udsc2026.ingestion.readers.models import RawDocument
 
-DEFAULT_DOCUMENTS_DIR = Path("data/processed/documents")
-DEFAULT_ERRORS_PATH = Path("data/processed/metadata/clean_errors.json")
+DEFAULT_DOCUMENTS_DIR = Path("data/processed_candidate/documents")
+DEFAULT_ERRORS_PATH = Path("data/processed_candidate/metadata/clean_errors.json")
 
 
 def _error_record(document: RawDocument, error: Exception) -> Dict[str, str]:
@@ -44,8 +44,8 @@ def clean_raw_documents(
     """Clean documents independently, writing audit JSON without failing a batch.
 
     One audit file is written per successful document to
-    ``data/processed/documents/``. Failures are collected in
-    ``data/processed/metadata/clean_errors.json`` by default.
+    ``data/processed_candidate/documents/``. Failures are collected in
+    ``data/processed_candidate/metadata/clean_errors.json`` by default.
     """
     target_dir = output_dir or DEFAULT_DOCUMENTS_DIR
     target_dir.mkdir(parents=True, exist_ok=True)

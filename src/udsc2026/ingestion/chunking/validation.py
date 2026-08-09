@@ -218,6 +218,8 @@ def build_quality_failures(
     missing_source_token_count: int,
     missing_source_bigram_count: int,
 ) -> List[str]:
+    """Return blocking corpus-quality failure labels for nonzero checks."""
+
     checks = (
         ("empty_chunks", empty_ids),
         ("oversized_chunks", oversized_ids),

@@ -134,10 +134,9 @@ Reranker:
 Nếu thiếu package, checkpoint hoặc device không hợp lệ, client báo lỗi phân
 biệt rõ dependency, load model và inference.
 
-Đây là wiring Python production trong core retrieval, chưa phải HTTP API. FastAPI
-hiện chỉ đăng ký `GET /health` và `GET /ready`; chưa có `/query` hoặc
-`/api/v1/query`. TV1 cần gọi `udsc2026.retrieval.hybrid.search` khi triển khai
-route query end-to-end.
+Reranker đã được nối vào core retrieval và endpoint FastAPI production. Route
+chính là `POST /api/v1/query`; `POST /query` được giữ làm alias tương thích.
+`GET /health` và `GET /ready` dùng để kiểm tra tiến trình và dependency.
 
 ## 3. Benchmark phát triển
 
@@ -234,10 +233,9 @@ ID phải khớp chính xác với benchmark. Lệnh chạy chính:
 
 ```powershell
 python scripts/evaluation/benchmark_reranker.py `
-  --benchmark data/processed/benchmarks/synthetic_qa.jsonl `
+  --benchmark data/processed_v3/benchmarks/synthetic_qa.jsonl `
   --candidates artifacts/tv2/hybrid_predictions.jsonl `
-  --model BAAI/bge-reranker-v2-m3 `
-  --allow-remote-model `
+  --model models/reranker `
   --device cuda:0 `
   --fp16 `
   --batch-size 8 `
@@ -269,13 +267,14 @@ artifacts/tv5/bge-reranker-v2-m3/
 reranker latency và delta metric. Vì vậy đây là artifact cần gửi nhóm trưởng sau mỗi
 run thật, cùng với `evaluation/comparison.md`.
 
-## 4. Tạo BM25 index từ output ingestion
+## 4. Tạo BM25 index từ corpus V3
 
-Sau khi TV4 tạo `data/processed/chunks/*.jsonl`, tạo artifact sparse retrieval:
+Chỉ đọc corpus đã audit tại `data/processed_v3/chunks/*.jsonl`; không index trực
+tiếp `processed_candidate` hoặc corpus cũ:
 
 ```powershell
-python scripts/build_bm25.py `
-  --chunks data/processed/chunks `
+python scripts/data_prep/build_bm25.py `
+  --chunks data/processed_v3/chunks `
   --output data/vector_store/bm25/index.json
 ```
 
@@ -287,6 +286,10 @@ Artifact BM25 là JSON có `schema_version` và các `LegalChunk`, không pickle
 Python hay object `rank_bm25`. Khi runtime load, schema và từng chunk được
 validate lại rồi BM25 được rebuild deterministically trong bộ nhớ. Module-level
 hybrid search luôn load artifact này trước khi phục vụ truy vấn.
+
+Lưu ý: full `rank_bm25` có thể vượt RAM 28 GB. Pipeline RTX chính thức trong
+`tv5_gpu_runbook.md` dùng dense FAISS top-50 → reranker top-5 và bỏ bước full
+BM25; chỉ build BM25 trên máy đủ RAM hoặc corpus smoke có giới hạn.
 
 ## 5. Evaluation và submission theo task
 
@@ -382,7 +385,7 @@ phải tuyên bố rằng Docker image hoặc full HTTP RAG đã được xác n
 
 ```powershell
 python -m pytest -q
-python scripts/smoke_test.py --mode host
+python scripts/ci_cd/smoke_test.py --mode host
 docker compose config --quiet
 ```
 
@@ -398,20 +401,20 @@ docker compose build backend
 docker compose run --rm --no-deps backend-smoke
 ```
 
-Sau khi khởi động stack, chỉ có thể probe hai endpoint hiện đã triển khai:
+Sau khi khởi động stack, probe health/readiness trước:
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8000/health
 Invoke-RestMethod http://127.0.0.1:8000/ready
 ```
 
-Không dùng `/query` làm tiêu chí pass ở thời điểm này vì route đó chưa tồn tại.
-Kết quả Docker build hoặc inference model thật phải được ghi nhận riêng sau khi
-đã chạy thành công trong môi trường có Docker/model/index, không suy ra từ host
-smoke test.
+`POST /api/v1/query` chỉ nên được dùng làm tiêu chí inference khi model và vector
+index thật đã sẵn sàng; health/readiness không thay thế phép thử end-to-end. Kết
+quả Docker build hoặc inference model thật phải được ghi nhận riêng sau khi chạy
+thành công trong môi trường có Docker/model/index.
 
 Xem hướng dẫn container, volume, healthcheck và troubleshooting tại
-[`docs/project/12_docker_deployment.md`](project/12_docker_deployment.md).
+[`docs/project/12_docker_deployment.md`](../../project/12_docker_deployment.md).
 
 ## 7. Quy trình khi nhận đủ corpus và phase data
 

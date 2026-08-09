@@ -41,10 +41,10 @@ vector_db:
   type: qdrant
   qdrant_url: http://localhost:6333
   collection_name: legal_chunks
-  faiss_index_path: data/vector_store/faiss/legal_chunks
+  faiss_index_path: data/vector_store/faiss
 
 sparse:
-  bm25_index_path: data/vector_store/bm25/legal_chunks.pkl
+  bm25_index_path: data/vector_store/bm25/index.json
 
 hybrid:
   dense_weight: 0.5
@@ -52,7 +52,7 @@ hybrid:
   candidate_k: 50
   min_score: 0.0
   top_k: 10
-  bm25_index_path: data/vector_store/bm25/legal_chunks.pkl
+  bm25_index_path: data/vector_store/bm25/index.json
 
 reranker:
   enabled: true

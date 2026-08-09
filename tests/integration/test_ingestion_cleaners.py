@@ -90,11 +90,7 @@ def test_cleaner_normalizes_eth_confusable_before_structure_line_merging():
 
 
 def test_cleaner_repairs_unambiguous_ocr_markers_but_preserves_s0_codes():
-    raw_text = (
-        "Mã kỹ thuật S0 và literal D1EU 1\n"
-        "d1eu 1. Phạm vi\n"
-        "kh0an 1. Nội dung"
-    )
+    raw_text = "Mã kỹ thuật S0 và literal D1EU 1\nd1eu 1. Phạm vi\nkh0an 1. Nội dung"
 
     cleaned_text, removed_lines = clean_text(raw_text)
 

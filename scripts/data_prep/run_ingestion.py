@@ -28,7 +28,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--raw-directory", type=Path, default=Path("data/raw/btc"))
     parser.add_argument(
-        "--processed-root", type=Path, default=Path("data/processed_v3")
+        "--processed-root", type=Path, default=Path("data/processed_candidate")
     )
     parser.add_argument("--chunk-size", type=_positive_int, default=192)
     parser.add_argument("--chunk-overlap", type=int, default=32)

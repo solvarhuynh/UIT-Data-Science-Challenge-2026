@@ -1,118 +1,99 @@
-# Data Pipeline cho LegalIR & LegalQA
+# Kiến trúc Data Pipeline
 
-## Mục tiêu
-
-Data Pipeline chuẩn hóa dữ liệu pháp luật thô thành chunk có metadata đầy đủ để phục vụ indexing, retrieval, QA và citation.
-
-## Luồng tổng thể
+Pipeline chuẩn hóa dữ liệu BTC cho LegalIR và LegalQA theo mô hình phát hành hai
+pha: tạo candidate có thể ghi, sau đó promote nguyên cây thành corpus V3 bất biến.
 
 ```mermaid
 flowchart LR
-    RAW[data/raw] --> READ[Readers]
-    READ --> CLEAN[Cleaning]
-    CLEAN --> PARSE[Legal Structure Parsing]
-    PARSE --> CHUNK[Chunking]
-    CHUNK --> JSONL[Processed JSONL]
-    JSONL --> INDEX[Vector/BM25 Index]
+    RAW[data/raw/btc] --> READ[Extract]
+    READ --> CLEAN[Clean + audit removals]
+    CLEAN --> PARSE[Legal parser]
+    PARSE --> PC[Parent–child chunking 192/32]
+    PC --> CAND[data/processed_candidate]
+    CAND --> AUDIT[Disk audit + hashes]
+    AUDIT --> BENCH[Synthetic benchmark]
+    BENCH --> RELEASE[Explicit whole-tree promotion]
+    RELEASE --> V3[data/processed_v3 — immutable]
+    V3 --> RET[Child indexing/retrieval/rerank]
+    V3 --> QA[Bounded parent expansion + QA]
 ```
 
-## Bước 1: Đọc dữ liệu thô
+## Ranh giới ghi/đọc
 
-Nguồn dữ liệu có thể là PDF, DOCX, TXT, JSON hoặc JSONL từ ban tổ chức. Reader cần trả về object thống nhất:
+- ETL chỉ ghi vào `data/processed_candidate` mới và rỗng. Library lẫn CLI đều
+  từ chối output đã có dữ liệu.
+- Audit và benchmark hoàn tất trong candidate trước khi release.
+- Promotion di chuyển đủ `documents`, `chunks`, `parents`, `benchmarks` và
+  `metadata` sang `data/processed_v3`; không copy từng phần.
+- V3 là read-only. TV1/TV2/TV3/TV5 và pipeline GPU chỉ tiêu thụ V3.
 
-```text
-doc_id, source_path, title, raw_text, metadata
+## Contract dữ liệu
+
+Child chunk dùng để embedding, retrieval và reranking:
+
+```json
+{
+  "chunk_id": "law_001_article_10_clause_1",
+  "doc_id": "law_001",
+  "parent_id": "law_001_article_10",
+  "text": "Nội dung khoản...",
+  "parent_text": null,
+  "metadata": {
+    "law_name": "Tên văn bản",
+    "article": "Điều 10",
+    "clause": "Khoản 1",
+    "structure_status": "structured",
+    "source": "data/raw/btc/..."
+  }
+}
 ```
 
-## Bước 2: Làm sạch
+Parent text được lưu một lần trong `parents/*.jsonl`. Luồng online luôn là
+**retrieve child → rerank child → tra `parent_id` → mở rộng parent có giới hạn →
+QA**, không đưa toàn bộ parent vào index child.
 
-Các thao tác bắt buộc:
-
-- Chuẩn hóa Unicode tiếng Việt.
-- Loại bỏ khoảng trắng thừa, tab, dòng trống liên tiếp.
-- Xử lý header/footer, số trang và ký tự nhiễu nếu có.
-- Giữ lại dấu câu và số điều khoản vì rất quan trọng cho pháp luật.
-
-Không được làm mất cấu trúc như `Điều`, `Khoản`, `Điểm`.
-
-## Bước 3: Bóc tách cấu trúc pháp luật
-
-Parser cần nhận diện:
-
-- Tên văn bản.
-- Chương, mục, tiểu mục.
-- Điều.
-- Khoản.
-- Điểm.
-
-Metadata tối thiểu:
-
-```text
-doc_id, law_name, chapter, section, article, clause, point, effective_date, source
-```
-
-## Bước 4: Chunking
-
-Nguyên tắc:
-
-- Ưu tiên chunk theo đơn vị pháp lý, không cắt ngang khoản nếu tránh được.
-- Chunk quá ngắn có thể gộp với context cha.
-- Chunk quá dài có thể chia theo câu nhưng vẫn giữ metadata điều/khoản.
-- Thêm overlap nhỏ khi chia đoạn dài để không mất ngữ cảnh.
-
-Baseline:
+Cấu hình chunking chuẩn là:
 
 ```yaml
 chunk_size: 192
 chunk_overlap: 32
 ```
 
-## Định dạng JSONL cho retrieval
+## Khả năng phục hồi và minh bạch
 
-```json
-{
-  "chunk_id": "law_001_article_10_clause_1",
-  "doc_id": "law_001",
-  "text": "Nội dung điều khoản...",
-  "metadata": {
-    "law_name": "Bộ luật Lao động 2019",
-    "article": "Điều 10",
-    "clause": "Khoản 1",
-    "source": "data/raw/btc/..."
-  }
-}
+- `partial`: giữ phần parse đáng tin cậy, kèm warning/manual review.
+- `unstructured_fallback`: giữ nội dung tìm kiếm được bằng chunk đoạn/câu và gắn
+  cờ fallback.
+- `empty_source`: giữ định danh của passage BTC rỗng bằng chunk có
+  `structure_type=empty_source_placeholder`; không tạo căn cứ pháp luật giả.
+
+Nhờ đó một lỗi regex không âm thầm làm rơi document, đồng thời consumer vẫn biết
+mức độ tin cậy của cấu trúc.
+
+## Integrity và versioning
+
+Candidate chỉ được promote khi disk audit/processing manifest xác nhận integrity,
+file/record counts và parent mapping; không có duplicate, orphan, invalid, empty,
+oversized, thiếu metadata hay child lặp `parent_text`. Audit còn kiểm tra độ phủ
+token/bigram nguồn và coverage của gold LegalIR/LegalQA.
+
+`processing_manifest.json` ghim Git commit, source hash, cấu hình 192/32, counts,
+processed tree hash và benchmark SHA-256/provenance. Bất kỳ thay đổi corpus hoặc
+model revision nào cũng làm mất hiệu lực index/candidate/evaluation cũ.
+
+## Entry point
+
+```powershell
+python scripts/data_prep/run_ingestion.py `
+  --raw-directory data/raw/btc `
+  --processed-root data/processed_candidate `
+  --chunk-size 192 `
+  --chunk-overlap 32 `
+  --benchmark-count 100 `
+  --benchmark-seed 2026
 ```
 
-## Định dạng QA/Instruction cho thí nghiệm LLM
-
-QA format:
-
-```json
-{"question": "Câu hỏi pháp luật", "answer": "Câu trả lời có căn cứ"}
-```
-
-Instruction format:
-
-```json
-{
-  "instruction": "Trả lời câu hỏi pháp luật sau dựa trên căn cứ được cung cấp.",
-  "input": "Câu hỏi của người dùng",
-  "output": "Câu trả lời mong muốn"
-}
-```
-
-## Validation
-
-Checklist:
-
-- Mỗi dòng JSONL parse được.
-- Không có `chunk_id` trùng.
-- Text không rỗng và không mất dấu tiếng Việt.
-- Metadata citation không rỗng với chunk pháp luật.
-- Số lượng records sau xử lý được ghi vào metadata.
-
-## Output bàn giao
-
-- `data/processed/documents/`: tài liệu đã chuẩn hóa.
-- `data/processed/chunks/`: chunk JSONL để index.
-- `data/processed/metadata/`: thống kê xử lý và validation report.
+Chi tiết vận hành, gate và promotion xem
+[TV4 setup](../members/tv4/tv4_setup.md); mô tả kỹ thuật đầy đủ xem
+[Data Pipeline chi tiết](../project/11_data_pipeline.md). Consumer GPU xem
+[TV5 GPU runbook](../members/tv5/tv5_gpu_runbook.md).

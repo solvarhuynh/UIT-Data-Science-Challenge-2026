@@ -15,11 +15,12 @@ from udsc2026.contracts import LegalChunk, RetrievalHit  # noqa: E402
 
 def main() -> None:
     p = argparse.ArgumentParser()
-    p.add_argument("--chunks-dir", default="data/processed/chunks")
+    p.add_argument("--chunks-dir", default="data/processed_v3/chunks")
     p.add_argument("--ir-train-file", required=True)
     p.add_argument("--mode", choices=["dense", "sparse", "hybrid"], required=True)
     p.add_argument("--top-k", type=int, default=5)
     p.add_argument("--candidate-k", type=int, default=20)
+    p.add_argument("--output", type=Path)
     a = p.parse_args()
     chunks: list[LegalChunk] = []
     for f in sorted(Path(a.chunks_dir).glob("*.jsonl")):
@@ -87,7 +88,7 @@ def main() -> None:
             rows, key=lambda x: (x["recall_at_k"], x["precision_at_k"])
         )[:10],
     }
-    out = Path(f"data/reports/tv2_retrieval_internal_{a.mode}.json")
+    out = a.output or Path(f"artifacts/tv2/retrieval_internal_{a.mode}.json")
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(
         json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

@@ -57,7 +57,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--error-report",
         type=Path,
-        default=Path("data/processed_v3/metadata/embedding_errors.json"),
+        default=Path("artifacts/tv2/embedding_errors.json"),
     )
     return parser.parse_args()
 

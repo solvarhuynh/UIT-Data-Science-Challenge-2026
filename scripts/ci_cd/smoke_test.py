@@ -62,6 +62,7 @@ REQUIRED_DOCKERIGNORE_PATTERNS = {
     ".cache/",
     ".git",
     "data/processed/",
+    "data/processed_v3/",
     "data/raw/",
     "data/task1/",
     "data/task2/",

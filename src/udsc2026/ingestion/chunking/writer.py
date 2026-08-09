@@ -15,10 +15,12 @@ from udsc2026.ingestion.chunking.validation import (
 )
 from udsc2026.ingestion.cleaners.models import CleanDocument
 
-DEFAULT_CHUNKS_DIR = Path("data/processed/chunks")
-DEFAULT_PARENTS_DIR = Path("data/processed/parents")
-DEFAULT_REPORT_PATH = Path("data/processed/metadata/validation_report.json")
-DEFAULT_REVIEW_PATH = Path("data/processed/metadata/manual_review_documents.json")
+DEFAULT_CHUNKS_DIR = Path("data/processed_candidate/chunks")
+DEFAULT_PARENTS_DIR = Path("data/processed_candidate/parents")
+DEFAULT_REPORT_PATH = Path("data/processed_candidate/metadata/validation_report.json")
+DEFAULT_REVIEW_PATH = Path(
+    "data/processed_candidate/metadata/manual_review_documents.json"
+)
 
 
 def write_chunking_outputs(

@@ -50,6 +50,15 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--vector-db-type", choices=("qdrant", "faiss"))
     parser.add_argument("--bm25-index-path")
     parser.add_argument(
+        "--error-report",
+        type=Path,
+        default=Path("artifacts/tv2/index_errors.json"),
+        help=(
+            "Operational indexing error report. It must stay outside the "
+            "immutable processed corpus."
+        ),
+    )
+    parser.add_argument(
         "--skip-bm25",
         action="store_true",
         help="Build dense only; useful when BM25 is built in a separate pass.",
@@ -385,8 +394,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         LOGGER.error("No valid chunks were indexed")
         return 1
 
-    chunks_path = Path(args.chunks_dir)
-    error_path = chunks_path.parent / "metadata" / "index_errors.json"
+    error_path = args.error_report
     error_path.parent.mkdir(parents=True, exist_ok=True)
     error_path.write_text(
         json.dumps(errors, ensure_ascii=False, indent=2) + "\n",

@@ -29,19 +29,13 @@ def _positive_int(value: str) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--documents-dir", type=Path, default=Path("data/processed/documents")
-    )
-    parser.add_argument(
-        "--chunks-dir", type=Path, default=Path("data/processed/chunks")
-    )
-    parser.add_argument(
-        "--parents-dir", type=Path, default=Path("data/processed/parents")
-    )
+    parser.add_argument("--documents-dir", type=Path, required=True)
+    parser.add_argument("--chunks-dir", type=Path, required=True)
+    parser.add_argument("--parents-dir", type=Path, required=True)
     parser.add_argument(
         "--report",
         type=Path,
-        default=Path("data/processed/metadata/empty_chunk_repair.json"),
+        default=Path("artifacts/tv4/empty_chunk_repair.json"),
     )
     parser.add_argument("--chunk-size", type=_positive_int, default=192)
     parser.add_argument("--chunk-overlap", type=int, default=32)

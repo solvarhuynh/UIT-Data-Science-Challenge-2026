@@ -57,7 +57,7 @@ class IngestionPipelineResult(BaseModel):
 
 def run_ingestion_pipeline(
     raw_directory: Union[str, Path] = "data/raw/btc",
-    processed_root: Union[str, Path] = "data/processed_v3",
+    processed_root: Union[str, Path] = "data/processed_candidate",
     chunk_size: int = 192,
     chunk_overlap: int = 32,
     progress_callback: Optional[Callable[[int, str], None]] = None,
@@ -73,6 +73,17 @@ def run_ingestion_pipeline(
     rather than aborting the remaining corpus.
     """
     root = Path(processed_root)
+    if root.exists():
+        if not root.is_dir():
+            raise NotADirectoryError(
+                "processed output root is not a directory: {0}".format(root)
+            )
+        if any(root.iterdir()):
+            raise FileExistsError(
+                "processed output root is not empty: {0}; choose a fresh path".format(
+                    root
+                )
+            )
     metadata_dir = root / "metadata"
     source_root = Path(raw_directory)
     manifest_path: Optional[Path] = metadata_dir / "manifest.json"

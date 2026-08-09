@@ -35,6 +35,7 @@ data/task1/
 data/task2/
 data/raw/
 data/processed/
+data/processed_v3/
 data/vector_store/
 artifacts/
 outputs/

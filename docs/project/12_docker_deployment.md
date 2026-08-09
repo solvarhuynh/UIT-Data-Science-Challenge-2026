@@ -73,7 +73,7 @@ Tạo trước các thư mục bind mount để Docker không tự tạo nhầm 
 
 ```powershell
 New-Item -ItemType Directory -Force .\models | Out-Null
-New-Item -ItemType Directory -Force .\data\processed | Out-Null
+New-Item -ItemType Directory -Force .\data\processed_v3 | Out-Null
 New-Item -ItemType Directory -Force .\data\vector_store | Out-Null
 ```
 
@@ -89,7 +89,7 @@ file.
 Chạy smoke test offline trên máy:
 
 ```powershell
-python .\scripts\smoke_test.py --mode host
+python .\scripts\ci_cd\smoke_test.py --mode host
 ```
 
 Smoke test kiểm tra:
@@ -255,8 +255,8 @@ Writer CSV `write_submission.py` chỉ là adapter `QAResponse` legacy, không p
 format nộp chính thức của Task 1 hay Task 2. METEOR/ROUGE-L local của Task 2 chỉ
 là diagnostic và report ghi `official_scorer_parity=false`; chưa có cơ sở tuyên
 bố parity với scorer ẩn. Xem runbook
-[`docs/members/tv5_legalir_warmup.md`](../members/tv5_legalir_warmup.md) và
-[`docs/members/tv5_legalqa_warmup.md`](../members/tv5_legalqa_warmup.md).
+[`docs/members/tv5/tv5_legalir_warmup.md`](../members/tv5/tv5_legalir_warmup.md) và
+[`docs/members/tv5/tv5_legalqa_warmup.md`](../members/tv5/tv5_legalqa_warmup.md).
 
 Image `codalab/codalab-legacy:py39` trên trang thi là runtime của scoring
 program; vòng file-submission không chạy source/model của đội trong image đó và
@@ -376,7 +376,7 @@ cache adapter thật, tránh cài dependency chưa được code sử dụng.
 Các bước tối thiểu:
 
 ```powershell
-python .\scripts\smoke_test.py --mode host
+python .\scripts\ci_cd\smoke_test.py --mode host
 docker compose config --quiet
 docker compose build backend
 docker compose run --rm --no-deps backend-smoke

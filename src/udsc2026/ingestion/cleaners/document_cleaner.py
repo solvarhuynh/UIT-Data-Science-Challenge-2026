@@ -99,8 +99,7 @@ def normalize_unicode_and_ocr(text: str) -> str:
                 rf"(?P<marker>{re.escape(source)})(?=[ \t]+\d)"
             ),
             lambda match: (
-                match.group("prefix")
-                + _match_case(match.group("marker"), replacement)
+                match.group("prefix") + _match_case(match.group("marker"), replacement)
             ),
             normalized,
             flags=re.IGNORECASE | re.MULTILINE,

@@ -15,13 +15,14 @@ from udsc2026.contracts import LegalChunk  # noqa: E402
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--chunks-dir", default="data/processed/chunks")
+    parser.add_argument("--chunks-dir", default="data/processed_v3/chunks")
     parser.add_argument("--ir-train-file")
     parser.add_argument(
-        "--report", default="data/processed/metadata/chunk_mapping_report.json"
+        "--report", default="artifacts/tv2/data_audit/chunk_mapping_report.json"
     )
     parser.add_argument(
-        "--audit-report", default="data/processed/metadata/chunk_file_audit.json"
+        "--audit-report",
+        default="artifacts/tv2/data_audit/chunk_file_audit.json",
     )
     return parser.parse_args()
 
