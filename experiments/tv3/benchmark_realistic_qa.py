@@ -77,6 +77,48 @@ def _resolve_local_model(requested: str, default_id: str, local_dir: Path) -> st
     return requested
 
 
+def _select_qids(
+    raw_data: dict[str, Any],
+    requested_qid: str,
+    limit: int,
+) -> list[str]:
+    """Select one exact question id before applying the general limit."""
+
+    question_ids = list(raw_data)
+    if requested_qid:
+        if requested_qid not in raw_data:
+            raise KeyError(requested_qid)
+        return [requested_qid]
+    if limit > 0:
+        return question_ids[:limit]
+    return question_ids
+
+
+def _log_verbose_hits(
+    qid: str,
+    stage: str,
+    contexts: list[RetrievalHit],
+) -> None:
+    logger.info(
+        "[verbose] QID=%s | stage=%s | candidates=%d",
+        qid,
+        stage,
+        len(contexts),
+    )
+    for rank, hit in enumerate(contexts[:5], start=1):
+        logger.info(
+            "[verbose] stage=%s rank=%d chunk_id=%s parent_id=%s "
+            "retrieval_score=%s rerank_score=%s text=%s",
+            stage,
+            rank,
+            hit.chunk_id,
+            hit.parent_id,
+            hit.score,
+            hit.rerank_score,
+            hit.text[:150].replace("\n", " "),
+        )
+
+
 def _truncate_contexts(
     contexts: list[RetrievalHit],
     max_context_len: int,
@@ -177,6 +219,11 @@ async def main() -> None:
     _configure_utf8_stdio()
     parser = argparse.ArgumentParser(description="Run TV3 Realistic Hybrid Benchmark")
     parser.add_argument("--limit", type=int, default=10, help="Số lượng câu hỏi cần test (0 = tất cả)")
+    parser.add_argument(
+        "--qid",
+        default="",
+        help="Chạy đúng một question ID; tùy chọn này ưu tiên hơn --limit.",
+    )
     parser.add_argument("--top_k", type=int, default=3, help="Số đoạn luật truyền cho LLM (default: 3)")
     parser.add_argument("--mode", type=str, default="hybrid", choices=["hybrid", "bm25", "dense"], help="Retrieval mode")
     parser.add_argument(
@@ -217,6 +264,11 @@ async def main() -> None:
     parser.add_argument("--decompose_queries", action="store_true", help="Bật thử nghiệm tách sub-query (mặc định tắt)")
     parser.add_argument("--allow_remote_reranker", action="store_true", help="Cho phép tải reranker từ Hugging Face nếu chưa có local")
     parser.add_argument("--allow_reranker_fallback", action="store_true", help="Cho phép fallback RRF khi reranker lỗi; mặc định fail-fast")
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="In top candidate ở các bước retrieval và rerank.",
+    )
     parser.add_argument(
         "--output-json",
         type=Path,
@@ -264,9 +316,16 @@ async def main() -> None:
     with open(train_path, "r", encoding="utf-8") as f:
         raw_data = json.load(f)
 
-    qids = list(raw_data.keys())
-    if args.limit > 0:
-        qids = qids[:args.limit]
+    try:
+        qids = _select_qids(
+            raw_data,
+            args.qid,
+            args.limit,
+        )
+    except KeyError as exc:
+        raise KeyError(
+            f"Không tìm thấy QID={args.qid!r} trong file dataset {train_path}"
+        ) from exc
     logger.info("📝 Số câu hỏi cần test: %d", len(qids))
 
     # 2. Khởi tạo MockHybridRetriever (BM25 + Dense Vector + RRF)
@@ -423,6 +482,9 @@ async def main() -> None:
                 for hit in contexts
             ]
         }
+        if args.verbose:
+            logger.info("[verbose] QID=%s | question=%s", qid, question)
+            _log_verbose_hits(qid, "retrieval", contexts)
 
         # 7. Rerank bằng CrossEncoderReranker chính thức của TV5 (nếu bật)
         try:
@@ -457,6 +519,9 @@ async def main() -> None:
             }
             for hit in contexts
         ]
+        if args.verbose:
+            stage = "rerank" if reranker_applied else "selected"
+            _log_verbose_hits(qid, stage, contexts)
 
         if not contexts:
             skipped[qid] = "no_retrieval_context"
@@ -536,6 +601,8 @@ async def main() -> None:
             "avg_seconds_per_sample": elapsed / max(1, success_count),
             "metrics": scores,
             "mode": args.mode,
+            "selected_qid": args.qid or None,
+            "verbose": args.verbose,
             "top_k": args.top_k,
             "candidate_k": args.candidate_k,
             "quantization": args.quantization,

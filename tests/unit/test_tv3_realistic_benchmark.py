@@ -6,8 +6,10 @@ from pathlib import Path
 
 import pytest
 from experiments.tv3.benchmark_realistic_qa import (
+    _log_verbose_hits,
     _rerank_candidates,
     _resolve_local_model,
+    _select_qids,
     _truncate_contexts,
 )
 
@@ -123,3 +125,31 @@ def test_local_model_only_overrides_the_default_identifier(tmp_path: Path) -> No
         _resolve_local_model("custom/model", "org/default", local_model)
         == "custom/model"
     )
+
+
+def test_exact_qid_selection_takes_priority_over_limit() -> None:
+    raw_data = {"q1": {}, "q2": {}, "q3": {}}
+
+    assert _select_qids(raw_data, "q3", 1) == ["q3"]
+    assert _select_qids(raw_data, "", 2) == ["q1", "q2"]
+    assert _select_qids(raw_data, "", 0) == ["q1", "q2", "q3"]
+
+
+def test_exact_qid_selection_rejects_unknown_id() -> None:
+    with pytest.raises(KeyError, match="missing"):
+        _select_qids({"known": {}}, "missing", 10)
+
+
+def test_verbose_hit_log_is_bounded(caplog: pytest.LogCaptureFixture) -> None:
+    caplog.set_level("INFO", logger="benchmark_realistic_qa")
+
+    _log_verbose_hits("q1", "retrieval", _hits(7))
+
+    messages = [
+        record.getMessage()
+        for record in caplog.records
+        if record.name == "benchmark_realistic_qa"
+    ]
+    assert len(messages) == 6
+    assert "candidates=7" in messages[0]
+    assert "rank=5" in messages[-1]
