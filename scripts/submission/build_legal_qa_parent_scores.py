@@ -17,6 +17,7 @@ import sys
 from pathlib import Path
 from typing import Any, NoReturn, Sequence
 
+
 _CONTROL_RE = re.compile(r"[\x00-\x1f\x7f-\x9f]")
 
 
@@ -105,7 +106,9 @@ def load_question_ids(path: Path, subset_path: Path | None = None) -> list[str]:
     raw_subset = _load_json(subset_path)
     if not isinstance(raw_subset, list) or not raw_subset:
         raise ValueError("question-ids must be a non-empty JSON string array")
-    subset = [_clean_id(value, label="question subset ID") for value in raw_subset]
+    subset = [
+        _clean_id(value, label="question subset ID") for value in raw_subset
+    ]
     if len(subset) != len(set(subset)):
         raise ValueError("question-ids contains duplicate IDs")
     unknown = [question_id for question_id in subset if question_id not in payload]
@@ -134,12 +137,15 @@ def _validated_parent(raw: object, *, question_id: str) -> dict[str, Any]:
         raise TypeError(f"parents for {question_id!r} must be objects")
     parent = dict(raw)
     parent["doc_id"] = _clean_id(parent.get("doc_id"), label="doc_id")
-    parent["parent_id"] = _clean_id(parent.get("parent_id"), label="parent_id")
+    parent["parent_id"] = _clean_id(
+        parent.get("parent_id"), label="parent_id"
+    )
     for name in ("parent_text", "anchor_text"):
         value = parent.get(name)
         if not isinstance(value, str) or not value.strip():
             raise ValueError(
-                f"parent {parent['parent_id']!r} for {question_id!r} has no {name}"
+                f"parent {parent['parent_id']!r} for {question_id!r} "
+                f"has no {name}"
             )
         parent[name] = value.strip()
     parent["rank"] = _positive_rank(parent.get("rank"), label="rank")
@@ -287,7 +293,10 @@ def fuse_parent_ranks(
             -(
                 ce_weight / (rrf_k + parent["rank"])
                 + retrieval_weight
-                / (rrf_k + retrieval_rank[(parent["doc_id"], parent["parent_id"])])
+                / (
+                    rrf_k
+                    + retrieval_rank[(parent["doc_id"], parent["parent_id"])]
+                )
             ),
             parent["rank"],
             parent["candidate_rank"],

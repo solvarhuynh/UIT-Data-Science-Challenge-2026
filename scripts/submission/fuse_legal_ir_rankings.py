@@ -114,7 +114,9 @@ def main() -> int:
                 document_id,
             ),
         )
-        output.append({"id": question_id, "documents": ranked_documents[: args.top_k]})
+        output.append(
+            {"id": question_id, "documents": ranked_documents[: args.top_k]}
+        )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(

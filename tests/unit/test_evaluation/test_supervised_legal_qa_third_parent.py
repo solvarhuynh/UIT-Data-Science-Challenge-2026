@@ -9,10 +9,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 from nltk.translate.meteor_score import meteor_score
+
 from scripts.submission.supervised_legal_qa_third_parent import (
-    FEATURE_NAMES,
     CandidateDataset,
     CandidateMeta,
+    FEATURE_NAMES,
     FeatureContext,
     Hit,
     ParentTextStore,

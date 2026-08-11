@@ -11,7 +11,10 @@ import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT_PATH = (
-    PROJECT_ROOT / "scripts" / "training" / "train_legal_qa_parent_crossencoder.py"
+    PROJECT_ROOT
+    / "scripts"
+    / "training"
+    / "train_legal_qa_parent_crossencoder.py"
 )
 
 

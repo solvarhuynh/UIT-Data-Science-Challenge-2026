@@ -351,7 +351,9 @@ def reference_overlap(reference: str, parent_text: str) -> float:
     parent_tokens = _tokens(parent_text)
     if not reference_tokens or not parent_tokens:
         return 0.0
-    matches = sum((Counter(reference_tokens) & Counter(parent_tokens)).values())
+    matches = sum(
+        (Counter(reference_tokens) & Counter(parent_tokens)).values()
+    )
     if not matches:
         return 0.0
     precision = matches / len(parent_tokens)
@@ -458,7 +460,9 @@ def _percentiles(values: Sequence[float]) -> dict[str, float | None]:
         upper = int(math.ceil(position))
         if lower == upper:
             return ordered[lower]
-        return ordered[lower] + (ordered[upper] - ordered[lower]) * (position - lower)
+        return ordered[lower] + (ordered[upper] - ordered[lower]) * (
+            position - lower
+        )
 
     return {
         "min": ordered[0],
@@ -541,7 +545,8 @@ def _derive_split_rows(
             parent
             for parent in parent_candidates
             if (parent["doc_id"], parent["parent_id"]) not in positive_keys
-            and float(parent["reference_overlap"]) <= weakest_positive - negative_gap
+            and float(parent["reference_overlap"])
+            <= weakest_positive - negative_gap
         ]
         negatives.sort(
             key=lambda parent: (
@@ -623,7 +628,9 @@ def run_split_ids(args: argparse.Namespace) -> list[Path]:
             "question_count": len(ordered_ids),
             "eval_count": len(eval_ids),
             "train_count": len(train_ids),
-            "train_normalized_exact_eval_duplicates": len(exact_duplicate_train_ids),
+            "train_normalized_exact_eval_duplicates": len(
+                exact_duplicate_train_ids
+            ),
             "duplicate_train_ids": exact_duplicate_train_ids,
             "note": (
                 "prepare removes these normalized-exact train duplicates before "
@@ -725,7 +732,8 @@ def run_prepare(args: argparse.Namespace) -> list[Path]:
                 "sha256": _sha256(args.questions),
             },
             "candidates": [
-                {"path": str(path), "sha256": _sha256(path)} for path in args.candidates
+                {"path": str(path), "sha256": _sha256(path)}
+                for path in args.candidates
             ],
             "train_ids": {
                 "path": str(args.train_ids),
@@ -824,10 +832,12 @@ def audit_training_rows(
                     f"{label} question {question_id!r} needs positive and negative rows"
                 )
         overlaps = [
-            float(group[0].get("best_parent_overlap", 0.0)) for group in groups.values()
+            float(group[0].get("best_parent_overlap", 0.0))
+            for group in groups.values()
         ]
         margins = [
-            float(group[0].get("overlap_margin", 0.0)) for group in groups.values()
+            float(group[0].get("overlap_margin", 0.0))
+            for group in groups.values()
         ]
         return {
             "rows": len(rows),
@@ -855,7 +865,8 @@ def audit_training_rows(
     normalized_overlap = train_keys & eval_keys
     if normalized_overlap:
         raise ValueError(
-            f"train/eval normalized questions overlap: {sorted(normalized_overlap)[:3]}"
+            "train/eval normalized questions overlap: "
+            f"{sorted(normalized_overlap)[:3]}"
         )
     train.pop("question_text")
     evaluation.pop("question_text")
@@ -887,11 +898,14 @@ def audit_fit_all_rows(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
             raise ValueError(f"fit-all changes question text for {question_id}")
         groups[question_id].add(row["label"])
     invalid = [
-        question_id for question_id, labels in groups.items() if labels != {0, 1}
+        question_id
+        for question_id, labels in groups.items()
+        if labels != {0, 1}
     ]
     if invalid:
         raise ValueError(
-            f"fit-all questions need positive and negative rows: {sorted(invalid)[:5]}"
+            "fit-all questions need positive and negative rows: "
+            f"{sorted(invalid)[:5]}"
         )
     return {
         "fit_all": True,
@@ -1040,7 +1054,8 @@ def _move_batch(torch: Any, batch: dict[str, Any], device: Any) -> dict[str, Any
     return {
         key: value.to(device, non_blocking=True)
         for key, value in batch.items()
-        if key not in {"labels", "question_ids"} and isinstance(value, torch.Tensor)
+        if key not in {"labels", "question_ids"}
+        and isinstance(value, torch.Tensor)
     }
 
 
@@ -1196,7 +1211,9 @@ def run_train(args: argparse.Namespace) -> list[Path]:
         lr=args.learning_rate,
         weight_decay=args.weight_decay,
     )
-    updates_per_epoch = math.ceil(len(train_loader) / args.gradient_accumulation)
+    updates_per_epoch = math.ceil(
+        len(train_loader) / args.gradient_accumulation
+    )
     total_updates = updates_per_epoch * args.epochs
     warmup_steps = int(total_updates * args.warmup_ratio)
     from transformers import get_linear_schedule_with_warmup
@@ -1228,7 +1245,10 @@ def run_train(args: argparse.Namespace) -> list[Path]:
                 scaled_loss = loss / args.gradient_accumulation
             scaler.scale(scaled_loss).backward()
             losses.append(float(loss.detach().cpu()))
-            update = step % args.gradient_accumulation == 0 or step == len(train_loader)
+            update = (
+                step % args.gradient_accumulation == 0
+                or step == len(train_loader)
+            )
             if update:
                 scaler.unscale_(optimizer)
                 torch.nn.utils.clip_grad_norm_(parameters, args.max_grad_norm)
@@ -1289,17 +1309,21 @@ def run_train(args: argparse.Namespace) -> list[Path]:
         "organizer_exact_overlay_policy": "excluded; handled separately",
         "inputs": {
             "train": [
-                {"path": str(path), "sha256": _sha256(path)} for path in args.train_data
+                {"path": str(path), "sha256": _sha256(path)}
+                for path in args.train_data
             ],
             "eval": [
-                {"path": str(path), "sha256": _sha256(path)} for path in args.eval_data
+                {"path": str(path), "sha256": _sha256(path)}
+                for path in args.eval_data
             ],
         },
     }
     manifest_path = args.output_dir / "training_manifest.json"
     _write_json(manifest_path, manifest)
     checkpoint = (
-        best_path if eval_loader is not None else args.output_dir / "checkpoint-final"
+        best_path
+        if eval_loader is not None
+        else args.output_dir / "checkpoint-final"
     )
     return [checkpoint, manifest_path]
 

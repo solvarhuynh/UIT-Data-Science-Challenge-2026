@@ -19,19 +19,7 @@ from pathlib import Path
 from typing import Any, NoReturn, Sequence
 
 import numpy as np
-from sklearn.feature_extraction.text import CountVectorizer
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-SOURCE_ROOT = PROJECT_ROOT / "src"
-if str(SOURCE_ROOT) not in sys.path:
-    sys.path.insert(0, str(SOURCE_ROOT))
-
-from udsc2026.evaluation.legal_ir import normalize_legal_ir_matching_question  # noqa: E402, I001
-from udsc2026.evaluation.legal_ir_lexical import (  # noqa: E402, I001
-    LegalContext,
-    build_bm25f_rankings,
-    build_knn_rankings,
-)
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 
 
 OUTPUT_DOCUMENTS = 5
@@ -40,6 +28,7 @@ BM25_TOP_K = 100
 BM25_K1 = 0.7
 BM25_B = 0.3
 _CONTROL_RE = re.compile(r"[\x00-\x1f\x7f-\x9f]")
+_NON_WORD_RE = re.compile(r"[^\w]+", flags=re.UNICODE)
 _WORD_RE = re.compile(r"(?u)\b\w+\b")
 
 
@@ -120,7 +109,9 @@ def _load_questions(path: Path) -> dict[str, str]:
     result: dict[str, str] = {}
     for raw_id, record in payload.items():
         question_id = _validate_opaque_id(raw_id, label="question ID")
-        result[question_id] = _question_text(record, label=f"question {question_id!r}")
+        result[question_id] = _question_text(
+            record, label=f"question {question_id!r}"
+        )
     return result
 
 
@@ -150,7 +141,9 @@ def _load_exclusions(paths: Sequence[Path]) -> tuple[set[str], set[str]]:
                         f"{path}[{index}] must be a string or question object"
                     )
         else:
-            raise TypeError(f"exclusion source {path} must be an object or an array")
+            raise TypeError(
+                f"exclusion source {path} must be an object or an array"
+            )
         for value, record in values:
             excluded.add(_validate_opaque_id(value, label="excluded question ID"))
             if isinstance(record, dict) and isinstance(record.get("question"), str):
@@ -177,7 +170,9 @@ def _load_labeled_questions(
             question_id = _validate_opaque_id(raw_id, label="labeled question ID")
             if question_id in excluded_ids:
                 continue
-            question = _question_text(record, label=f"labeled question {question_id!r}")
+            question = _question_text(
+                record, label=f"labeled question {question_id!r}"
+            )
             if normalize_question(question) in excluded_questions:
                 continue
             assert isinstance(record, dict)
@@ -219,22 +214,12 @@ def _load_labeled_questions(
 
 
 def _load_contexts(contexts_dir: Path) -> tuple[list[str], list[str]]:
-    """Backward-compatible passage-only context loader."""
-
-    contexts = _load_context_records(contexts_dir)
-    return [context.doc_id for context in contexts], [
-        context.passage for context in contexts
-    ]
-
-
-def _load_context_records(contexts_dir: Path) -> list[LegalContext]:
-    """Load IDs, optional name/title, and passages without altering raw data."""
     if not contexts_dir.is_dir():
         raise NotADirectoryError(f"contexts directory does not exist: {contexts_dir}")
     paths = sorted(contexts_dir.glob("*.json"), key=lambda path: path.name)
     if not paths:
         raise ValueError(f"contexts directory contains no JSON files: {contexts_dir}")
-    documents: dict[str, LegalContext] = {}
+    documents: dict[str, str] = {}
     for path in paths:
         payload = _load_json(path)
         if not isinstance(payload, dict):
@@ -243,16 +228,11 @@ def _load_context_records(contexts_dir: Path) -> list[LegalContext]:
         passage = payload.get("passage")
         if not isinstance(passage, str):
             raise TypeError(f"context {document_id!r} passage must be a string")
-        raw_title = payload.get("title", payload.get("name", ""))
-        if raw_title is None:
-            raw_title = ""
-        if not isinstance(raw_title, str):
-            raise TypeError(f"context {document_id!r} title/name must be a string")
         if document_id in documents:
             raise ValueError(f"duplicate context document ID {document_id!r}")
-        documents[document_id] = LegalContext(document_id, passage, raw_title)
+        documents[document_id] = passage
     ordered_ids = sorted(documents, key=lambda value: (len(value), value))
-    return [documents[document_id] for document_id in ordered_ids]
+    return ordered_ids, [documents[document_id] for document_id in ordered_ids]
 
 
 def _load_prediction_rankings(
@@ -338,35 +318,64 @@ def _load_prediction_rankings(
 
 
 def normalize_question(text: str) -> str:
-    """Normalize with the shared strict-CV and supervised matching contract."""
+    """Normalize a question conservatively for exact-label matching."""
 
-    return normalize_legal_ir_matching_question(text)
+    normalized = unicodedata.normalize("NFKC", text).casefold()
+    normalized = _NON_WORD_RE.sub(" ", normalized)
+    return " ".join(normalized.split())
 
 
 def _build_knn_rankings(
     questions: dict[str, str], labeled: Sequence[LabeledQuestion]
 ) -> dict[str, list[str]]:
-    return build_knn_rankings(
-        questions,
-        [(record.question_id, record.question, record.documents) for record in labeled],
+    vectorizer = TfidfVectorizer(
         analyzer="word",
         ngram_range=(1, 2),
-        neighbors=KNN_NEIGHBORS,
+        sublinear_tf=True,
+        norm="l2",
+        dtype=np.float32,
     )
+    try:
+        labeled_matrix = vectorizer.fit_transform(
+            [record.question for record in labeled]
+        )
+    except ValueError as exc:
+        raise ValueError(f"cannot build labeled-question TF-IDF: {exc}") from exc
+    query_ids = list(questions)
+    query_matrix = vectorizer.transform([questions[item] for item in query_ids])
+    similarities = (query_matrix @ labeled_matrix.T).tocsr()
 
-
-def _build_char_knn_rankings(
-    questions: dict[str, str], labeled: Sequence[LabeledQuestion]
-) -> dict[str, list[str]]:
-    """Legal spelling/format tolerant KNN, separate from word KNN."""
-
-    return build_knn_rankings(
-        questions,
-        [(record.question_id, record.question, record.documents) for record in labeled],
-        analyzer="char_wb",
-        ngram_range=(3, 5),
-        neighbors=KNN_NEIGHBORS,
-    )
+    rankings: dict[str, list[str]] = {}
+    for row_index, question_id in enumerate(query_ids):
+        row = similarities.getrow(row_index)
+        neighbors = [
+            (int(index), float(score))
+            for index, score in zip(row.indices, row.data)
+            if score > 0.0
+        ]
+        neighbors.sort(
+            key=lambda pair: (-pair[1], labeled[pair[0]].question_id)
+        )
+        neighbors = neighbors[:KNN_NEIGHBORS]
+        document_scores: dict[str, tuple[float, int]] = {}
+        for neighbor_rank, (label_index, score) in enumerate(neighbors, 1):
+            for document_id in labeled[label_index].documents:
+                old_score, old_rank = document_scores.get(
+                    document_id, (-math.inf, 10**9)
+                )
+                if score > old_score or (
+                    score == old_score and neighbor_rank < old_rank
+                ):
+                    document_scores[document_id] = (score, neighbor_rank)
+        rankings[question_id] = sorted(
+            document_scores,
+            key=lambda document_id: (
+                -document_scores[document_id][0],
+                document_scores[document_id][1],
+                document_id,
+            ),
+        )
+    return rankings
 
 
 def _build_bm25_rankings(
@@ -374,37 +383,16 @@ def _build_bm25_rankings(
     document_ids: Sequence[str],
     passages: Sequence[str],
 ) -> dict[str, list[str]]:
-    """Backward-compatible passage-only (title weight 0) BM25 ranking."""
-
-    return build_bm25f_rankings(
-        questions,
-        [
-            LegalContext(doc_id, passage)
-            for doc_id, passage in zip(document_ids, passages)
-        ],
-        title_weight=0.0,
-        top_k=BM25_TOP_K,
-    )
-
-
-def _build_bm25f_rankings(
-    questions: dict[str, str], contexts: Sequence[LegalContext], title_weight: float
-) -> dict[str, list[str]]:
-    return build_bm25f_rankings(
-        questions, contexts, title_weight=title_weight, top_k=BM25_TOP_K
-    )
-
-
-def _legacy_build_bm25_rankings(
-    questions: dict[str, str], document_ids: Sequence[str], passages: Sequence[str]
-) -> dict[str, list[str]]:
+    """Rank documents with BM25 over a vocabulary fixed by public queries."""
 
     query_ids = list(questions)
     query_texts = [questions[item] for item in query_ids]
     vocabulary_terms: dict[str, int] = {}
     term_lengths: dict[str, int] = {}
     for question in query_texts:
-        tokens = _WORD_RE.findall(unicodedata.normalize("NFKC", question).casefold())
+        tokens = _WORD_RE.findall(
+            unicodedata.normalize("NFKC", question).casefold()
+        )
         for ngram_length in (1, 2, 3):
             for start in range(len(tokens) - ngram_length + 1):
                 term = " ".join(tokens[start : start + ngram_length])
@@ -434,7 +422,8 @@ def _legacy_build_bm25_rankings(
         minlength=document_counts.shape[1],
     ).astype(np.float32)
     inverse_document_frequency = np.log1p(
-        (document_count - document_frequency + 0.5) / (document_frequency + 0.5)
+        (document_count - document_frequency + 0.5)
+        / (document_frequency + 0.5)
     ).astype(np.float32)
     phrase_weights = np.asarray(
         [term_lengths[term] for term in sorted(term_lengths)],
@@ -446,7 +435,9 @@ def _legacy_build_bm25_rankings(
         np.arange(document_count, dtype=np.int64),
         np.diff(weighted_documents.indptr),
     )
-    length_norm = BM25_K1 * (1.0 - BM25_B + BM25_B * document_lengths / average_length)
+    length_norm = BM25_K1 * (
+        1.0 - BM25_B + BM25_B * document_lengths / average_length
+    )
     term_frequency = weighted_documents.data
     term_indices = weighted_documents.indices
     weighted_documents.data = (
@@ -507,7 +498,9 @@ def _weighted_rrf(
         if weight == 0.0:
             continue
         for document_id, rank in rank_map.items():
-            scores[document_id] = scores.get(document_id, 0.0) + weight / (rrf_k + rank)
+            scores[document_id] = scores.get(document_id, 0.0) + weight / (
+                rrf_k + rank
+            )
     return sorted(
         scores,
         key=lambda document_id: (
@@ -643,7 +636,9 @@ def run(args: argparse.Namespace) -> tuple[list[dict[str, object]], BuildStats]:
                 raise ValueError(f"output must not overwrite input {source}")
 
     questions = _load_questions(args.questions)
-    excluded_ids, excluded_questions = _load_exclusions(args.exclude_question_sources)
+    excluded_ids, excluded_questions = _load_exclusions(
+        args.exclude_question_sources
+    )
     labeled = _load_labeled_questions(
         args.labeled,
         excluded_ids,

@@ -127,14 +127,18 @@ def _overlay_known_answers(
         try:
             question_record = questions[question_id]
         except KeyError as exc:
-            raise ValueError(f"question mapping is missing ID {question_id!r}") from exc
+            raise ValueError(
+                f"question mapping is missing ID {question_id!r}"
+            ) from exc
         question_key = _question_key(question_record.get("question"))
         rows = known_by_question.get(question_key, [])
         same_id_answers = {
             answer for known_id, answer in rows if known_id == question_id
         }
         if len(same_id_answers) > 1:
-            raise ValueError(f"conflicting same-ID known answers for {question_id!r}")
+            raise ValueError(
+                f"conflicting same-ID known answers for {question_id!r}"
+            )
         if same_id_answers:
             answer = next(iter(same_id_answers))
             counts["same_id"] += 1
@@ -204,7 +208,8 @@ def main() -> int:
             key=lambda chunk_id: (
                 -(
                     args.dense_weight / (args.rrf_k + dense_rank[chunk_id])
-                    + args.reranker_weight / (args.rrf_k + reranker_rank[chunk_id])
+                    + args.reranker_weight
+                    / (args.rrf_k + reranker_rank[chunk_id])
                 ),
                 dense_rank[chunk_id],
                 reranker_rank[chunk_id],

@@ -7,6 +7,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = PROJECT_ROOT / "scripts" / "submission" / "build_legal_ir_ensemble.py"
 
@@ -152,7 +153,8 @@ def test_builder_deduplicates_documents_caches_components_and_overlays_exact_lab
     assert [row["id"] for row in predictions] == ["q1", "q2"]
     assert predictions[0]["documents"][0] == "d6"
     assert all(
-        len(row["documents"]) == len(set(row["documents"])) == 5 for row in predictions
+        len(row["documents"]) == len(set(row["documents"])) == 5
+        for row in predictions
     )
 
     components = json.loads(paths["components"].read_text(encoding="utf-8"))
