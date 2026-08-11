@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import platform
 import sys
 from collections.abc import Callable, Sequence
@@ -17,10 +18,14 @@ if str(SOURCE_ROOT) not in sys.path:
     sys.path.insert(0, str(SOURCE_ROOT))
 
 from udsc2026.evaluation import (  # noqa: E402
+    LegalIRReference,
+    compare_legal_ir_document_diagnostics,
     compare_reports,
+    evaluate_legal_ir_document_diagnostics,
     evaluate_predictions,
     load_benchmark,
     load_predictions,
+    load_warmup,
     rerank_prediction_samples,
     validate_rerank_candidate_pools,
     write_predictions,
@@ -118,6 +123,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--before-name", default="before_rerank")
     parser.add_argument("--after-name", default="after_rerank")
+    parser.add_argument(
+        "--legal-ir-references",
+        type=Path,
+        help=(
+            "Optional organizer LegalIR mapping (for example train.json) used "
+            "only for document-level OOF diagnostics. It must have exactly the "
+            "same question IDs as --benchmark."
+        ),
+    )
+    parser.add_argument(
+        "--legal-ir-final-documents",
+        type=_positive_int,
+        default=5,
+        help="Unique documents retained for official LegalIR scoring (1..5).",
+    )
     return parser
 
 
@@ -145,7 +165,45 @@ def _output_paths(directory: Path) -> dict[str, Path]:
         "after_md": evaluation / "after.md",
         "comparison_json": evaluation / "comparison.json",
         "comparison_md": evaluation / "comparison.md",
+        "label_status_json": evaluation / "label_status.json",
+        "legal_ir_before_json": evaluation / "legal_ir_before.json",
+        "legal_ir_after_json": evaluation / "legal_ir_after.json",
+        "legal_ir_comparison_json": evaluation / "legal_ir_comparison.json",
     }
+
+
+def _benchmark_label_status(benchmark: Sequence[Any]) -> str:
+    """Classify whether a transport benchmark has real retrieval labels."""
+
+    unlabeled = [
+        bool(getattr(sample, "metadata", {}).get("unlabeled_public_question"))
+        for sample in benchmark
+    ]
+    if any(unlabeled) and not all(unlabeled):
+        raise ValueError(
+            "benchmark mixes unlabeled public transport rows with labeled rows"
+        )
+    return "unlabeled_transport" if unlabeled and all(unlabeled) else "labeled"
+
+
+def _load_legal_ir_references(path: Path) -> list[LegalIRReference]:
+    """Load organizer document labels without treating chunk labels as documents."""
+
+    return [
+        LegalIRReference(id=sample.id, gold_documents=list(sample.gold_documents))
+        for sample in load_warmup(path)
+    ]
+
+
+def _write_json(path: Path, payload: Any) -> None:
+    """Write one deterministic UTF-8 JSON diagnostic artifact."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, allow_nan=False, indent=2) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
 
 
 def _reject_input_output_collisions(
@@ -175,6 +233,8 @@ def run(
         raise ValueError("--k values must be unique")
     if args.top_n > args.candidate_k:
         raise ValueError("--top-n must not exceed --candidate-k")
+    if args.legal_ir_final_documents > 5:
+        raise ValueError("--legal-ir-final-documents must not exceed 5")
     if (
         args.fp16
         and args.device is not None
@@ -190,6 +250,7 @@ def run(
     benchmark_hash = _sha256(args.benchmark)
     candidates_hash = _sha256(args.candidates)
     benchmark = load_benchmark(args.benchmark)
+    label_status = _benchmark_label_status(benchmark)
     predictions = load_predictions(args.candidates)
 
     client = client_factory(
@@ -210,34 +271,100 @@ def run(
     )
     validate_rerank_candidate_pools(batch.before, batch.after)
 
-    before = evaluate_predictions(
-        benchmark,
-        batch.before,
-        args.k,
-        name=args.before_name,
-    )
-    after = evaluate_predictions(
-        benchmark,
-        batch.after,
-        args.k,
-        name=args.after_name,
-    )
-    comparison = compare_reports(before, after)
+    before = after = comparison = None
+    if label_status == "labeled":
+        before = evaluate_predictions(
+            benchmark,
+            batch.before,
+            args.k,
+            name=args.before_name,
+        )
+        after = evaluate_predictions(
+            benchmark,
+            batch.after,
+            args.k,
+            name=args.after_name,
+        )
+        comparison = compare_reports(before, after)
 
-    written = list(outputs.values())
+    legal_ir_before = legal_ir_after = legal_ir_comparison = None
+    if args.legal_ir_references is not None:
+        references = _load_legal_ir_references(args.legal_ir_references)
+        legal_ir_before = evaluate_legal_ir_document_diagnostics(
+            references,
+            batch.before,
+            candidate_predictions=batch.before,
+            final_document_limit=args.legal_ir_final_documents,
+        )
+        legal_ir_after = evaluate_legal_ir_document_diagnostics(
+            references,
+            batch.after,
+            candidate_predictions=batch.before,
+            final_document_limit=args.legal_ir_final_documents,
+        )
+        legal_ir_comparison = compare_legal_ir_document_diagnostics(
+            legal_ir_before,
+            legal_ir_after,
+        )
+
+    written = [outputs["predictions_before"], outputs["predictions_after"]]
     write_predictions(batch.before, outputs["predictions_before"])
     write_predictions(batch.after, outputs["predictions_after"])
-    write_report_bundle(
-        [
-            (before, outputs["before_json"], outputs["before_md"]),
-            (after, outputs["after_json"], outputs["after_md"]),
-            (
-                comparison,
+    label_status_payload = {
+        "schema_version": "reranker-label-status-v1",
+        "status": label_status,
+        "generic_chunk_metrics": "available" if before is not None else "skipped",
+        "reason": (
+            None
+            if before is not None
+            else (
+                "benchmark rows are an explicitly unlabeled public transport "
+                "artifact; placeholder chunk IDs are not evaluation labels"
+            )
+        ),
+        "legal_ir_document_metrics": (
+            "available" if legal_ir_before is not None else "not_requested"
+        ),
+    }
+    _write_json(outputs["label_status_json"], label_status_payload)
+    written.append(outputs["label_status_json"])
+    if before is not None and after is not None and comparison is not None:
+        write_report_bundle(
+            [
+                (before, outputs["before_json"], outputs["before_md"]),
+                (after, outputs["after_json"], outputs["after_md"]),
+                (
+                    comparison,
+                    outputs["comparison_json"],
+                    outputs["comparison_md"],
+                ),
+            ]
+        )
+        written.extend(
+            [
+                outputs["before_json"],
+                outputs["before_md"],
+                outputs["after_json"],
+                outputs["after_md"],
                 outputs["comparison_json"],
                 outputs["comparison_md"],
-            ),
-        ]
-    )
+            ]
+        )
+    if (
+        legal_ir_before is not None
+        and legal_ir_after is not None
+        and legal_ir_comparison is not None
+    ):
+        _write_json(outputs["legal_ir_before_json"], legal_ir_before)
+        _write_json(outputs["legal_ir_after_json"], legal_ir_after)
+        _write_json(outputs["legal_ir_comparison_json"], legal_ir_comparison)
+        written.extend(
+            [
+                outputs["legal_ir_before_json"],
+                outputs["legal_ir_after_json"],
+                outputs["legal_ir_comparison_json"],
+            ]
+        )
     manifest: dict[str, Any] = {
         "schema_version": 1,
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -246,7 +373,14 @@ def run(
             "benchmark_sha256": benchmark_hash,
             "candidates": str(args.candidates),
             "candidates_sha256": candidates_hash,
-            "dataset_fingerprint": before.dataset_fingerprint,
+            "dataset_fingerprint": (
+                before.dataset_fingerprint if before is not None else None
+            ),
+            "legal_ir_references": (
+                str(args.legal_ir_references)
+                if args.legal_ir_references is not None
+                else None
+            ),
         },
         "model": {
             "name_or_path": args.model,
@@ -264,7 +398,29 @@ def run(
             "k_values": sorted(args.k),
             "total_rerank_ms": batch.total_rerank_ms,
             "mean_rerank_ms": batch.total_rerank_ms / len(batch.after),
-            "delta": comparison.delta.model_dump(mode="json"),
+            "label_status": label_status,
+            "delta": (
+                comparison.delta.model_dump(mode="json")
+                if comparison is not None
+                else None
+            ),
+            "legal_ir": (
+                {
+                    "before": {
+                        "official_recall": legal_ir_before["official_recall"],
+                        "official_precision": legal_ir_before["official_precision"],
+                    },
+                    "after": {
+                        "official_recall": legal_ir_after["official_recall"],
+                        "official_precision": legal_ir_after["official_precision"],
+                    },
+                    "delta": legal_ir_comparison["delta"],
+                }
+                if legal_ir_before is not None
+                and legal_ir_after is not None
+                and legal_ir_comparison is not None
+                else None
+            ),
         },
         "runtime": {
             "python": platform.python_version(),
@@ -273,6 +429,7 @@ def run(
         "outputs": {name: str(path) for name, path in outputs.items()},
     }
     write_run_manifest(manifest, outputs["manifest"])
+    written.append(outputs["manifest"])
     return written
 
 

@@ -82,13 +82,13 @@ def _rank_aggregate(
         if count >= cap:
             continue
         counts[document_id] = count + 1
-        scores[document_id] = scores.get(document_id, 0.0) + 1.0 / (
-            rank_k + rank
-        )
+        scores[document_id] = scores.get(document_id, 0.0) + 1.0 / (rank_k + rank)
     return sorted(
         scores,
         key=lambda document_id: (
-            -scores[document_id], first_rank[document_id], document_id
+            -scores[document_id],
+            first_rank[document_id],
+            document_id,
         ),
     )
 
@@ -111,7 +111,9 @@ def _score_aggregate(
     return sorted(
         scores,
         key=lambda document_id: (
-            -scores[document_id], first_rank[document_id], document_id
+            -scores[document_id],
+            first_rank[document_id],
+            document_id,
         ),
     )
 
@@ -172,9 +174,7 @@ def _build_sources(
         for cap in (2, 3, 5, 10):
             for rank_k in (0, 5, 10, 20, 40, 60):
                 key = f"rank_cap{cap}_k{rank_k}"
-                result[key][question_id] = _rank_aggregate(
-                    hits, cap=cap, rank_k=rank_k
-                )
+                result[key][question_id] = _rank_aggregate(hits, cap=cap, rank_k=rank_k)
             result[f"score_cap{cap}"][question_id] = _score_aggregate(
                 hits, source=source, cap=cap
             )
@@ -246,14 +246,10 @@ def main() -> int:
     source_scores.sort(key=lambda item: -item["pooled"]["recall"])
 
     dense_shortlist = [
-        item["config"]
-        for item in source_scores
-        if item["source"] == "dense"
+        item["config"] for item in source_scores if item["source"] == "dense"
     ][:8]
     bge_shortlist = [
-        item["config"]
-        for item in source_scores
-        if item["source"] == "bge"
+        item["config"] for item in source_scores if item["source"] == "bge"
     ][:8]
     fusion_scores: list[dict[str, Any]] = []
     for dense_name in dense_shortlist:
@@ -309,9 +305,22 @@ def main() -> int:
     best = fusion_scores[0]
     print(f"best_recall={best['pooled']['recall']:.9f}")
     print(f"best_precision={best['pooled']['precision']:.9f}")
-    print(json.dumps({key: best[key] for key in (
-        'dense', 'bge', 'dense_weight', 'bge_weight', 'rrf_k', 'splits'
-    )}, ensure_ascii=False))
+    print(
+        json.dumps(
+            {
+                key: best[key]
+                for key in (
+                    "dense",
+                    "bge",
+                    "dense_weight",
+                    "bge_weight",
+                    "rrf_k",
+                    "splits",
+                )
+            },
+            ensure_ascii=False,
+        )
+    )
     print(args.output)
     return 0
 

@@ -7,6 +7,7 @@ from udsc2026.evaluation.evaluator import (
     validate_rerank_candidate_pools,
 )
 from udsc2026.evaluation.legal_ir import (
+    OFFICIAL_MAX_DOCUMENTS,
     LegalIRAggregate,
     LegalIREvaluationReport,
     LegalIRPrediction,
@@ -26,9 +27,24 @@ from udsc2026.evaluation.legal_ir import (
     legal_ir_reciprocal_rank,
     load_legal_ir_question_ids,
     load_warmup,
+    normalize_legal_ir_matching_question,
     normalize_legal_ir_query,
     warmup_any_gold_recall_at_3,
     warmup_any_gold_reciprocal_rank,
+)
+from udsc2026.evaluation.legal_ir_candidates import (
+    AGGREGATION_METHODS,
+    DEFAULT_RRF_K,
+    AggregatedDocument,
+    aggregate_document_candidates,
+    aggregate_to_legal_ir_prediction,
+)
+from udsc2026.evaluation.legal_ir_diagnostics import (
+    DEFAULT_CANDIDATE_CHUNK_DEPTHS,
+    OPTIONAL_CANDIDATE_CHUNK_DEPTH,
+    compare_legal_ir_document_diagnostics,
+    document_ids_from_hits,
+    evaluate_legal_ir_document_diagnostics,
 )
 from udsc2026.evaluation.legal_ir_submission import (
     DEFAULT_MAX_JSON_BYTES,
@@ -139,11 +155,15 @@ from udsc2026.evaluation.synthetic_generator import (
 )
 
 __all__ = [
+    "AGGREGATION_METHODS",
+    "AggregatedDocument",
     "BenchmarkSample",
     "BatchRerankResult",
     "EvaluationComparison",
     "EvaluationReport",
     "EmptyAnswerPolicy",
+    "DEFAULT_CANDIDATE_CHUNK_DEPTHS",
+    "DEFAULT_RRF_K",
     "LEGAL_QA_DEFAULT_MAX_COMPRESSION_RATIO",
     "LEGAL_QA_DEFAULT_MAX_JSON_BYTES",
     "LEGAL_QA_DEFAULT_MAX_ZIP_BYTES",
@@ -157,6 +177,8 @@ __all__ = [
     "LegalIRReferenceSet",
     "LegalIRSubmissionError",
     "LegalIRSubmissionItem",
+    "OFFICIAL_MAX_DOCUMENTS",
+    "OPTIONAL_CANDIDATE_CHUNK_DEPTH",
     "LegalQAAggregate",
     "LegalQAEmptyAnswerWarning",
     "LegalQAEvaluationReport",
@@ -191,10 +213,14 @@ __all__ = [
     "DEFAULT_MAX_JSON_BYTES",
     "DEFAULT_MAX_ZIP_BYTES",
     "aggregate_latencies",
+    "aggregate_document_candidates",
+    "aggregate_to_legal_ir_prediction",
     "complete_legal_ir_rankings",
     "compare_reports",
+    "compare_legal_ir_document_diagnostics",
     "chunk_content_sha256",
     "evaluate_legal_ir",
+    "evaluate_legal_ir_document_diagnostics",
     "evaluate_legal_qa",
     "evaluate_predictions",
     "evaluate_retrieval",
@@ -207,6 +233,7 @@ __all__ = [
     "legal_ir_recall",
     "legal_ir_recall_at_3",
     "legal_ir_reciprocal_rank",
+    "document_ids_from_hits",
     "load_benchmark",
     "load_legal_chunks",
     "load_legal_ir_question_ids",
@@ -225,6 +252,7 @@ __all__ = [
     "meteor_diagnostic_score",
     "normalize_legal_qa_text",
     "normalize_legal_ir_query",
+    "normalize_legal_ir_matching_question",
     "package_legal_ir_submission",
     "package_legal_qa_submission",
     "recall_at_k",

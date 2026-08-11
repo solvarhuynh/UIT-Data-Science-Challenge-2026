@@ -121,12 +121,8 @@ def _score_predictions(
         meteor.append(_official_meteor(reference, answer))
         rouge_l.append(_official_rouge_l(reference, answer))
     return {
-        "split_a": _metric_block(
-            meteor[:split_a_count], rouge_l[:split_a_count]
-        ),
-        "split_b": _metric_block(
-            meteor[split_a_count:], rouge_l[split_a_count:]
-        ),
+        "split_a": _metric_block(meteor[:split_a_count], rouge_l[:split_a_count]),
+        "split_b": _metric_block(meteor[split_a_count:], rouge_l[split_a_count:]),
         "pooled": _metric_block(meteor, rouge_l),
     }
 
@@ -158,9 +154,7 @@ def run(args: argparse.Namespace) -> list[dict[str, Any]]:
     for top_parents in top_values:
         for parent_tokens in token_values:
             total_tokens = top_parents * parent_tokens
-            cell_name = (
-                f"k{top_parents}_m{parent_tokens}_t{total_tokens}"
-            )
+            cell_name = f"k{top_parents}_m{parent_tokens}_t{total_tokens}"
             cell_dir = args.output_dir / cell_name
             prediction_path = cell_dir / "predictions.json"
             report_path = cell_dir / "metrics.json"

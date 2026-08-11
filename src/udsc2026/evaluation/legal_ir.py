@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
 import unicodedata
 from pathlib import Path
 from typing import Annotated, Any, List, Literal, NoReturn, Sequence
@@ -31,6 +32,9 @@ from pydantic import (
 )
 
 from udsc2026.contracts.retrieval import RetrievalHit
+
+OFFICIAL_MAX_DOCUMENTS = 5
+_MATCHING_NON_WORD_RE = re.compile(r"[^\w]+", flags=re.UNICODE)
 
 
 def _validate_identifier(value: str) -> str:
@@ -69,6 +73,25 @@ def normalize_legal_ir_query(value: str) -> str:
     except UnicodeEncodeError as exc:
         raise ValueError("query must contain valid Unicode scalar values") from exc
     return " ".join(unicodedata.normalize("NFC", value).split())
+
+
+def normalize_legal_ir_matching_question(value: str) -> str:
+    """Normalize questions for supervised matching and grouped CV.
+
+    This intentionally matches the LegalIR ensemble's exact-label/KNN
+    normalization: NFKC, case-folding, punctuation collapse, then whitespace
+    collapse.  It is separate from :func:`normalize_legal_ir_query`, whose
+    narrower NFC normalization preserves retrieval-facing text.
+    """
+
+    if not isinstance(value, str):
+        raise TypeError("question must be a string")
+    try:
+        value.encode("utf-8")
+    except UnicodeEncodeError as exc:
+        raise ValueError("question must contain valid Unicode scalar values") from exc
+    normalized = unicodedata.normalize("NFKC", value).casefold()
+    return " ".join(_MATCHING_NON_WORD_RE.sub(" ", normalized).split())
 
 
 def _validate_raw_question(value: str) -> str:
@@ -696,6 +719,20 @@ def _legal_ir_set_counts(
     return len(gold), len(prediction), len(set(gold).intersection(prediction))
 
 
+def _official_scored_documents(documents: Sequence[str]) -> List[str]:
+    """Return the ranking eligible for the BTC scorer's per-query metric.
+
+    The organizer scorer assigns zero Recall and Precision when an answer is
+    empty or contains more than five documents.  Internal retrieval rankings
+    remain unconstrained; this guard is applied only by official evaluation.
+    """
+
+    validated = _validated_ranked_documents(documents)
+    if 1 <= len(validated) <= OFFICIAL_MAX_DOCUMENTS:
+        return validated
+    return []
+
+
 def legal_ir_recall(
     documents: Sequence[str],
     gold_documents: Sequence[str],
@@ -703,7 +740,7 @@ def legal_ir_recall(
     """Compute official per-query set Recall."""
 
     relevant_count, _, relevant_retrieved_count = _legal_ir_set_counts(
-        documents,
+        _official_scored_documents(documents),
         gold_documents,
     )
     return relevant_retrieved_count / relevant_count
@@ -716,7 +753,7 @@ def legal_ir_precision(
     """Compute official per-query set Precision, returning zero for no predictions."""
 
     _, predicted_count, relevant_retrieved_count = _legal_ir_set_counts(
-        documents,
+        _official_scored_documents(documents),
         gold_documents,
     )
     return relevant_retrieved_count / predicted_count if predicted_count > 0 else 0.0
@@ -837,7 +874,10 @@ def _build_diagnostic(
     """Calculate one auditable set diagnostic from an aligned prediction."""
 
     validated_gold = _validated_gold_documents(gold_documents)
-    validated_prediction = _validated_ranked_documents(prediction.documents)
+    # Do not truncate an invalid official answer.  BTC scores all-zero for
+    # empty and >5-document answers; top-five truncation belongs solely to the
+    # final-submission builder, never to the scorer-parity evaluator.
+    validated_prediction = _official_scored_documents(prediction.documents)
     gold_set = set(validated_gold)
     matched = [document for document in validated_prediction if document in gold_set]
     predicted_set = set(validated_prediction)
@@ -986,6 +1026,7 @@ __all__ = [
     "evaluate_legal_ir",
     "evaluate_warmup",
     "evaluate_warmup_any_gold",
+    "OFFICIAL_MAX_DOCUMENTS",
     "legal_ir_precision",
     "legal_ir_prediction_from_hits",
     "legal_ir_recall",
@@ -994,6 +1035,7 @@ __all__ = [
     "load_legal_ir_question_ids",
     "load_warmup",
     "normalize_legal_ir_query",
+    "normalize_legal_ir_matching_question",
     "warmup_any_gold_recall_at_3",
     "warmup_any_gold_reciprocal_rank",
 ]

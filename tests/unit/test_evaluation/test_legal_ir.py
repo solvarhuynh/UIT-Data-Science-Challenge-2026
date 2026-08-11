@@ -1,5 +1,6 @@
 """Tests for official and warm-up-specific LegalIR evaluation."""
 
+import importlib.util
 import json
 import unicodedata
 from pathlib import Path
@@ -26,6 +27,7 @@ from udsc2026.evaluation.legal_ir import (
     legal_ir_recall,
     load_legal_ir_question_ids,
     load_warmup,
+    normalize_legal_ir_matching_question,
     normalize_legal_ir_query,
 )
 
@@ -195,6 +197,13 @@ def test_query_normalization_is_strict_nfc_and_whitespace_aware() -> None:
         normalize_legal_ir_query("question-\ud800")
 
 
+def test_matching_normalization_matches_ensemble_contract() -> None:
+    assert (
+        normalize_legal_ir_matching_question("  ĐIỀU  5 — Người lao động? ")
+        == "điều 5 người lao động"
+    )
+
+
 def test_prediction_and_reference_contracts_are_strict() -> None:
     with pytest.raises(ValidationError):
         LegalIRPrediction.model_validate({"id": 1, "documents": ["doc"]})
@@ -327,6 +336,68 @@ def test_official_metric_functions_use_sets_and_handle_empty_predictions() -> No
     assert legal_ir_precision(["gold-b", "x", "gold-a"], gold) == pytest.approx(2 / 3)
     assert legal_ir_recall([], gold) == 0.0
     assert legal_ir_precision([], gold) == 0.0
+
+
+def _official_scorer_reference(
+    predictions: dict[str, dict[str, list[str]]], references: dict[str, list[str]]
+) -> tuple[float, float]:
+    """Call the published BTC scorer directly without modifying its source."""
+
+    scorer_path = (
+        Path(__file__).resolve().parents[3]
+        / "docs/Scoring-Program-Task-LegalIR/scoring.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "official_legal_ir_scorer", scorer_path
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"could not load official scorer from {scorer_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    score = module.eval_retrieval(predictions, references)
+    return float(score["recall"]), float(score["precision"])
+
+
+def test_official_scorer_golden_parity_for_empty_overflow_and_multi_gold() -> None:
+    references = {
+        "q1": ["gold-1", "gold-1b"],
+        "q2": ["gold-2"],
+        "q3": ["gold-3"],
+        "q4": ["gold-4", "gold-4b"],
+    }
+    predictions = {
+        "q1": {"answer": ["gold-1"]},
+        "q2": {"answer": []},
+        # The gold document is present, but the official scorer gives zero.
+        "q3": {"answer": ["a", "b", "c", "d", "e", "gold-3"]},
+        "q4": {"answer": ["gold-4", "x", "gold-4b", "y", "z"]},
+    }
+    expected_recall, expected_precision = _official_scorer_reference(
+        predictions, references
+    )
+
+    report = evaluate_legal_ir(
+        [
+            LegalIRReference(id=question_id, gold_documents=gold)
+            for question_id, gold in references.items()
+        ],
+        [
+            LegalIRPrediction(id=question_id, documents=record["answer"])
+            for question_id, record in predictions.items()
+        ],
+    )
+
+    assert report.aggregate.recall == pytest.approx(expected_recall)
+    assert report.aggregate.precision == pytest.approx(expected_precision)
+    assert report.per_query[1].recall == report.per_query[1].precision == 0.0
+    assert report.per_query[2].recall == report.per_query[2].precision == 0.0
+    assert report.per_query[2].predicted_documents == []
+
+
+def test_six_predicted_documents_receive_zero_official_metrics() -> None:
+    documents = ["a", "b", "c", "d", "e", "gold"]
+    assert legal_ir_recall(documents, ["gold"]) == 0.0
+    assert legal_ir_precision(documents, ["gold"]) == 0.0
 
 
 @pytest.mark.parametrize(

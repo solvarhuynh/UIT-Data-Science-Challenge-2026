@@ -5,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from experiments.tv3 import build_vector_cache
 
 
@@ -25,10 +24,13 @@ def test_cache_builder_only_resolves_the_default_model(tmp_path: Path) -> None:
         build_vector_cache.DEFAULT_EMBEDDING_MODEL,
         local_dir=local_model,
     ) == str(local_model)
-    assert build_vector_cache._resolve_local_model(
-        "custom/model",
-        local_dir=local_model,
-    ) == "custom/model"
+    assert (
+        build_vector_cache._resolve_local_model(
+            "custom/model",
+            local_dir=local_model,
+        )
+        == "custom/model"
+    )
 
 
 def test_cache_builder_falls_back_to_cpu_and_closes(
