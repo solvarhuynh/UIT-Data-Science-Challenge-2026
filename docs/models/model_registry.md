@@ -20,7 +20,7 @@ Quản lý tập trung mọi phiên bản mô hình (Retriever, Generator, Reran
 
 | Checkpoint | Version | Params | Local path | Input format | Output format | Trạng thái |
 |---|---|---|---|---|---|---|
-| `huyydangg/DEk21_hcmute_embedding_v2` | HuggingFace (resolved SHA được ghi khi tải) | ~135M | `./models/dek21-v2/` | Văn bản tiếng Việt đã word-segment bằng PyVi | Vector 768 chiều đã normalize, cosine similarity | Đang dùng (dense v2) |
+| `huyydangg/DEk21_hcmute_embedding_v2` | HuggingFace (resolved SHA được ghi khi tải) | ~135M | `./models/dek21-v2/` | Văn bản tiếng Việt đã word-segment bằng PyVi | Vector 768 chiều đã normalize, cosine similarity | **PROMOTED** — Task1 embedding bắt buộc |
 
 Ghi chú:
 - Encode query và encode chunk dùng chung 1 model (symmetric bi-encoder).
@@ -31,7 +31,7 @@ Ghi chú:
 
 | Checkpoint | Version | Params | Local path | Input format | Output format | Trạng thái |
 |---|---|---|---|---|---|---|
-| [`BAAI/bge-reranker-v2-m3`](https://huggingface.co/BAAI/bge-reranker-v2-m3) | HuggingFace (resolved SHA được ghi khi tải) | ~0.6B | `./models/reranker/` | `list[tuple[str, str]]` — cặp (query, chunk_text) | `list[float]` — relevance logit | Đang dùng (reranker baseline) |
+| [`BAAI/bge-reranker-v2-m3`](https://huggingface.co/BAAI/bge-reranker-v2-m3) | HuggingFace (resolved SHA được ghi khi tải) | ~0.6B | `./models/reranker/` | `list[tuple[str, str]]` — cặp (query, chunk_text) | `list[float]` — relevance logit | **PROMOTED** — Task1 reranker bắt buộc |
 
 ## Generator
 
@@ -51,9 +51,24 @@ Ghi chú:
 
 ## Model đã loại bỏ / không đạt điều kiện
 
-| Checkpoint | Lý do loại bỏ | Ngày | Người phát hiện |
-|---|---|---|---|
-| *(để trống, điền khi phát sinh)* | | | |
+Các checkpoint dưới đây được giữ lại như lịch sử P8/P9, nhưng không required,
+không nằm trong Task1 production và không được tải bởi profile mặc định.
+
+| Checkpoint | Status | Task | Role | Required |
+|---|---|---|---|---|
+| `Qwen/Qwen3-Embedding-0.6B` | `REJECTED_EXPERIMENT` | Task1 | secondary embedding | `false` |
+| `Qwen/Qwen3-Reranker-0.6B` | `REJECTED_EXPERIMENT` | Task1 | experimental reranker | `false` |
+
+| Checkpoint | Status | Lý do loại bỏ | Ngày | Người phát hiện |
+|---|---|---|---|---|
+| `Qwen/Qwen3-Embedding-0.6B` | `REJECTED_EXPERIMENT` | P9 không được chọn làm Task1 secondary retrieval | 2026-08-11 | TV2 |
+| `Qwen/Qwen3-Reranker-0.6B` | `REJECTED_EXPERIMENT` | P8 smoke không vượt BGE; không phải production component | 2026-08-11 | TV2 |
+
+## Deferred experiments
+
+| Checkpoint | Status | Task | Required | Activation trigger |
+|---|---|---|---|---|
+| `BAAI/bge-m3` | `DEFERRED_EXPERIMENT` | Task1 | `false` | CandidateDocRecall hoặc official OOF Recall plateau sau P12/P13/P15 |
 
 ## Liên quan
 

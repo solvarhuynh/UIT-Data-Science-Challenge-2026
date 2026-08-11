@@ -1,419 +1,261 @@
-﻿# TV2 — Retrieval Pipeline: trạng thái, setup và vận hành
-## 25/07/2026
-Tài liệu này mô tả những gì TV2 đã hoàn thành, cách chạy lại và các điểm tích hợp
-với TV4/TV5. TV2 chỉ phụ trách retrieval; không chứa API route, frontend, QA generation
-hay cross-encoder reranking.
+# TV2 — Hướng dẫn vận hành Task 1 LegalIR
 
-## 1. TV2 đã hoàn thành gì?
+Hướng dẫn này dựa trên repository, source, test, manifest và official scorer
+hiện tại. TV2 phụ trách retrieval, indexing, tạo candidate, gộp document và bàn
+giao cho TV5. Phần reranking và kiểm tra submission của TV5 cũng được mô tả để
+một người có thể vận hành toàn bộ Task 1.
 
-| Nhóm | File chính | Tác dụng |
-|---|---|---|
-| Contract | `src/udsc2026/contracts/chunk.py` | Định nghĩa `LegalChunk`, input chung từ ingestion TV4 vào indexing TV2. |
-| Embedding | `src/udsc2026/infrastructure/embedding/client.py` | Load HCMUTE embedding v2 từ local path, encode query hoặc batch document thành vector float đã normalize. |
-| Embedding config | `src/udsc2026/infrastructure/embedding/config.py` | Compatibility wrapper cho config embedding cũ. |
-| Config chung | `src/udsc2026/infrastructure/config.py` | Deep-merge `base.yaml` và `development.yaml`, tránh mỗi module tự đọc YAML. |
-| VectorDB interface | `infrastructure/vector_db/base.py` | Interface chung, payload mapping và chuyển payload thành `RetrievalHit`. |
-| Qdrant | `qdrant_adapter.py` | Lưu/search vector qua Qdrant, giữ payload citation. |
-| FAISS | `faiss_adapter.py` | Lưu vector `IndexFlatIP` local, kèm JSON side-store metadata. |
-| Factory | `vector_db/factory.py` | Chọn Qdrant hoặc FAISS từ config. |
-| Dense | `retrieval/dense/dense_retriever.py` | Encode query rồi gọi VectorDB, gán `dense_score` và rank. |
-| Sparse | `retrieval/sparse/tokenizer.py`, `bm25_retriever.py` | Tokenize tiếng Việt, giữ dấu/cụm Điều-Khoản-Điểm, build/search/save BM25 độc lập. |
-| Hybrid | `retrieval/hybrid/score_fusion.py`, `hybrid_retriever.py` | Normalize, merge theo `chunk_id`, weighted fusion và giữ citation. |
-| Index script | `scripts/data_prep/index_chunks.py` | Orchestrate JSONL → embedding → VectorDB → BM25. |
-| Tests | `tests/retrieval/` | Mock model/Qdrant, test FAISS thật, BM25, Dense, Hybrid và fusion. |
+## 1. Contract Task 1
 
-Kết quả verify sau lần tích hợp ngày 09/08/2026: toàn repository `850 passed,
-15 skipped`; nhóm test tập trung TV2/ingestion `143 passed, 1 skipped`.
+Canonical corpus: `data/processed_v3` (read-only for experiments). Training
+labels: `data/raw/btc/LegalIR/train.json`. Experiment outputs belong under
+`artifacts/tv2/` or `artifacts/task1/`. Final predictions use exact question
+coverage and distinct document IDs. Internal rankings may be deep, but official
+predictions must contain 1–5 documents per question.
 
-## 2. TV2 có cần train model không?
+## 2. Official scorer
 
-TV2 hiện dùng HCMUTE embedding v2 đã pretrained và chỉ làm inference để tạo embedding.
-Khi có dữ liệu TV4, quy trình cần chạy là:
+The source of truth is [`scoring.py`](../../Scoring-Program-Task-LegalIR/scoring.py).
+One through five predictions score normally; empty or more than five predictions
+score Recall 0 and Precision 0; multi-gold Recall is intersection divided by
+gold-set size; macro Recall is primary and macro Precision is secondary. Local
+parity is in [`legal_ir.py`](../../../src/udsc2026/evaluation/legal_ir.py) with
+golden tests in `tests/unit/test_evaluation/test_legal_ir.py`.
 
-1. TV4 sinh JSONL chunk hợp lệ.
-2. TV2 validate JSONL bằng `LegalChunk`.
-3. Chạy script indexing để tạo embedding, FAISS/Qdrant index và BM25 index.
-4. Dense/Sparse/Hybrid dùng các index đó để trả `list[RetrievalHit]` cho TV1/TV5.
-
-Chỉ cần fine-tune nếu benchmark cho thấy embedding pretrained chưa đủ tốt và team quyết
-định làm một task ML riêng. Fine-tune không thuộc bước vận hành mặc định của TV2.
-
-## 3. Phụ thuộc chéo với TV4 — đã đối chiếu chưa?
-
-Đã đối chiếu output hiện tại của TV4 với `LegalChunk`:
-
-- TV4 đã có ingestion thật trong `src/udsc2026/ingestion/`.
-- Đã kiểm tra 4 file JSONL và 20 record TV4 trước sample dev.
-- Không phát hiện field thiếu hoặc field thừa so với `LegalChunk`.
-- Validation report của TV4 không có missing metadata, duplicate chunk ID hay orphan chunk.
-- Các field `parent_id`, `section`, `effective_date` được giữ trong contract/payload
-  mapping. Child có `parent_text=null`; QA tra nội dung cha từ
-  `data/processed_v3/parents` qua `parent_id` sau reranking.
-
-Vì vậy hiện tại TV2 và TV4 đã khớp. Tuy nhiên, khi TV4 đổi schema JSONL, hai thành viên
-phải đối chiếu lại trước khi merge; không tự sửa một bên.
-
-## 4. Cấu hình
-
-`configs/base.yaml` chứa cấu hình chung cho embedding, VectorDB, BM25 và hybrid.
-`configs/development.yaml` chỉ override môi trường dev: FAISS và CPU.
-
-```yaml
-embedding:
-  model_path: ./models/dek21-v2
-  model_id: huyydangg/DEk21_hcmute_embedding_v2
-  device: cpu
-  batch_size: 32
-  max_length: 256
-  normalize_embeddings: true
-```
-
-Model `DEk21_hcmute_embedding_v2` được export bằng `sentence-transformers 5.4.1`
-và `transformers 5.0.0`. Các thành viên phải cài đúng runtime contract này;
-không dùng bản `sentence-transformers 3.x`/`transformers 4.x` cũ vì model sẽ
-tham chiếu module `sentence_transformers.base` không tồn tại trong bản cũ.
-
-FAISS dùng NumPy 1.x trong môi trường hiện tại, nên `requirements_dev.txt` pin
-`numpy==1.26.4` và `scipy<1.14`.
-
-Từ thư mục gốc repository, dùng Python 3.10–3.12:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -c requirements_runtime.txt -e ".[llm,rerank,retrieval]"
-```
-
-Lệnh trên là môi trường CPU/dev. Trên máy thuê RTX, không cài `.[gpu]` thủ công
-trước Torch CUDA; dùng `scripts/gpu/run_gpu_pipeline.ps1` theo
-[`tv5_gpu_runbook.md`](../tv5/tv5_gpu_runbook.md). Script đó cài Torch CUDA 12.8
-trước rồi mới cài các dependency GPU còn lại.
-
-Không commit `.venv/`. Nếu chưa dùng editable install, đặt tạm package path:
-
-```powershell
-$env:PYTHONPATH = "$PWD\src"
-```
-
-Tải và kiểm tra model embedding local:
-
-```powershell
-python download_models.py --only embedding
-python scripts/data_prep/verify_embedding.py
-```
-
-Chạy smoke index trên CPU/dev:
-
-```powershell
-python scripts/data_prep/index_chunks.py `
-  --chunks-dir data/processed_v3/chunks `
-  --config-env development `
-  --vector-db-type faiss `
-  --batch-size 32 `
-  --max-chunks 1000 `
-  --skip-bm25 `
-  --force
-```
-
-Để chạy toàn bộ corpus trên RTX, dùng pipeline trong runbook TV5; không thay
-`--config-env development` thành `gpu` trên máy local không có CUDA.
-
-Script tạo:
-
-- `data/vector_store/faiss/legal_chunks/index.faiss`
-- `data/vector_store/faiss/legal_chunks/payloads.json`
-- `data/vector_store/bm25/index.json` (khi không dùng `--skip-bm25`)
-- `data/vector_store/faiss/legal_chunks/manifest.json`
-
-Chạy test:
-
-```powershell
-python -m pytest tests/retrieval/ -v
-```
-
-| Tasks | Phạm vi | Verify sau khi hoàn tất |
-|---|---|---|
-| 0 | `LegalChunk` contract | `python -c "from udsc2026.contracts import LegalChunk, RetrievalHit; print('ok')"` |
-| 1 | `EmbeddingClient` HCMUTE Embedding v2 local | `python -c "from udsc2026.infrastructure.embedding import EmbeddingClient; print('ok')"` |
-| 2 | Qdrant/FAISS adapter | `python -c "from udsc2026.infrastructure.vector_db.factory import get_vector_db_adapter; print('ok')"` |
-| 3 | `DenseRetriever` | `python -c "from udsc2026.retrieval.dense.dense_retriever import DenseRetriever; print('ok')"` |
-| 4 | `BM25Retriever` + tokenizer | `python -c "from udsc2026.retrieval.sparse.tokenizer import tokenize_vi; print(tokenize_vi('Điều 10 Bộ luật Lao động'))"` |
-| 5 | `HybridRetriever` + fusion | `python -c "from udsc2026.retrieval.hybrid import fuse_scores; print(fuse_scores([], []))"` |
-| 6 | Indexing script | Chạy script index với JSONL TV4 và kiểm tra `data/vector_store/`. |
-| 7 | Hợp nhất config | Kiểm tra đủ `embedding`, `vector_db`, `sparse`, `hybrid`. |
-| 8 | Unit tests | `python -m pytest tests/unit/test_retrieval -v` phải pass 100%. |
-| 9 | Đối chiếu DoD | Sửa mọi mục FAIL trước khi bàn giao. |
-
-Sau mỗi verify pass, commit đúng nhóm prompt. Không chạy prompt sau nếu verify bước hiện
-tại còn fail.
-
-## 5. Cấu trúc và trách nhiệm
-
-- `src/udsc2026/contracts/`: `LegalChunk` từ TV4 và `RetrievalHit` dùng chung.
-- `src/udsc2026/infrastructure/embedding/`: load HCMUTE embedding v2 local và encode query/chunks.
-- `src/udsc2026/infrastructure/vector_db/`: interface backend-neutral, Qdrant và FAISS.
-- `src/udsc2026/retrieval/dense/`: query embedding và dense search.
-- `src/udsc2026/retrieval/sparse/`: tokenizer tiếng Việt và BM25 độc lập.
-- `src/udsc2026/retrieval/hybrid/`: normalize, merge và weighted score fusion; không rerank.
-- `configs/base.yaml`: model path, vector DB và hybrid settings.
-- `data/vector_store/`: FAISS/BM25 index local; không commit dữ liệu index lớn.
-
-TV2 cung cấp các API `search(query, top_k, filters=None)` cho dense, sparse và hybrid.
-TV1 có thể gọi hybrid để lấy context; TV5 nhận `list[RetrievalHit]` để rerank.
-
-## Tóm tắt vị trí file
-
-### Cấu trúc các file TV2 đã làm việc
+## 3. Bố cục dữ liệu
 
 ```text
-udsc2026/
-├── pyproject.toml              # ĐÃ SỬA: thêm [build-system] + [project]
-├── requirements_dev.txt        # SẼ ĐƯỢC AGENT BỔ SUNG dần theo bảng trên (Prompt 1/2/4/7)
-├── .venv/                      # môi trường ảo, KHÔNG commit vào git
-├── configs/
-│   ├── base.yaml                # SẼ CÓ THÊM section embedding/vector_db/sparse/hybrid
-│   └── development.yaml
-├── data/
-│   ├── processed_v3/chunks/     # corpus canonical đã qua preflight
-│   └── vector_store/            # output của Prompt 6: faiss/, bm25/ (qdrant chạy ngoài Docker)
-├── scripts/
-│   └── data_prep/index_chunks.py
-├── src/udsc2026/
-│   ├── contracts/                 # Prompt 0: chunk.py (LegalChunk) + retrieval.py (RetrievalHit, có sẵn)
-│   ├── infrastructure/
-│   │   ├── config.py              # Prompt 7
-│   │   ├── embedding/             # Prompt 1
-│   │   └── vector_db/             # Prompt 2
-│   └── retrieval/
-│       ├── dense/                 # Prompt 3
-│       ├── sparse/                # Prompt 4
-│       └── hybrid/                # Prompt 5
-├── tests/unit/test_retrieval/     # Prompt 8
-└── docs
-    └── tv2_setup.md               # chính là file bạn đang đọc
+data/processed_v3/{chunks,parents,documents,metadata}
 ```
 
-# 06/08/2026
+Current audit counts: 1,270,356 chunks, 184,548 parents, and 8,532 documents.
+Strict CV is `artifacts/task1/evaluation/strict_cv_v2/`: 5 folds, 7,000
+questions, with normalized duplicate groups kept together.
 
-## Hướng dẫn test dữ liệu chính thức
+## 4. Baseline hiện đã xác nhận
+
+[`build_legal_ir_ensemble.py`](../../../scripts/submission/build_legal_ir_ensemble.py)
+loads cached DEk21 dense and BGE rankings, word TF-IDF KNN, passage BM25, RRF,
+and optional exact-label overlay. The validated dense manifest uses collection
+`legal_chunks_dek21_v2_768`, dimension 768, corpus hash
+`d92782fe2a66a865745721756c1f790f0c4b5073f31c29004f29efb5e0941cc1`, and model
+`huyydangg/DEk21_hcmute_embedding_v2`, revision
+`99a2963b2f51fa7a570a3e7f550d7993b9de90a8`.
+
+```text
+Current validated baseline
+Query → DEk21 child dense candidates
+      → cached BGE reranking when available
+      → word KNN + passage BM25 + RRF ensemble
+      → top 5 distinct document IDs
+```
+
+P2 cached smoke (`train500_dense200`, 500 questions) measured
+CandidateDocRecall@200 `0.965`, mean unique docs at depth 200 `61.258`, and
+11 retrieval misses. This is a cached diagnostic, not a public score.
+
+## 5. Kiến trúc Top-1 mục tiêu
+
+The following components are experimental until full GPU OOF validation:
+
+```text
+                         ┌─ child dense HCMUTE
+                         ├─ parent/article dense
+Query ───────────────────┼─ document BM25/BM25F
+                         ├─ query KNN word+char
+                         └─ optional Qwen3 dense
+                                  │
+                                  ▼
+                         document candidate union
+                             100–200 docs
+                                  │
+                       top 2 evidence chunks/doc
+                                  │
+                                  ▼
+                   BGE/Qwen3 document reranker
+                                  │
+                        document-level RRF
+                                  │
+                              TOP 5
+```
+
+P3 lexical, P4 parent/multi-granularity, and P5 document-candidate code are
+implemented, but are not current production claims without a matching GPU
+benchmark manifest. Current production reranker remains BGE.
+
+## 6. Kiểm tra nhẹ trên CPU local
+
+### P12 — mine hard/semi-hard negatives từ cache
+
+P12 không train và không load model. Mỗi `fold_F.jsonl` chỉ chứa records dùng
+để train fold F, nên loại toàn bộ query thuộc validation fold F. Default dùng
+cached HCMUTE; thêm parent/BM25F/citation/reranker cache bằng nhiều flag
+`--rankings source=path`.
 
 ```powershell
-New-Item -ItemType Directory -Path D:\udsc2026\.pytest_runtime -Force
-.\.venv\Scripts\python.exe -m pytest tests/retrieval/ -v
+python scripts/training/mine_task1_negatives.py `
+  --train data/raw/btc/LegalIR/train.json `
+  --folds artifacts/task1/evaluation/strict_cv_v2/folds.json `
+  --rankings hcmute=artifacts/task1/train500_dense200_predictions.jsonl `
+  --output-dir artifacts/task1/training/negatives
 ```
 
-Các test logic nhỏ vẫn dùng mock để cô lập BM25/top-k/batch error. Khi kiểm tra
-integration với dữ liệu chính thức, dùng Docker/Qdrant theo lệnh sau:
+Outputs: `fold_0.jsonl` đến `fold_4.jsonl`, `mining_manifest.json` và
+`statistics.md`. Near-duplicate/ambiguous candidates are excluded; all
+negative records keep source/rank/score provenance.
+
+Để chạy ablation `easy-random` của P13, tạo lại một P12 artifact riêng (không
+ghi đè artifact mặc định) với optional easy band:
 
 ```powershell
-docker compose up -d qdrant qdrant-ready
-docker compose run --rm backend-smoke
-docker compose logs --tail 200 qdrant qdrant-ready
+python scripts/training/mine_task1_negatives.py `
+  --train data/raw/btc/LegalIR/train.json `
+  --folds artifacts/task1/evaluation/strict_cv_v2/folds.json `
+  --rankings hcmute=artifacts/task1/train500_dense200_predictions.jsonl `
+  --max-easy-per-query 5 `
+  --output-dir artifacts/task1/training/negatives_with_easy
 ```
 
-Lệnh `backend-smoke` dùng image backend và các volume đã khai báo trong
-`docker-compose.yml`; không dùng dữ liệu mock thay cho corpus chính thức.
+### P13 — local schema smoke, không load model
 
-## Chạy toàn bộ tasks TV2 trên Corpus thật (Data từ TV4)
-
-Đây là luồng end-to-end của TV2 sau khi TV4 bàn giao corpus. Nếu TV4 vừa tái
-tạo chunks, bước index phải dùng `--force` để không bị manifest cache bỏ qua.
-
-### A. Nhận corpus canonical từ TV4
-
-TV2 không chạy lại ingestion vào `data/processed_v3`. Thư mục này là corpus đã
-được audit và phải được xem như immutable trong lúc build index. Trước khi chạy,
-xác nhận bản copy từ Drive còn nguyên hash:
+P13 chỉ fine-tune BGE trên Kaggle GPU. Local dry-run kiểm tra hash, split,
+leakage và document-evidence formatting; cache `train500` chỉ là partial OOF
+nên flag này không bao giờ tạo promotion decision.
 
 ```powershell
-python scripts/gpu/preflight.py --processed-root data/processed_v3
+python scripts/training/finetune_task1_bge_reranker.py `
+  --train data/raw/btc/LegalIR/train.json `
+  --folds artifacts/task1/evaluation/strict_cv_v2/folds.json `
+  --negatives-dir artifacts/task1/training/negatives `
+  --candidates artifacts/task1/train500_dense200_predictions.jsonl `
+  --output-dir artifacts/task1/models/bge_reranker_finetune_dryrun `
+  --allow-partial-oof --dry-run
 ```
 
-Nếu TV4 thật sự cần tạo corpus mới, phải ghi vào một thư mục trống khác rồi audit
-trước khi thay thế bản canonical; không ghi đè trong lúc TV2 đang index:
+These commands are light/medium CPU checks and do not rebuild the full index:
 
 ```powershell
-python scripts/data_prep/run_ingestion.py `
-  --raw-directory data/raw/btc `
-  --processed-root data/processed_candidate
+python -m compileall -q src scripts
+git diff --check
+powershell -ExecutionPolicy Bypass -File scripts/ci_cd/check-tv2-task1.ps1 -Tier unit
+powershell -ExecutionPolicy Bypass -File scripts/ci_cd/check-tv2-task1.ps1 -Tier data
 ```
 
-Chỉ khi preflight đạt exit code `0` mới bắt đầu index TV2.
-
-### B. Kiểm tra và index — bước TV2
-
-1. Preflight trước khi chạy corpus:
+Runner smoke, maximum 20 questions:
 
 ```powershell
-$ErrorActionPreference = "Stop"
-$env:PYTHONPATH = "src"
-python -c "from udsc2026.contracts import LegalChunk, RetrievalHit; from udsc2026.retrieval.sparse.tokenizer import tokenize_vi; print('TV2 imports: OK', tokenize_vi('Điều 10'))"
-python -m pytest tests/retrieval tests/unit/test_retrieval -q -o addopts=''
+python scripts/task1/run_legal_ir_pipeline.py `
+  --config configs/task1_baseline.yaml `
+  --questions data/raw/btc/LegalIR/train.json `
+  --max-questions 20 --dry-run
 ```
 
-Chunks thật đã có sẵn tại `data/processed_v3/chunks/`. Với dữ liệu chính thức,
-chạy toàn bộ chuỗi qua Docker/Qdrant theo đúng thứ tự:
+## 7. Pipeline GPU
 
-Nếu vừa thay đổi source trong `src/` hoặc dependency, build lại image trước khi
-chạy index. Container chỉ mount `scripts/` và dữ liệu runtime, không mount
-source package `src/`.
+The actual GPU profile is [`configs/gpu.yaml`](../../../configs/gpu.yaml):
+DEk21 v2, CUDA, FAISS collection `legal_chunks_dek21_v2_768`, and local
+`BAAI/bge-reranker-v2-m3`. This is medium/heavy and requires approved model and
+index inputs; it must not silently download or rebuild locally.
 
 ```powershell
-docker compose build --no-cache backend
+python scripts/task1/run_legal_ir_pipeline.py `
+  --config configs/task1_baseline.yaml `
+  --questions data/raw/btc/LegalIR/train.json `
+  --processed-root data/processed_v3 `
+  --contexts-dir data/raw/btc/LegalIR/selected-contexts `
+  --vector-store-root data/vector_store `
+  --artifacts-root artifacts/task1/pipeline_gpu `
+  --stage all --resume
 ```
 
-2. Đầu tiên chạy validate để kiểm tra mapping giữa chunk và ground-truth, đồng thời
-   tự tạo report audit về các file JSONL rỗng, không có record hoặc sai schema.
-   Lệnh này không sửa dữ liệu và không ảnh hưởng tới các bước sau; nó chỉ giúp bạn
-   biết còn những file nào cần TV4 sửa trước khi index.
+Full project pre-push check (medium/heavy):
 
 ```powershell
-New-Item -ItemType Directory -Force artifacts/tv2/data_audit | Out-Null
-docker compose up -d qdrant qdrant-ready
-docker compose run --rm --volume "${PWD}/scripts:/app/scripts:ro" --volume "${PWD}/data/processed_v3:/app/data/processed_v3:ro" --volume "${PWD}/artifacts:/app/artifacts" --volume "${PWD}/data/raw/btc:/app/data/raw/btc:ro" backend python /app/scripts/validate_chunk_mapping.py --chunks-dir /app/data/processed_v3/chunks --ir-train-file /app/data/raw/btc/LegalIR/train.json --report /app/artifacts/tv2/data_audit/chunk_mapping_report.json --audit-report /app/artifacts/tv2/data_audit/chunk_file_audit.json
+powershell -ExecutionPolicy Bypass -File scripts/ci_cd/check-all.ps1 -SkipFrontend -SkipCompose
 ```
 
-Lệnh này dùng để khởi động Qdrant và chạy validate trên corpus TV4. Nó sẽ kiểm tra mapping giữa chunk và ground-truth, đồng thời tạo report audit về các file JSONL rỗng, không có record hoặc sai schema. Ý nghĩa của lệnh này là xác nhận dữ liệu chunk đã sẵn sàng cho bước index hay chưa, nhưng không sửa dữ liệu và không ảnh hưởng tới các bước sau.
+### P13 — Kaggle GPU strict OOF
 
-Lệnh này sẽ sinh hai report:
-- `artifacts/tv2/data_audit/chunk_mapping_report.json`: kết quả mapping chunk ↔ ground-truth.
-- `artifacts/tv2/data_audit/chunk_file_audit.json`: danh sách file rỗng, không có record,
-  JSON lỗi hoặc record không đúng schema.
-
-Không ghi report vận hành vào `data/processed_v3/metadata`; corpus đã audit là
-immutable và mọi file thêm vào đó sẽ làm đổi tree hash.
-
-3. Chỉ khi exit code 0 mới chạy bước index để build vector index và BM25 index.
+Mount/copy the local base checkpoint as `models/reranker`; P13 never overwrites
+it and never downloads weights. Before the full command, P12 and the cached
+candidate ranking must cover all 7,000 strict-CV IDs. Do not pass
+`--allow-partial-oof` for a promotable result.
 
 ```powershell
-docker compose run --rm `
-  --volume "${PWD}/scripts:/app/scripts:ro" `
-  --volume "${PWD}/data/processed_v3:/app/data/processed_v3:ro" `
-  --volume "${PWD}/data/vector_store:/app/data/vector_store" `
-  --volume "${PWD}/artifacts:/app/artifacts" `
-  backend python /app/scripts/data_prep/index_chunks.py `
-  --chunks-dir /app/data/processed_v3/chunks `
-  --vector-db-type qdrant `
-  --batch-size 128 `
-  --skip-bm25 `
-  --error-report /app/artifacts/tv2/index_errors.json `
-  --force
+python scripts/training/finetune_task1_bge_reranker.py `
+  --train data/raw/btc/LegalIR/train.json `
+  --folds artifacts/task1/evaluation/strict_cv_v2/folds.json `
+  --negatives-dir artifacts/task1/training/negatives_full `
+  --candidates artifacts/task1/train_dense200_predictions.jsonl `
+  --base-model models/reranker `
+  --ablation semi-hard-plus-hard `
+  --candidate-depth 200 --evidence-limit 2 `
+  --learning-rate 2e-5 --epochs 2 `
+  --batch-size 4 --gradient-accumulation 4 `
+  --max-length 512 --warmup-ratio 0.1 `
+  --seed 2026 --device cuda `
+  --output-dir artifacts/task1/models/bge_reranker_finetune
 ```
 
-Lệnh này build dense index từ các chunk đã qua validate. Full BM25 bằng
-`rank_bm25` không chạy chung trên máy RAM 28 GB; pipeline GPU chính dùng dense
-top-50 rồi chuyển candidate cho reranker.
+Run `baseline`, `semi-hard`, `semi-hard-plus-hard`, and `same-law-boosted` into
+separate output directories for the bounded A/C/D/E comparison. `easy-random`
+requires the separate `negatives_with_easy` artifact above. A checkpoint can
+only be considered when `final_decision.json` reports `PROMOTE_CANDIDATE`; the
+runner does not edit `configs/task1_top1.yaml` automatically.
 
-`--batch-size 128` là mức khởi đầu an toàn cho CPU. Nếu container còn dư RAM và
-không có lỗi out-of-memory, tăng lần lượt lên `256` rồi `512`; không chạy nhiều
-process embedding song song vì mỗi process sẽ nạp một bản model vào RAM.
+## 8. Artifact được tạo
 
-4. Sau khi manifest xác nhận, dùng
-`scripts/evaluation/generate_dense_candidates.py` để sinh dense top-50. Quy trình
-full và tham số RTX nằm trong `docs/members/tv5/tv5_gpu_runbook.md`.
+The runner creates `run_manifest.json` and `corpus_document_ids.json` under its
+artifact root.
 
-Nếu thiếu model/backend, giữ nguyên lỗi môi trường và báo cụ thể; không nới lỏng validation.
+| Artifact | Producer/input | Purpose | Rebuild/delete | Submission effect |
+|---|---|---|---|---|
+| `artifacts/tv2/data_audit/*` | TV2 audit over processed corpus | integrity | rebuildable | none |
+| `artifacts/task1/*dense*` | DEk21 + indexed chunks | cached candidates | hash-dependent | indirect |
+| `artifacts/task1/*reranker*` | TV5 BGE over candidates | rerank diagnostics | rebuildable | indirect |
+| `artifacts/task1/cv_strict/*` | strict CV builder + train labels | OOF folds | rebuildable | none |
+| `artifacts/task1/evaluation/*` | P1–P4 analyzers/smokes | diagnostics | rebuildable | none |
+| `submission.zip` | submission writer | package containing only submission.json | regenerate | direct |
 
-TV2 được xem là hoàn tất khi preflight, validate, indexing, sparse benchmark
-và dense/hybrid benchmark đã được triển khai đều pass. Artifact bàn giao gồm
-dense index/collection, BM25 index, manifest, payload mapping,
-`index_errors.json` và các report benchmark.
+## 9. Submission
 
-## Bức tranh bàn giao: Output của TV2 và Trách nhiệm của các thành viên tuyến sau
+The runner's final stage calls the existing writer and validator. Direct commands
+are:
 
-Phần này bám theo Pipeline chuẩn trong `docs/udsc2026_plan.md`:
+```powershell
+python scripts/submission/write_legal_ir_submission.py `
+  --input artifacts/task1/pipeline_gpu/ensemble/predictions.json `
+  --questions data/raw/btc/LegalIR/train.json `
+  --corpus-manifest artifacts/task1/pipeline_gpu/corpus_document_ids.json `
+  --output artifacts/task1/pipeline_gpu/submission.zip
 
-`BTC files → TV4 ingestion/chunking → LegalChunk JSONL → TV2 indexes → TV5 rerank/evaluation → TV3 QA → TV1 API/submission orchestration`.
+python scripts/submission/validate_legal_ir_submission.py `
+  --input artifacts/task1/pipeline_gpu/submission.zip `
+  --questions data/raw/btc/LegalIR/train.json `
+  --corpus-manifest artifacts/task1/pipeline_gpu/corpus_document_ids.json
+```
 
-### 1. Danh sách output chi tiết của TV2
+Validation is light; full package writing is medium.
 
-TV2 bàn giao các artifact sau:
+## 10. Lỗi thường gặp
 
-- **Corpus đầu vào đã được kiểm tra:** các file `chunks/*.jsonl` chứa
-  `LegalChunk` hợp lệ từ TV4. Mỗi chunk giữ `chunk_id`, `parent_id`, `doc_id`,
-  `text`, `source` và các trường cấu trúc pháp lý cần cho truy hồi/citation.
+- Public `LABEL_NOT_AVAILABLE` rows are unlabeled transport data, not gold.
+- Six documents score zero under the official scorer.
+- Compare corpus/model hashes and collection names before reusing an index.
+- Strict CV excludes validation IDs and normalized duplicate questions from
+  supervised neighbor training.
+- The Windows gate creates a fresh pytest runtime to avoid stale ACL failures.
 
-- **Dense index:** index FAISS hoặc collection Qdrant được build từ toàn bộ
-  corpus đã nghiệm thu. Artifact dense phải có payload mapping để từ kết quả
-  vector truy ngược được chunk gốc và metadata của chunk.
+## 11. Tái lập và liên kết
 
-- **Sparse index:** BM25 index chứa các chunk và tokenization phục vụ tìm kiếm
-  theo từ khóa, số điều/khoản/điểm, số hiệu văn bản và thuật ngữ pháp lý.
+Promoted runs require git commit, config, input/corpus hashes, model revision,
+ representation versions, candidate depth, reranker, RRF weights, timestamp, and
+ output hashes. See [`model_registry.md`](../../models/model_registry.md),
+ [`tv5_gpu_runbook.md`](../tv5/tv5_gpu_runbook.md), and
+ [`tv5_legalir_warmup.md`](../tv5/tv5_legalir_warmup.md). The cell-by-cell
+ The temporary P12/P13 GPU source of truth is
+ [`tv2_task1_kaggle_p12_p13.md`](tv2_task1_kaggle_p12_p13.md). The older guide
+ is not a final submission guide for this stage.
 
-- **`manifest.json`:** manifest đi kèm index, ghi số lượng chunk, loại backend,
-  collection/index path, `corpus_hash`, `model_hash` hoặc model identity,
-  cấu hình liên quan và commit/config nếu có. Manifest dùng để xác nhận index
-  đang tương ứng với đúng corpus và model, tránh dùng index cũ hoặc stale.
-
-- **`payloads.json` và payload mapping:** với FAISS, `payloads.json` lưu payload
-  theo vị trí vector, gồm `chunk_id`, `doc_id`, `text`, `source`, các trường
-  `law_name/article/clause` và `metadata`; với Qdrant, cấu trúc tương đương nằm
-  trong payload của point. Dữ liệu này phải bảo toàn citation metadata, không
-  chỉ lưu vector và score.
-
-- **`list[RetrievalHit]`:** các retriever dense, sparse và hybrid trả về danh
-  sách đối tượng đúng contract `RetrievalHit`. Mỗi hit mang `chunk_id`, `doc_id`,
-  `text`, score phù hợp với backend, rank khi tầng đó gán rank, cùng citation
-  metadata như `source`, `law_name`, `article`, `clause` và `metadata` nguyên
-  vẹn. Đây là interface runtime để các thành viên tuyến sau dùng, không tự
-  đọc trực tiếp FAISS/Qdrant/BM25.
-
-### 2. Phân luồng bàn giao: ai nhận output và để làm gì?
-
-#### Đối với TV5 — Reranking & MLOps
-
-TV5 nhận `list[RetrievalHit]` từ TV2 làm candidate set cho Cross-encoder
-Reranker:
-
-- TV5 chạy Cross-encoder trên `text` của các candidate và query tương ứng.
-- Reranker gán `rerank_score` hoặc `final_score`, sau đó sắp xếp lại thứ tự
-  candidate và giới hạn về top-k cần bàn giao.
-- Mục tiêu là cải thiện chất lượng xếp hạng, đặc biệt Precision/Recall ở nhóm
-  kết quả đầu bảng so với thứ tự dense/sparse/hybrid ban đầu.
-- TV5 tuyệt đối không được làm mất `chunk_id`, `doc_id`, `text`, `source`,
-  `law_name`, `article`, `clause` hoặc metadata citation do TV2 truyền sang.
-  Điểm rerank chỉ bổ sung/chỉnh thứ tự; không được thay thế hoặc tự suy đoán
-  citation metadata.
-- TV5 dùng các hit đã bảo toàn citation để tạo evaluation report, validate
-  top-5 và bàn giao ordered `RetrievalHit` cho TV3/TV1.
-
-#### Đối với TV3 — QA & LLM Engine
-
-TV3 nhận các `RetrievalHit` đã được TV5 rerank; nếu pipeline baseline bypass
-TV5 thì TV3 nhận trực tiếp hit từ TV2:
-
-- TV3 bóc tách trường `text` của các hit để tạo Context đưa vào prompt cho
-  Qwen3 hoặc LLM được cấu hình.
-- TV3 dùng thứ tự, score và số lượng hit để chọn context trong giới hạn token,
-  nhưng không được làm thay đổi sai lệch identity của nguồn.
-- TV3 dùng `law_name`, `article`, `clause`, `source`, `chunk_id` và metadata để
-  tạo câu trả lời pháp lý có trích dẫn chính xác.
-- Citation parser phải ánh xạ citation về đúng `RetrievalHit`; nếu không xác
-  minh được thì trả warning/unverified theo contract QA, không tự bịa nguồn.
-- QA output của TV3 là `QAResponse` cùng answer, citations, warnings và thông
-  tin prompt/model version để TV1 tiếp tục orchestration.
-
-#### Đối với TV1 — API Orchestration & Submission
-
-TV1 là lớp điều phối và đóng gói, không truy cập trực tiếp database retrieval:
-
-- TV1 gọi hàm `search`/retrieval interface của TV2 thông qua dependency
-  injection hoặc orchestrator; TV1 không gọi trực tiếp FAISS, Qdrant hay BM25.
-- Với LegalIR, TV1 lấy các ID từ output `RetrievalHit`, ưu tiên identity đã
-  được pipeline xác nhận như `doc_id` hoặc `parent_id`/mapping tương ứng.
-- TV1 lọc các ID trùng nhưng giữ thứ tự xếp hạng, cắt tối đa đúng 5 ID theo
-  ràng buộc của BTC, rồi format thành `submission.json` cuối cùng.
-- TV1 phải bảo toàn đầy đủ question ID từ `public_official.json`, không làm mất,
-  lặp hoặc tự điền đáp án từ `train.json`.
-- TV1 giao artifact prediction cho TV5 validate exact schema/scorer và sau đó
-  Leader đóng gói/nộp `submission.zip` cho BTC.
-
-### Nguyên tắc bàn giao chung
-
-- TV2 giao artifact có manifest/hash và contract `RetrievalHit`, không giao
-  một index không truy được payload về chunk gốc.
-- TV5, TV3 và TV1 dùng output qua contract; không tự đoán field mới hoặc đọc
-  backend trực tiếp để sửa thiếu metadata.
-- Mọi thay đổi corpus, index, model hoặc mapping phải có report/hash tương ứng
-  để truy nguyên kết quả benchmark và submission.
+Temporary P12/P13 Kaggle guide riêng cho TV2:
+[`tv2_task1_kaggle_p12_p13.md`](tv2_task1_kaggle_p12_p13.md).

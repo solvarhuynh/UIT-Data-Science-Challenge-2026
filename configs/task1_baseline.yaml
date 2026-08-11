@@ -1,0 +1,24 @@
+# Production baseline only. Experimental values belong in a separate config.
+schema_version: task1-baseline-v1
+representation_versions:
+  child: child_raw_v1
+  parent: parent_meta_v1
+candidate:
+  depths: [50, 100, 150, 200]
+  selected_depth: 200
+  final_documents: 5
+  evidence_limit: 2
+reranker:
+  name: BAAI/bge-reranker-v2-m3
+  local_files_only: true
+  candidate_k: 200
+  top_n: 5
+ensemble:
+  rrf_k: 60
+  weights:
+    dense: 0.20
+    bge: 0.50
+    knn_word: 0.20
+    bm25_body: 0.10
+reproducibility:
+  seed: 2026

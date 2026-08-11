@@ -15,7 +15,6 @@ ROOT = Path(__file__).resolve().parents[2]
 REQUIRED_MODELS = {
     "embedding": ROOT / "models" / "dek21-v2",
     "reranker": ROOT / "models" / "reranker",
-    "llm": ROOT / "models" / "qwen3-legal",
 }
 _PROCESSED_TREE_LAYOUT = (
     ("documents", "*.json"),

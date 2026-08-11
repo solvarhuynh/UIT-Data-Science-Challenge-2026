@@ -1,201 +1,111 @@
-﻿# TV2 Progress Report
+# Báo cáo tiến độ TV2 — Task 1 LegalIR
 
-Tài liệu này tổng hợp các prompt TV2 đã được xử lý từ `prompts.md`, theo đúng trạng thái thực tế của repo sau khi hoàn thành từng bước.
+Báo cáo này dựa trên source, test, manifest, config, model registry,
+`git status/diff` và official scorer hiện có. Trạng thái “đã cài đặt code” và
+“đã hoàn thành experiment GPU đầy đủ” được phân biệt riêng.
 
-## 1. Prompt 0 - Readiness check trước khi đụng vào data mới
+## Tóm tắt trạng thái
 
-Yêu cầu:
-- Audit read-only toàn bộ corpus mock hiện có.
-- Đọc config embedding, vector DB, BM25, hybrid.
-- Đối chiếu contract `LegalChunk` và `RetrievalHit`.
-- Chạy test `tests/retrieval/` và báo cáo hiện trạng.
+| Hạng mục | Trạng thái | Bằng chứng |
+|---|---|---|
+| Official scorer parity | DONE | `artifacts/task1/evaluation/p1_report.json`; golden tests |
+| Strict grouped CV | DONE | `artifacts/task1/evaluation/strict_cv_v2/`; 5 folds/7,000 questions |
+| Dense baseline | DONE | `artifacts/task1/train500b_dense200_manifest.json` |
+| BGE GPU reranker artifact | DONE | `artifacts/task1/train500-bge-reranker-200-m512/run_manifest.json` |
+| Candidate diagnostics | DONE | P2 summary/smoke artifacts |
+| P3 lexical | EXPERIMENTAL | implementation/tests; full CPU ablation timed out |
+| P4 parent retrieval | EXPERIMENTAL | implementation/tests; bounded plan only |
+| P5 document candidates | EXPERIMENTAL | implementation/tests; no full GPU score |
+| P6 operational runner | DONE | dry-run and runner tests |
+| Public Top-1 improvement | PENDING GPU | no promotion manifest |
+| P11 BGE-M3 rescue experiment | DEFERRED | no model download/index; trigger only after P12/P13/P15 plateau |
+| P12 hard/semi-hard negatives | P12_FULL_PENDING | code-ready miner with canonical positive evidence; full 7,000-query Kaggle run pending |
+| P13 BGE reranker fine-tuning | KAGGLE_GPU_SMOKE_PENDING | fixed-epoch strict OOF trainer and prerequisite gate; real GPU smoke/full OOF pending |
 
-Mình đã thực hiện:
-- Đọc dữ liệu mock trong `data/processed/chunks/`.
-- Kiểm tra `data/raw/btc/` và xác nhận chưa có data BTC thật để ingest.
-- Chạy test retrieval với môi trường tạm ổn định hơn để tránh lỗi temp của Windows.
-- Ghi nhận rõ contract hiện tại đủ để chạy trên mock, nhưng chưa đủ điều kiện để nhận JSONL thật từ TV4 nếu chưa có mapping context chuẩn.
+## Nhật ký các task đã thực hiện
 
-Tác dụng sau khi làm xong:
-- Có ảnh chụp trạng thái ban đầu của hệ thống retrieval.
-- Xác định đúng điểm nghẽn trước khi tối ưu: thiếu data thật, thiếu manifest/versioning, thiếu bài benchmark theo corpus BTC.
+| Task | Trạng thái | File/artifact | Mục đích và ảnh hưởng runtime | Ảnh hưởng score / rủi ro | Kiểm tra |
+|---|---|---|---|---|---|
+| Contract/retrieval foundation | DONE | `src/udsc2026/contracts`, `src/udsc2026/retrieval` | typed chunks/hits and retrieval adapters | enables retrieval; contract drift remains a risk | retrieval/adapter tests |
+| Index versioning | DONE | `scripts/data_prep/index_chunks.py`, dense manifests | corpus/model hash, dimension, collection, commit | prevents stale index reuse | `test_index_versioning.py` |
+| Resilient embedding | DONE | embedding client and index script | batch/windowed embedding and manifests | heavy GPU indexing; no new score claim | embedding/index smoke |
+| BM25/tokenizer regression | DONE | sparse BM25/tokenizer modules | deterministic Vietnamese lexical retrieval | sparse index must match corpus | BM25/tokenizer tests |
+| Top-k guards | DONE | rerank/evaluation CLIs | validates candidate depth/top-n | prevents invalid scoring shapes | reranker tests |
+| Data audit | DONE | audit/mapping scripts | verifies 8,532 docs, 184,548 parents, 1,270,356 chunks | audit is not relevance score | `artifacts/tv2/data_audit/*` |
+| Dense artifacts | DONE | dense candidate CLI/manifests | cached DEk21 candidates at depth 200 | reuse only matching hashes | manifest validation |
+| Ensemble/CV | DONE | ensemble builder and strict CV builder | word KNN/BM25/dense/BGE/RRF and OOF structure | leakage risk controlled by grouped folds | strict CV/ensemble tests |
+| P1 | DONE | evaluator, CLI, diagnostics | official semantics and zero-metric plumbing | no model change | P1 report and unit gate |
+| P2 | DONE | candidate analyzer/diagnostics | document coverage and early collapse | cached 500-question diagnostic | Recall@200 0.965; unit/data gate |
+| P3 | EXPERIMENTAL | lexical module and ablation CLI | char KNN, BM25F-like fields, citation parser/cache | no validated full-CV score; full corpus CPU run timed out | synthetic tests/unit gate |
+| P4 | EXPERIMENTAL | multigranularity module and plan CLI | versioned child/parent text and parent→doc fusion | no full parent GPU index/OOF score | 10-record plan/unit gate |
+| P5 | EXPERIMENTAL | document candidate module | union, evidence selection, reranker interface | no full GPU score | 200-chunk/3-doc tests |
+| P6 | DONE | `scripts/task1/run_legal_ir_pipeline.py`, baseline config | resumable orchestration/manifests/submission hand-off | missing neural cache is reported, not hidden | dry-run/unit gate |
+| P12 | P12_FULL_PENDING | `scripts/training/mine_task1_negatives.py` | canonical-evidence, leakage-safe hard/semi-hard dataset | full GPU candidate cache/mining pending | miner unit tests + manifest |
+| P13 | KAGGLE_GPU_SMOKE_PENDING | `scripts/training/finetune_task1_bge_reranker.py` | fixed-epoch strict five-fold document-evidence trainer | GPU/Kaggle only; no production change before OOF | mock trainer, fold-leakage, serialization tests |
+| P16 | DONE | [`tv2_task1_kaggle_p12_p13.md`](tv2_task1_kaggle_p12_p13.md) | temporary P12/P13-only GPU runbook | public/submission stage deferred | doc/CLI checks |
 
-Ảnh hưởng tới gì:
-- Không sửa code ở bước này.
-- Không làm thay đổi hành vi runtime.
-- Chỉ tạo baseline để các prompt sau có mốc so sánh.
+## Current model registry
 
-## 2. Prompt 1 - Nâng cấp `scripts/index_chunks.py` với versioning theo corpus/model hash
+| Role | Model | Local path | Actual state |
+|---|---|---|---|
+| Dense | `huyydangg/DEk21_hcmute_embedding_v2` | `models/dek21-v2` | validated; revision `99a2963b2f51fa7a570a3e7f550d7993b9de90a8` |
+| Task1 reranker | `BAAI/bge-reranker-v2-m3` | `models/reranker` | validated GPU artifact; revision `953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e` |
+| Legal generator | `thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2` | `models/qwen3-legal` | registered QA model; not promoted as Task1 retrieval/reranker |
 
-Yêu cầu:
-- Tính `corpus_hash` và `model_hash`.
-- Ghi manifest cạnh index.
-- Hỗ trợ `--force`.
-- Không rebuild nếu index đã up to date.
-- Có test versioning.
+Source: [`model_registry.md`](../../models/model_registry.md).
 
-Mình đã thực hiện:
-- Thêm logic hash corpus và hash model/config.
-- Thêm manifest JSON cho FAISS, Qdrant và BM25.
-- Thêm cơ chế bỏ qua rebuild khi corpus/model không đổi.
-- Thêm `--force` để ép build lại khi cần.
-- Tạo test riêng cho versioning index.
-- Cập nhật trạng thái TV2 trong `PROJECT_STATUS.md`.
+## Artifact map
 
-Tác dụng sau khi làm xong:
-- Index không còn là file “mù” nữa, mà có metadata để truy vết.
-- Build lại index tiết kiệm thời gian hơn khi corpus không đổi.
-- Dễ rollback và dễ debug khi đổi corpus hoặc model.
+| Family | Producer/input | Purpose | Rebuild/delete | Submission impact |
+|---|---|---|---|---|
+| `artifacts/tv2/data_audit/*` | TV2 audit over processed corpus | integrity/mapping | safe to rebuild/delete | none |
+| `artifacts/task1/*dense*` | DEk21 + indexed chunks | cached candidates | hash-dependent rebuild | indirect |
+| `artifacts/task1/*reranker*` | TV5 BGE + candidates | rerank diagnostics | rebuildable | indirect |
+| `artifacts/task1/cv_strict/*` | strict CV + train labels | OOF folds/reports | rebuildable | none until promoted |
+| `artifacts/task1/evaluation/*` | P1–P6 scripts/tests | diagnostics/contracts | rebuildable | none |
+| `submission.zip` | existing submission writer | package with only `submission.json` | regenerate | direct |
 
-Ảnh hưởng tới gì:
-- Không đổi signature `search()`.
-- Không làm thay đổi contract dữ liệu.
-- Tăng thêm file manifest đi kèm index, nên pipeline đã có thêm một lớp kiểm tra trạng thái.
+## Measured results
 
-File runtime chính:
+P2 cached smoke (`train500_dense200`, 500 questions) measured:
 
-- `scripts/data_prep/index_chunks.py`
+| Metric | Value |
+|---|---:|
+| CandidateDocRecall@5 | 0.769833 |
+| CandidateDocRecall@100 | 0.946000 |
+| CandidateDocRecall@200 | 0.965000 |
+| Mean unique docs at depth 200 | 61.258 |
+| Retrieval misses | 11 |
 
-File test:
+These are validation diagnostics, not a leaderboard claim. Public transport
+rows containing `LABEL_NOT_AVAILABLE` are not valid gold evaluation.
 
-- `tests/unit/test_retrieval/test_index_versioning.py`
-- `tests/unit/test_retrieval/test_build_bm25_cli.py`
-- `tests/retrieval/test_vector_db_adapters.py`
+## Validation commands
 
-Chức năng:
+```powershell
+python -m compileall -q src scripts
+git diff --check
+powershell -ExecutionPolicy Bypass -File scripts/ci_cd/check-tv2-task1.ps1 -Tier unit
+powershell -ExecutionPolicy Bypass -File scripts/ci_cd/check-tv2-task1.ps1 -Tier data
+powershell -ExecutionPolicy Bypass -File scripts/ci_cd/check-all.ps1 -SkipFrontend -SkipCompose
+```
 
-- Đọc từng `LegalChunk` từ thư mục JSONL và tính `corpus_hash` ổn định từ
-  `chunk_id` cùng nội dung `text` đã sắp xếp.
-- Tạo `model_hash` từ nhận diện/cấu hình embedding để phân biệt index tạo bởi
-  các model hoặc thiết lập khác nhau.
-- Ghi manifest cạnh FAISS/Qdrant và BM25, gồm corpus/model hash, số chunk,
-  collection, đường dẫn BM25 và git commit nếu có.
-- So sánh manifest hiện có trước khi build; nếu corpus/model không đổi thì
-  thoát thành công mà không embed/index lại. Cờ `--force` ép rebuild.
+The first four are local light/medium checks. The final command is the full
+project pre-push check and may require additional dependencies/runtime.
 
-## 3. Prompt 3 - Benchmark và tăng độ bền của `EmbeddingClient`
+## Sửa lỗi Windows trong pytest
 
-Yêu cầu:
-- Đo khả năng encode batch trên corpus lớn.
-- Xử lý lỗi batch rõ ràng thay vì làm sập toàn bộ pipeline.
-- Giữ nguyên shape/output contract.
-- Có test cho lỗi batch.
+`check-all.ps1` trước đây dùng cố định `.pytest_runtime` làm thư mục tạm.
+Trên Windows, handle hoặc quyền còn sót từ lần chạy trước có thể khiến pytest
+không xóa được thư mục và tạo hàng loạt lỗi `PermissionError: [WinError 5]`.
 
-Mình đã thực hiện:
-- Bổ sung phương thức resilient cho embedding batch.
-- Thêm script benchmark embedding để đo thời gian và lỗi batch.
-- Thêm test mô phỏng batch lỗi có kiểm soát.
+Script hiện tạo một thư mục `basetemp` riêng theo GUID cho mỗi lần chạy. Cách
+này không đụng vào corpus hay artifact, tránh xung đột giữa các lần chạy và đã
+được xác nhận bằng kết quả `854 passed, 10 skipped` cùng coverage `85.63%`.
 
-Tác dụng sau khi làm xong:
-- Retrieval pipeline chịu lỗi tốt hơn khi gặp text quá dài hoặc batch lỗi cục bộ.
-- Có công cụ đo tốc độ thật trước khi đẩy corpus BTC lớn vào hệ thống.
+## Boundary for future promotion
 
-Ảnh hưởng tới gì:
-- Encode vẫn trả đúng output shape như cũ.
-- Chỉ thêm một nhánh xử lý an toàn hơn, không phá luồng gọi hiện tại.
-- Giảm rủi ro fail toàn bộ index khi chỉ một vài chunk lỗi.
-
-File runtime chính:
-
-- `src/udsc2026/infrastructure/embedding/client.py`
-- `scripts/data_prep/benchmark_embedding.py`
-
-File test:
-
-- `tests/retrieval/test_embedding_client.py`
-
-Chức năng:
-
-- Mã hóa query và document theo batch cấu hình được, vẫn giữ nguyên số chiều
-  và dạng dữ liệu embedding mà các retriever hiện tại sử dụng.
-- Đo thời gian toàn bộ, thời gian trung bình mỗi batch và throughput để đánh
-  giá khả năng chạy trên corpus BTC lớn.
-- Khi batch lỗi, log rõ chunk/batch lỗi và tiếp tục phần dữ liệu còn lại theo
-  luồng resilient, thay vì dừng toàn bộ quá trình indexing.
-
-## 4. Prompt 4 - Regression test BM25 tiếng Việt với thuật ngữ pháp lý thật
-
-Yêu cầu:
-- Bảo vệ tokenizer tiếng Việt và các cụm pháp lý quan trọng.
-- Thêm test cho điều, khoản, điểm, số hiệu văn bản, viết tắt pháp lý.
-- Không sửa logic nếu hành vi hiện tại đúng.
-
-Mình đã thực hiện:
-- Bổ sung test BM25 tokenizer cho các case pháp lý Việt Nam.
-- Kiểm tra tokenization không làm mất số điều/khoản/điểm và số hiệu văn bản.
-- Giữ nguyên logic tokenizer nếu case đã đúng ý nghĩa yêu cầu.
-
-Tác dụng sau khi làm xong:
-- Giảm nguy cơ BM25 khớp sai trên văn bản pháp lý thật.
-- Bắt lỗi regression sớm khi thay đổi tokenizer hoặc regex xử lý pháp lý.
-
-Ảnh hưởng tới gì:
-- Không đổi hành vi runtime nếu case cũ đã đúng.
-- Chủ yếu là tăng độ an toàn bằng test regression.
-
-File runtime chính:
-
-- `src/udsc2026/retrieval/sparse/tokenizer.py`
-- `src/udsc2026/retrieval/sparse/bm25_retriever.py`
-
-File test:
-
-- `tests/retrieval/test_bm25_tokenizer.py`
-- `tests/retrieval/test_bm25_retriever.py`
-- `tests/unit/test_retrieval/test_bm25_persistence.py`
-
-Chức năng:
-
-- Chuẩn hóa và tách token tiếng Việt nhưng vẫn bảo toàn dấu, số điều/khoản/
-  điểm, số hiệu văn bản và các thuật ngữ pháp lý cần thiết cho truy hồi.
-- Xây dựng BM25 từ LegalChunk, truy vấn theo điểm sparse, rồi lưu/nạp index
-  mà không làm thay đổi kết quả truy hồi hoặc metadata chunk.
-- Regression tests khóa các trường hợp pháp lý thực tế để thay đổi regex hay
-  tokenizer sau này không âm thầm làm giảm chất lượng khớp.
-
-## 5. Prompt 6 - Guard top-k và giữ citation metadata
-
-Yêu cầu:
-- Chặn trả dư hơn `top_k`.
-- Raise lỗi nếu search trả nhiều hơn giới hạn.
-- Bảo toàn metadata citation từ chunk sang `RetrievalHit`.
-- Có test cho overflow và preservation metadata.
-
-Mình đã thực hiện:
-- Thêm validation ở tầng search để phát hiện kết quả dư.
-- Bổ sung test cho trường hợp backend trả quá số lượng cho phép.
-- Bổ sung test kiểm tra metadata citation được giữ nguyên.
-
-Tác dụng sau khi làm xong:
-- Hệ thống fail sớm nếu có lỗi logic ở retrieval.
-- TV5 và TV1 nhận đầu ra sạch hơn, không phải tự đoán hoặc tự chữa metadata bị mất.
-
-Ảnh hưởng tới gì:
-- Đây là thay đổi hành vi có chủ đích: lỗi vượt `top_k` không còn bị nuốt âm thầm.
-- Giảm rủi ro sai format khi đi tới bước submission.
-
-File runtime chính:
-
-- `src/udsc2026/retrieval/dense/dense_retriever.py`
-- `src/udsc2026/retrieval/sparse/bm25_retriever.py`
-- `src/udsc2026/retrieval/hybrid/hybrid_retriever.py`
-- `src/udsc2026/retrieval/hybrid/score_fusion.py`
-
-File test:
-
-- `tests/retrieval/test_dense_retriever.py`
-- `tests/retrieval/test_bm25_retriever.py`
-- `tests/retrieval/test_hybrid_retriever.py`
-- `tests/retrieval/test_score_fusion.py`
-- `tests/unit/test_retrieval/test_hybrid_and_dense.py`
-
-Chức năng:
-
-- Dense, sparse và hybrid trả tối đa đúng `top_k` `RetrievalHit`; số lượng vượt
-  giới hạn được xem là lỗi logic để phát hiện sớm trước tầng TV1/TV5.
-- Hybrid hợp nhất kết quả dense và BM25 theo score fusion/candidate policy,
-  đồng thời duy trì thứ hạng và điểm thành phần phục vụ debug.
-- Khi chuyển chunk thành `RetrievalHit`, các field citation như `chunk_id`,
-  `doc_id`, `text`, `source`, `law_name`, `article`, `clause` và `metadata`
-  phải giữ nguyên giá trị gốc nếu chunk có cung cấp.
-
+P3/P4/P5 must not be described as score improvements until a robust strict-CV
+before/after report and matching manifest exist. Neural/index changes also need
+a GPU run. P16 now has a cell-by-cell Task1 runbook; it does not itself claim a
+GPU score or change production configuration.

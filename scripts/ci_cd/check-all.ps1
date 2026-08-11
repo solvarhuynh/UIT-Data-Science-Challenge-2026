@@ -6,6 +6,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ProjectRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path
+$PytestBaseTemp = Join-Path $ProjectRoot (".pytest_runtime_" + [guid]::NewGuid().ToString("N"))
 $PythonCheckPaths = @("src", "tests", "scripts")
 $VirtualEnvironmentPythons = @(
     (Join-Path $ProjectRoot ".venv\Scripts\python.exe"),
@@ -58,6 +59,7 @@ try {
             $env:OMP_NUM_THREADS = "1"
             $env:OPENBLAS_NUM_THREADS = "1"
             & $ProjectPython -m pytest -q -rs `
+                --basetemp $PytestBaseTemp `
                 --ignore=tests/unit/test_vector_db `
                 --ignore=tests/retrieval/test_vector_db_adapters.py `
                 --cov=src/udsc2026 `
@@ -66,6 +68,7 @@ try {
                 throw "non-VectorDB pytest shard failed with exit code $LASTEXITCODE"
             }
             & $ProjectPython -m pytest -q -rs `
+                --basetemp $PytestBaseTemp `
                 tests/unit/test_vector_db `
                 tests/retrieval/test_vector_db_adapters.py `
                 --cov=src/udsc2026 `

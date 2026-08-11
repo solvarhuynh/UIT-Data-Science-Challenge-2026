@@ -2,6 +2,11 @@
 
 [HCMUTE Embedding v2](https://huggingface.co/huyydangg/DEk21_hcmute_embedding_v2)
 
+> **Status: `DEFERRED_EXPERIMENT`.** BGE-M3 không thuộc Task1 production hiện
+> tại, không được tải/build index và chưa được thêm vào preflight hay config.
+> Chỉ xem xét nếu P12/P13/P15 vẫn plateau theo CandidateDocRecall hoặc
+> official OOF Recall.
+
 ## Tổng quan
 
 Tài liệu này ghi chú cách tích hợp `huyydangg/DEk21_hcmute_embedding_v2` cho dense retrieval tiếng Việt. Các nguyên tắc về dense, sparse và hybrid retrieval vẫn áp dụng khi mở rộng kiến trúc.
@@ -51,4 +56,3 @@ class EmbeddingClient:
 ```
 
 Embedding client không phụ thuộc trực tiếp vào FastAPI. Backend chỉ gọi qua service/retriever để giữ khả năng thay model.
-

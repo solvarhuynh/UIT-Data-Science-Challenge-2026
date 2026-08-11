@@ -1,4 +1,4 @@
-"""Download the three approved UDSC2026 models into reproducible local paths."""
+"""Download approved UDSC2026 models into reproducible local paths."""
 
 from __future__ import annotations
 
@@ -51,6 +51,12 @@ IGNORE_PATTERNS = (
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
+        "--profile",
+        choices=("task1", "task1-baseline", "task1-top1", "all"),
+        default="all",
+        help="Download profile (task1 profiles contain only HCMUTE + BGE).",
+    )
+    parser.add_argument(
         "--only",
         nargs="+",
         choices=[spec.key for spec in MODELS],
@@ -72,7 +78,15 @@ def main() -> int:
         raise SystemExit(
             "Missing huggingface-hub; run `python -m pip install -e .[gpu]` first."
         ) from exc
-    selected = set(args.only or [spec.key for spec in MODELS])
+    task1_keys = {"embedding", "reranker"}
+    profile_keys = task1_keys if args.profile != "all" else {spec.key for spec in MODELS}
+    selected = set(args.only or profile_keys)
+    invalid = selected - profile_keys if args.profile != "all" else set()
+    if invalid:
+        raise SystemExit(
+            f"Profile {args.profile!r} only supports: "
+            f"{', '.join(sorted(profile_keys))}"
+        )
     api = HfApi()
     manifest: dict[str, object] = {
         "created_at_utc": datetime.now(timezone.utc).isoformat(),

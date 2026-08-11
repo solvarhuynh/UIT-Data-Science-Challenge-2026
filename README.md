@@ -27,8 +27,15 @@ sinh câu trả lời bằng LLM local, đánh giá và đóng gói submission.
 | Reranker | [`BAAI/bge-reranker-v2-m3`](https://huggingface.co/BAAI/bge-reranker-v2-m3) | `models/reranker` | CUDA FP16, batch 8, max length 1024 |
 | LLM | [`thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2`](https://huggingface.co/thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2) | `models/qwen3-legal` | CUDA BF16 |
 
-Model được tải bằng `download_models.py`; revision thực tế được ghi vào
+Task1 production dùng HCMUTE embedding + BGE reranker. Model được tải bằng
+`download_models.py`; revision thực tế được ghi vào
 `models/download_manifest.json`. Xem thêm [Model Registry](docs/models/model_registry.md).
+
+Tải đúng model production Task1:
+
+```powershell
+python download_models.py --profile task1
+```
 
 ## Kiến trúc
 
@@ -146,6 +153,9 @@ powershell -ExecutionPolicy Bypass -File scripts/gpu/run_gpu_pipeline.ps1 `
 Pipeline sẽ dừng nếu corpus, benchmark, model hoặc CUDA không qua preflight.
 Hướng dẫn chi tiết và xử lý OOM nằm tại
 [TV5 GPU Runbook](docs/members/tv5/tv5_gpu_runbook.md).
+
+Runbook từng cell cho Task1 trên Kaggle nằm tại
+[TV2 Task1 Kaggle Runbook](docs/members/tv2/tv2_task1_kaggle.md).
 
 Với RTX 5060 Ti 16 GB và RAM 28 GB, pipeline chính dùng dense FAISS top-50 →
 reranker top-5; không build full `rank_bm25` trong cùng lượt vì tốn RAM. Lần chạy

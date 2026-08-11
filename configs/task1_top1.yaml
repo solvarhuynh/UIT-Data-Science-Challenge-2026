@@ -1,0 +1,9 @@
+# Task1 production selection. Required local models are only HCMUTE + BGE.
+schema_version: task1-top1-v1
+embedding:
+  model_id: huyydangg/DEk21_hcmute_embedding_v2
+  model_path: ./models/dek21-v2
+reranker:
+  name: BAAI/bge-reranker-v2-m3
+  model_path: ./models/reranker
+  local_files_only: true
