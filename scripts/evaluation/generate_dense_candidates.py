@@ -12,6 +12,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from tqdm import tqdm
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SOURCE_ROOT = PROJECT_ROOT / "src"
 if str(SOURCE_ROOT) not in sys.path:
@@ -20,7 +22,6 @@ if str(SOURCE_ROOT) not in sys.path:
 from udsc2026.evaluation import (  # noqa: E402
     load_benchmark,
     load_warmup,
-    write_predictions,
     write_run_manifest,
 )
 from udsc2026.evaluation.models import PredictionSample  # noqa: E402
@@ -90,23 +91,58 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _read_completed_question_ids(path: Path) -> set[str]:
+    """Read completed JSONL IDs without retaining prediction objects in RAM."""
+
+    if not path.exists():
+        return set()
+    if path.suffix.casefold() != ".jsonl":
+        raise ValueError("resume output must use .jsonl")
+
+    completed: set[str] = set()
+    with path.open("r", encoding="utf-8") as stream:
+        for line_number, line in enumerate(stream, start=1):
+            if not line.strip():
+                continue
+            try:
+                payload = json.loads(line)
+                question_id = payload["question_id"]
+            except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+                raise ValueError(
+                    f"invalid prediction JSONL at {path}:{line_number}"
+                ) from exc
+            if not isinstance(question_id, str) or not question_id.strip():
+                raise ValueError(
+                    f"prediction question_id must be a non-empty string at "
+                    f"{path}:{line_number}"
+                )
+            if question_id in completed:
+                raise ValueError(f"duplicate question_id in existing output: {question_id}")
+            completed.add(question_id)
+    return completed
+
+
+def _write_prediction_batch(stream: Any, predictions: list[PredictionSample]) -> None:
+    """Write one batch with the same JSONL serialization as write_predictions."""
+
+    for prediction in predictions:
+        payload = prediction.model_dump(mode="json", exclude_none=True)
+        stream.write(
+            json.dumps(
+                payload,
+                ensure_ascii=False,
+                sort_keys=True,
+                separators=(",", ":"),
+                allow_nan=False,
+            )
+            + "\n"
+        )
+
+
 def run(args: argparse.Namespace) -> list[Path]:
     question_source = args.legal_ir_train or args.benchmark
     if question_source is None:
         question_source = Path("data/processed_v3/benchmarks/synthetic_qa.jsonl")
-    config = load_config(args.config_env)
-    embedding = dict(config.get("embedding", {}))
-    model_path = str(embedding.get("model_path", "./models/dek21-v2"))
-    embedder = EmbeddingClient(
-        model_path=model_path,
-        device=str(embedding.get("device", "cpu")),
-        batch_size=int(embedding.get("batch_size", 32)),
-        max_length=int(embedding.get("max_length", 256)),
-        normalize_embeddings=bool(embedding.get("normalize_embeddings", True)),
-        output_dimension=embedding.get("output_dimension"),
-        window_long_texts=False,
-    )
-    vector_db = get_vector_db_adapter(config)
     if args.legal_ir_train is not None:
         samples = [
             (sample.id, sample.question) for sample in load_warmup(question_source)
@@ -120,6 +156,14 @@ def run(args: argparse.Namespace) -> list[Path]:
         samples = samples[: args.limit]
     if not samples:
         raise ValueError("benchmark selection must not be empty")
+    completed_ids = _read_completed_question_ids(args.output)
+    selected_ids = {question_id for question_id, _ in samples}
+    unexpected_ids = completed_ids - selected_ids
+    if unexpected_ids:
+        raise ValueError(
+            "existing output contains question IDs outside the selected input: "
+            + ", ".join(sorted(unexpected_ids)[:5])
+        )
     outputs = [args.output, args.manifest]
     if args.limit is not None:
         args.benchmark_subset.parent.mkdir(parents=True, exist_ok=True)
@@ -138,48 +182,82 @@ def run(args: argparse.Namespace) -> list[Path]:
         )
         outputs.append(args.benchmark_subset)
 
-    predictions: list[PredictionSample] = []
     started = time.perf_counter()
-    for offset in range(0, len(samples), args.query_batch_size):
-        batch = samples[offset : offset + args.query_batch_size]
-        batch_started = time.perf_counter()
-        vectors = embedder.embed_documents(
-            [question for _, question in batch],
-            batch_size=args.query_batch_size,
+    pending = [sample for sample in samples if sample[0] not in completed_ids]
+    if not pending:
+        print(f"complete: {args.output} already contains {len(samples)} queries")
+        config = load_config(args.config_env)
+        embedding = dict(config.get("embedding", {}))
+        model_path = str(embedding.get("model_path", "./models/dek21-v2"))
+    else:
+        config = load_config(args.config_env)
+        embedding = dict(config.get("embedding", {}))
+        model_path = str(embedding.get("model_path", "./models/dek21-v2"))
+        embedder = EmbeddingClient(
+            model_path=model_path,
+            device=str(embedding.get("device", "cpu")),
+            batch_size=int(embedding.get("batch_size", 32)),
+            max_length=int(embedding.get("max_length", 256)),
+            normalize_embeddings=bool(embedding.get("normalize_embeddings", True)),
+            output_dimension=embedding.get("output_dimension"),
+            window_long_texts=False,
         )
-        embedding_elapsed_ms = (time.perf_counter() - batch_started) * 1000
-        per_query_embedding_ms = embedding_elapsed_ms / len(batch)
-        for (question_id, question), vector in zip(batch, vectors):
-            search_started = time.perf_counter()
-            hits = vector_db.search(vector, args.candidate_k)
-            search_elapsed_ms = (time.perf_counter() - search_started) * 1000
-            ranked_hits = [
-                hit.model_copy(
-                    update={
-                        "rank": rank,
-                        "dense_score": (
-                            hit.dense_score
-                            if hit.dense_score is not None
-                            else hit.score
-                        ),
-                        "final_score": (
-                            hit.dense_score
-                            if hit.dense_score is not None
-                            else hit.score
-                        ),
-                    }
-                )
-                for rank, hit in enumerate(hits, start=1)
-            ]
-            predictions.append(
-                PredictionSample(
-                    question_id=question_id,
-                    hits=ranked_hits,
-                    latency_ms=per_query_embedding_ms + search_elapsed_ms,
-                )
+        vector_db = get_vector_db_adapter(config)
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        with args.output.open("a", encoding="utf-8") as stream:
+            progress = tqdm(
+                total=len(samples),
+                initial=len(completed_ids),
+                unit="q",
+                bar_format="{n_fmt}/{total_fmt} [{percentage:3.0f}%] | "
+                "{rate_fmt} | elapsed {elapsed} | ETA {remaining}",
             )
-
-    write_predictions(predictions, args.output)
+            try:
+                for offset in range(0, len(pending), args.query_batch_size):
+                    batch = pending[offset : offset + args.query_batch_size]
+                    batch_started = time.perf_counter()
+                    vectors = embedder.embed_documents(
+                        [question for _, question in batch],
+                        batch_size=args.query_batch_size,
+                    )
+                    embedding_elapsed_ms = (time.perf_counter() - batch_started) * 1000
+                    per_query_embedding_ms = embedding_elapsed_ms / len(batch)
+                    batch_predictions: list[PredictionSample] = []
+                    for (question_id, question), vector in zip(batch, vectors):
+                        search_started = time.perf_counter()
+                        hits = vector_db.search(vector, args.candidate_k)
+                        search_elapsed_ms = (time.perf_counter() - search_started) * 1000
+                        ranked_hits = [
+                            hit.model_copy(
+                                update={
+                                    "rank": rank,
+                                    "dense_score": (
+                                        hit.dense_score
+                                        if hit.dense_score is not None
+                                        else hit.score
+                                    ),
+                                    "final_score": (
+                                        hit.dense_score
+                                        if hit.dense_score is not None
+                                        else hit.score
+                                    ),
+                                }
+                            )
+                            for rank, hit in enumerate(hits, start=1)
+                        ]
+                        batch_predictions.append(
+                            PredictionSample(
+                                question_id=question_id,
+                                hits=ranked_hits,
+                                latency_ms=per_query_embedding_ms + search_elapsed_ms,
+                            )
+                        )
+                    _write_prediction_batch(stream, batch_predictions)
+                    stream.flush()
+                    progress.update(len(batch_predictions))
+                    del batch_predictions, ranked_hits, hits, vectors, batch
+            finally:
+                progress.close()
     vector_settings = dict(config.get("vector_db", {}))
     index_manifest = (
         Path(str(vector_settings["faiss_index_path"]))
@@ -197,7 +275,7 @@ def run(args: argparse.Namespace) -> list[Path]:
         "question_source_type": (
             "legal_ir_train" if args.legal_ir_train is not None else "benchmark"
         ),
-        "question_count": len(predictions),
+        "question_count": len(samples),
         "candidate_k": args.candidate_k,
         "model_path": model_path,
         "model_id": embedding.get("model_id"),
@@ -205,6 +283,7 @@ def run(args: argparse.Namespace) -> list[Path]:
         "index_manifest": index_metadata,
         "output": str(args.output),
         "elapsed_seconds": time.perf_counter() - started,
+        "complete": len(completed_ids) + len(pending) == len(samples),
     }
     write_run_manifest(manifest, args.manifest)
     return outputs
