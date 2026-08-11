@@ -122,12 +122,15 @@ def _load_diagnostics(path: Path, *, resume: bool) -> list[dict[str, Any]]:
 
 def _write_json_atomic(path: Path, payload: object) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    encoded = json.dumps(
-        payload,
-        ensure_ascii=False,
-        allow_nan=False,
-        indent=2,
-    ) + "\n"
+    encoded = (
+        json.dumps(
+            payload,
+            ensure_ascii=False,
+            allow_nan=False,
+            indent=2,
+        )
+        + "\n"
+    )
     temporary_name: str | None = None
     try:
         with tempfile.NamedTemporaryFile(
@@ -166,9 +169,7 @@ async def _run(args: argparse.Namespace) -> None:
         questions = questions[: args.limit]
     contexts = _load_contexts(args.contexts)
     missing_contexts = [
-        question_id
-        for question_id, _ in questions
-        if question_id not in contexts
+        question_id for question_id, _ in questions if question_id not in contexts
     ]
     if missing_contexts:
         raise ValueError(f"missing retrieval contexts for {missing_contexts[:5]}")

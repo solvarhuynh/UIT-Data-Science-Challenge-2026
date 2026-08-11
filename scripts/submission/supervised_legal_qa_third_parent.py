@@ -44,7 +44,6 @@ import numpy as np
 from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-
 FEATURE_NAMES = (
     "dense_rank",
     "dense_reciprocal_rank",
@@ -342,9 +341,7 @@ def load_rankings(
     dense_rows: dict[str, dict[str, tuple[int, str, float]]] = {}
     for question_id, raw_hits in _iter_prediction_jsonl(dense_path):
         if question_id not in expected:
-            raise ValueError(
-                f"dense question coverage mismatch: extra={[question_id]}"
-            )
+            raise ValueError(f"dense question coverage mismatch: extra={[question_id]}")
         dense_by_chunk: dict[str, tuple[int, str, float]] = {}
         for rank, raw_hit in enumerate(raw_hits, 1):
             chunk_id = _opaque_id(raw_hit.get("chunk_id"), label="chunk_id")
@@ -687,13 +684,12 @@ def _feature_rows_for_question(
         parent_token_lists.append(tokens)
         token_set = set(tokens)
         bigrams = set(zip(tokens, tokens[1:]))
-        unigram_coverage = sum(
-            context.token_idf(token) for token in query_unique & token_set
-        ) / denominator
+        unigram_coverage = (
+            sum(context.token_idf(token) for token in query_unique & token_set)
+            / denominator
+        )
         bigram_coverage = (
-            len(query_bigrams & bigrams) / len(query_bigrams)
-            if query_bigrams
-            else 0.0
+            len(query_bigrams & bigrams) / len(query_bigrams) if query_bigrams else 0.0
         )
         lexical_score = 0.7 * unigram_coverage + 0.3 * bigram_coverage
         raw.append(
@@ -826,9 +822,7 @@ def build_candidate_dataset(
             context,
         )
         reference = questions[question_id]["answer"]
-        base_score = (
-            fast_exact_meteor(str(reference), base_answer) if labeled else 0.0
-        )
+        base_score = fast_exact_meteor(str(reference), base_answer) if labeled else 0.0
         weight = 1.0 / len(candidates)
         for candidate, row, parent_text in zip(candidates, rows, parent_texts):
             third_span = contiguous_parent_span(
@@ -913,9 +907,9 @@ class SupervisedParentPrior:
             meta = dataset.metas[index]
             self.doc_rows.setdefault(meta.doc_id, []).append(row)
             if meta.article:
-                self.article_rows.setdefault(
-                    (meta.doc_id, meta.article), []
-                ).append(row)
+                self.article_rows.setdefault((meta.doc_id, meta.article), []).append(
+                    row
+                )
 
     def features_for_group(
         self,
@@ -956,14 +950,11 @@ def add_oof_prior_features(
     if folds < 2:
         raise ValueError("supervised-prior folds must be at least two")
     question_key_by_id = {
-        item: normalize_question(str(questions[item]["question"]))
-        for item in train_ids
+        item: normalize_question(str(questions[item]["question"])) for item in train_ids
     }
     ordered_keys = sorted(set(question_key_by_id.values()))
     fold_by_key = {key: index % folds for index, key in enumerate(ordered_keys)}
-    fold_by_id = {
-        item: fold_by_key[question_key_by_id[item]] for item in train_ids
-    }
+    fold_by_id = {item: fold_by_key[question_key_by_id[item]] for item in train_ids}
     all_ids = set(train_ids)
     for fold in range(folds):
         held_out = {item for item in train_ids if fold_by_id[item] == fold}
@@ -1288,13 +1279,9 @@ def run_fit_public(args: argparse.Namespace) -> dict[str, Any]:
         ],
         [args.output, args.output_report],
     )
-    train_questions = _load_question_mapping(
-        args.train_questions, require_answers=True
-    )
+    train_questions = _load_question_mapping(args.train_questions, require_answers=True)
     train_ids = list(train_questions)
-    train_rankings = load_rankings(
-        args.train_dense, args.train_reranked, train_ids
-    )
+    train_rankings = load_rankings(args.train_dense, args.train_reranked, train_ids)
     context = FeatureContext.fit(train_rankings, train_ids)
     store = ParentTextStore(
         args.parents_dir, max_cached_documents=args.parent_cache_documents
@@ -1322,9 +1309,7 @@ def run_fit_public(args: argparse.Namespace) -> dict[str, Any]:
         args.public_questions, require_answers=False
     )
     public_ids = list(public_questions)
-    public_rankings = load_rankings(
-        args.public_dense, args.public_reranked, public_ids
-    )
+    public_rankings = load_rankings(args.public_dense, args.public_reranked, public_ids)
     public_dataset = build_candidate_dataset(
         public_questions,
         public_rankings,
@@ -1458,9 +1443,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (OSError, TypeError, ValueError, LookupError) as exc:
         print(f"third-parent selector error: {exc}", file=sys.stderr)
         return 2
-    print(
-        f"mode={report['mode']} supervised_prior={report['supervised_prior']}"
-    )
+    print(f"mode={report['mode']} supervised_prior={report['supervised_prior']}")
     print(args.output_report)
     return 0
 

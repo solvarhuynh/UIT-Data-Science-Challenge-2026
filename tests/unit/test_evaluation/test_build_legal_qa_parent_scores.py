@@ -7,7 +7,6 @@ from argparse import Namespace
 from pathlib import Path
 
 import pytest
-
 from scripts.submission.build_legal_qa_parent_scores import (
     bounded_parent_window,
     build_predictions,
@@ -47,9 +46,7 @@ def test_anchor_window_matches_parent_expander_single_anchor_behavior() -> None:
     assert bounded_parent_window(parent, "four five", 6) == (
         "two three four five six seven"
     )
-    assert bounded_parent_window(parent, "missing child text", 2) == (
-        "missing child"
-    )
+    assert bounded_parent_window(parent, "missing child text", 2) == ("missing child")
 
 
 def test_build_preserves_question_order_and_enforces_total_budget() -> None:
@@ -77,9 +74,7 @@ def test_build_preserves_question_order_and_enforces_total_budget() -> None:
     )
 
     assert [row["id"] for row in predictions] == ["q2", "q1"]
-    assert predictions[0]["answer"] == (
-        "two three four five six seven\nalpha beta"
-    )
+    assert predictions[0]["answer"] == ("two three four five six seven\nalpha beta")
     assert len(predictions[0]["answer"].split()) == 8
     assert summary["question_count"] == 2
     assert summary["parents_used"] == 3
@@ -153,15 +148,11 @@ def test_run_is_reference_independent_and_writes_internal_schema(
         [
             {
                 "question_id": "q1",
-                "parents": [
-                    _parent(1, 2.0, text="nguồn một", anchor="nguồn một")
-                ],
+                "parents": [_parent(1, 2.0, text="nguồn một", anchor="nguồn một")],
             },
             {
                 "question_id": "q2",
-                "parents": [
-                    _parent(1, 2.0, text="nguồn hai", anchor="nguồn hai")
-                ],
+                "parents": [_parent(1, 2.0, text="nguồn hai", anchor="nguồn hai")],
             },
         ],
     )
