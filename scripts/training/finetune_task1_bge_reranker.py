@@ -12,6 +12,7 @@ import argparse
 import hashlib
 import json
 import math
+import os
 import random
 import sys
 from contextlib import nullcontext
@@ -19,6 +20,8 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol, Sequence
+
+from tqdm import tqdm
 
 ROOT = Path(__file__).resolve().parents[2]
 SOURCE_ROOT = ROOT / "src"
@@ -189,7 +192,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--diagnostic-only", action="store_true",
                         help="Mark output non-promotable (used by the real GPU smoke).")
     parser.add_argument("--seed", type=int, default=2026)
-    parser.add_argument("--device", default="cuda")
+    parser.add_argument("--device", choices=("auto", "cpu", "cuda"), default="auto")
     parser.add_argument(
         "--no-fp16",
         dest="fp16",
@@ -235,6 +238,19 @@ def _write_json(path: Path, payload: Any) -> None:
         encoding="utf-8",
         newline="\n",
     )
+
+
+def _write_json_atomic(path: Path, payload: Any) -> None:
+    """Publish small completion metadata atomically."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(
+        json.dumps(payload, ensure_ascii=False, allow_nan=False, indent=2) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    os.replace(temporary, path)
 
 
 def _write_jsonl(path: Path, rows: Sequence[dict[str, Any]]) -> None:
@@ -310,6 +326,27 @@ def _load_json_records(path: Path) -> list[dict[str, Any]]:
     raise ValueError(f"unsupported candidate artifact: {path}")
 
 
+def _iter_json_records(path: Path):
+    """Stream JSONL records for fold-local validation/building."""
+
+    if not path.is_file():
+        raise FileNotFoundError(f"input artifact not found: {path}")
+    if path.suffix.casefold() != ".jsonl":
+        yield from _load_json_records(path)
+        return
+    with path.open(encoding="utf-8-sig") as stream:
+        for line_number, line in enumerate(stream, start=1):
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"invalid JSON at {path}:{line_number}") from exc
+            if not isinstance(record, dict):
+                raise ValueError(f"record at {path}:{line_number} must be an object")
+            yield record
+
+
 def _numeric_score(item: dict[str, Any]) -> float | None:
     for key in ("rerank_score", "final_score", "dense_score", "score"):
         value = item.get(key)
@@ -380,6 +417,19 @@ def load_document_candidates(
     if not output:
         raise ValueError("candidate cache contains no usable document evidence")
     return output
+
+
+def load_candidate_query_ids(path: Path) -> set[str]:
+    """Stream only candidate query IDs for model-free dry-run validation."""
+
+    query_ids: set[str] = set()
+    for record in _iter_json_records(path):
+        query_id = str(record.get("question_id", record.get("id", ""))).strip()
+        if query_id:
+            query_ids.add(query_id)
+    if not query_ids:
+        raise ValueError("candidate cache contains no query IDs")
+    return query_ids
 
 
 def _evidence_texts(value: Any) -> tuple[str, ...]:
@@ -549,7 +599,12 @@ def _validation_predictions(
     fold: int,
 ) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
-    for query_id in validation_ids:
+    for query_id in tqdm(
+        validation_ids,
+        desc=f"Fold {fold} validation",
+        unit="q",
+        leave=False,
+    ):
         query = train[query_id]["question"]
         pool = candidates[query_id]
         scores = backend.score(query, [format_document_evidence(item) for item in pool])
@@ -628,7 +683,7 @@ def _better_metrics(candidate: dict[str, Any], best: dict[str, Any] | None) -> b
 
 
 class TorchBGERerankerBackend:
-    """Minimal CUDA-only binary relevance trainer for BGE cross encoders."""
+    """Binary relevance trainer supporting CPU diagnostics and CUDA training."""
 
     def __init__(
         self,
@@ -652,10 +707,10 @@ class TorchBGERerankerBackend:
                 "P13 GPU training requires torch and transformers. Install the "
                 "project GPU extra on Kaggle."
             ) from exc
-        if not device.casefold().startswith("cuda") or not torch.cuda.is_available():
+        if device == "cuda" and not torch.cuda.is_available():
             raise RuntimeError(
-                "P13 full fine-tuning requires CUDA. Use --dry-run locally, or run "
-                "this command on a Kaggle GPU with a CUDA-enabled PyTorch build."
+                "CUDA is required for --device cuda, but torch.cuda.is_available() "
+                "is False. Use --device cpu for a tiny diagnostic or run on a GPU."
             )
         self._torch = torch
         self._schedule_factory = get_linear_schedule_with_warmup
@@ -665,10 +720,11 @@ class TorchBGERerankerBackend:
         self._max_length = max_length
         self._learning_rate = learning_rate
         self._warmup_ratio = warmup_ratio
-        self._fp16 = fp16
+        self._fp16 = bool(fp16 and self._device.type == "cuda")
         random.seed(seed)
         torch.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed)
+        if self._device.type == "cuda":
+            torch.cuda.manual_seed_all(seed)
         self._tokenizer = AutoTokenizer.from_pretrained(
             base_model, local_files_only=True
         )
@@ -677,7 +733,10 @@ class TorchBGERerankerBackend:
         ).to(self._device)
         self._optimizer: Any | None = None
         self._scheduler: Any | None = None
-        self._scaler = torch.cuda.amp.GradScaler(enabled=fp16)
+        if self._fp16:
+            self._scaler = torch.cuda.amp.GradScaler(enabled=True)
+        else:
+            self._scaler = _DisabledGradScaler()
         revision = getattr(self._model.config, "_commit_hash", None)
         self._model_revision = (
             str(revision) if revision else _local_model_revision(base_model)
@@ -737,7 +796,14 @@ class TorchBGERerankerBackend:
         self._model.train()
         self._optimizer.zero_grad(set_to_none=True)
         losses: list[float] = []
-        for start in range(0, len(ordered), self._batch_size):
+        batch_starts = range(0, len(ordered), self._batch_size)
+        for start in tqdm(
+            batch_starts,
+            total=math.ceil(len(ordered) / self._batch_size),
+            desc="Training batches",
+            unit="batch",
+            leave=False,
+        ):
             batch = ordered[start : start + self._batch_size]
             encoded, labels = self._batch(batch)
             autocast = (
@@ -807,7 +873,24 @@ class TorchBGERerankerBackend:
 
     def close(self) -> None:
         del self._model
-        self._torch.cuda.empty_cache()
+        if self._device.type == "cuda":
+            self._torch.cuda.empty_cache()
+
+
+class _DisabledGradScaler:
+    """CPU-safe no-op matching the small GradScaler API used by the trainer."""
+
+    def scale(self, loss: Any) -> Any:
+        return loss
+
+    def unscale_(self, optimizer: Any) -> None:
+        del optimizer
+
+    def step(self, optimizer: Any) -> None:
+        optimizer.step()
+
+    def update(self) -> None:
+        return None
 
 
 def _local_model_revision(base_model: str) -> str:
@@ -816,6 +899,49 @@ def _local_model_revision(base_model: str) -> str:
     if config.is_file():
         return f"local-config-sha256:{_sha256(config)}"
     return "unavailable"
+
+
+def _resolve_device(requested: str, *, dry_run: bool) -> str:
+    """Resolve device without importing or touching CUDA during dry-run."""
+
+    if dry_run:
+        return requested
+    if requested == "cpu":
+        return "cpu"
+    try:
+        import torch
+    except ImportError as exc:
+        raise RuntimeError("P13 requires torch for non-dry-run execution") from exc
+    available = bool(torch.cuda.is_available())
+    if requested == "cuda" and not available:
+        raise RuntimeError(
+            "CUDA is required for --device cuda, but torch.cuda.is_available() "
+            "is False. Use --device cpu for a tiny diagnostic or run on a GPU."
+        )
+    return "cuda" if available else "cpu"
+
+
+def _print_device_diagnostics(device: str, *, diagnostic_only: bool) -> None:
+    """Print explicit runtime information for diagnostic runs."""
+
+    print(f"diagnostic_device = {device}")
+    if device != "cuda":
+        return
+    import torch
+
+    print(f"cuda_available = {torch.cuda.is_available()}")
+    print(f"gpu_name = {torch.cuda.get_device_name(0)}")
+    print(f"cuda_version = {torch.version.cuda}")
+    try:
+        free_bytes, total_bytes = torch.cuda.mem_get_info()
+        allocated = torch.cuda.memory_allocated()
+        print(f"gpu_memory_allocated_bytes = {allocated}")
+        print(f"gpu_memory_free_bytes = {free_bytes}")
+        print(f"gpu_memory_total_bytes = {total_bytes}")
+    except (AttributeError, RuntimeError):
+        print("gpu_memory = unavailable")
+    if diagnostic_only:
+        print("diagnostic_subset = enabled")
 
 
 def _backend_factory(args: argparse.Namespace, *, fold: int) -> TrainingBackend:
@@ -843,7 +969,96 @@ def _fold_paths(output_dir: Path, fold: int) -> dict[str, Path]:
         "baseline": directory / "baseline_predictions.jsonl",
         "finetuned": directory / "finetuned_predictions.jsonl",
         "checkpoint": directory / "checkpoint",
+        "completion": directory / "completion.json",
     }
+
+
+def _validate_fold_negative_records(
+    path: Path,
+    *,
+    fold: int,
+    fold_map: dict[str, int],
+    expected_training_ids: set[str],
+    ablation: str,
+    same_law_boost: int,
+    retain_records: bool,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Stream one P12 fold, validate membership/leakage, then return that fold only."""
+
+    records: list[dict[str, Any]] = []
+    query_ids: set[str] = set()
+    positive_count = 0
+    negative_count = 0
+    hard_count = 0
+    semi_hard_count = 0
+    selected_pair_count = 0
+    unresolved_evidence_count = 0
+    record_count = 0
+    for record in tqdm(
+        _iter_json_records(path),
+        desc=f"Fold {fold} negatives",
+        unit="record",
+        leave=False,
+    ):
+        query_id = str(record.get("query_id", "")).strip()
+        record_count += 1
+        if not query_id or query_id not in fold_map:
+            raise ValueError(f"P12 record has an unknown query_id in fold {fold}")
+        if record.get("fold") != fold:
+            raise ValueError(f"negative record for {query_id} belongs to wrong fold")
+        if query_id not in expected_training_ids:
+            raise ValueError(
+                f"leakage: validation query {query_id} appears in training fold {fold}"
+            )
+        if not str(record.get("query", "")).strip():
+            raise ValueError(f"P12 record for {query_id} has no query text")
+        if not str(record.get("positive_doc", "")).strip():
+            raise ValueError(f"P12 record for {query_id} has no positive document")
+        if not str(record.get("negative_doc", "")).strip():
+            raise ValueError(f"P12 record for {query_id} has no negative document")
+        query_ids.add(query_id)
+        positive_count += bool(str(record.get("positive_doc", "")).strip())
+        negative_count += bool(str(record.get("negative_doc", "")).strip())
+        kind = str(record.get("negative_type", "")).strip()
+        hard_count += kind in {"hard_false_positive", "semantic_confuser"}
+        semi_hard_count += kind in {"semi_hard", "lexical_confuser"}
+        if (
+            not str(record.get("positive_evidence", "")).strip()
+            or not str(record.get("negative_evidence", "")).strip()
+        ):
+            unresolved_evidence_count += 1
+        if _selected_negative(record, ablation):
+            selected_pair_count += (
+                same_law_boost
+                if ablation == "same-law-boosted" and kind == "same_law"
+                else 1
+            )
+        if retain_records:
+            records.append(record)
+    missing = sorted(expected_training_ids.difference(query_ids))
+    summary = {
+        "negative_record_count": record_count,
+        "training_query_count": len(query_ids),
+        "expected_training_query_count": len(expected_training_ids),
+        "missing_training_queries": missing,
+        "leakage_query_count": 0,
+        "positive_record_count": positive_count,
+        "negative_record_with_document_count": negative_count,
+        "hard_negative_count": hard_count,
+        "semi_hard_negative_count": semi_hard_count,
+        "selected_pair_count": selected_pair_count,
+        "unresolved_evidence_count": unresolved_evidence_count,
+        "status": "VALID" if not missing else "INVALID",
+    }
+    if missing:
+        raise ValueError(
+            f"fold {fold} negatives are missing {len(missing)} training queries"
+        )
+    if ablation != "baseline" and selected_pair_count == 0:
+        raise ValueError(
+            f"fold {fold} has no eligible {ablation} hard/semi-hard negatives"
+        )
+    return records, summary
 
 
 def _run_one_ablation(
@@ -857,6 +1072,11 @@ def _run_one_ablation(
 ) -> dict[str, Any]:
     output_dir = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
+    requested_folds = set(args.folds_to_run) if args.folds_to_run else set(range(5))
+    available_folds = set(fold_map.values())
+    missing_requested = sorted(requested_folds.difference(available_folds))
+    if missing_requested:
+        raise ValueError(f"requested folds are not resolvable: {missing_requested}")
     if args.resume and (output_dir / "training_manifest.json").is_file():
         previous_manifest = json.loads(
             (output_dir / "training_manifest.json").read_text(encoding="utf-8")
@@ -883,29 +1103,10 @@ def _run_one_ablation(
             f"({len(missing_candidates)} missing). Provide full cached rankings, or "
             "use --allow-partial-oof only for a non-promotable diagnostic run."
         )
-    # P12 must preserve canonical positive evidence.  Do this before creating
-    # the backend so an invalid bundle can never consume GPU/model resources.
-    unresolved_positive: list[str] = []
-    for check_fold in sorted(set(fold_map.values())):
-        check_path = args.negatives_dir / f"fold_{check_fold}.jsonl"
-        for record in _load_json_records(check_path):
-            if (
-                not str(record.get("positive_evidence", "")).strip()
-                or not str(record.get("negative_evidence", "")).strip()
-            ):
-                unresolved_positive.append(
-                    f"{record.get('query_id')}:{record.get('positive_doc')}"
-                )
-    if unresolved_positive:
-        raise ValueError(
-            "P12 contains unresolved positive evidence; refusing P13 training: "
-            + ", ".join(unresolved_positive[:5])
-        )
     fold_reports: list[dict[str, Any]] = []
     oof_rows: list[dict[str, Any]] = []
     base_revision: str | None = None
-    requested_folds = set(args.folds_to_run) if args.folds_to_run else set(range(5))
-    for fold in sorted(set(fold_map.values()).intersection(requested_folds)):
+    for fold in sorted(requested_folds):
         paths = _fold_paths(output_dir, fold)
         validation_ids = [
             query_id
@@ -915,16 +1116,32 @@ def _run_one_ablation(
         if args.max_validation_queries:
             validation_ids = validation_ids[: args.max_validation_queries]
         train_ids = [query_id for query_id in all_ids if fold_map[query_id] != fold]
+        expected_training_ids = set(train_ids)
         negative_path = args.negatives_dir / f"fold_{fold}.jsonl"
-        negative_records = _load_json_records(negative_path)
-        dataset = build_fold_dataset(
-            negative_records,
+        negative_records, negative_summary = _validate_fold_negative_records(
+            negative_path,
             fold=fold,
             fold_map=fold_map,
+            expected_training_ids=expected_training_ids,
             ablation=ablation,
             same_law_boost=args.same_law_boost,
-            max_training_pairs=args.max_training_pairs,
+            retain_records=not args.dry_run,
         )
+        if negative_summary["unresolved_evidence_count"]:
+            raise ValueError(
+                "P12 contains unresolved positive/negative evidence in fold "
+                f"{fold}: {negative_summary['unresolved_evidence_count']} records"
+            )
+        dataset = None
+        if not args.dry_run:
+            dataset = build_fold_dataset(
+                negative_records,
+                fold=fold,
+                fold_map=fold_map,
+                ablation=ablation,
+                same_law_boost=args.same_law_boost,
+                max_training_pairs=args.max_training_pairs,
+            )
         _write_json(paths["train_ids"], train_ids)
         _write_json(paths["validation_ids"], validation_ids)
         _write_json(
@@ -933,24 +1150,51 @@ def _run_one_ablation(
                 "schema_version": "task1-p13-fold-dataset-v1",
                 "fold": fold,
                 "ablation": ablation,
-                "pair_count": dataset.pair_count,
-                "example_count": len(dataset.examples),
-                "training_query_count": len(dataset.query_ids),
-                "training_query_ids": list(dataset.query_ids),
-                "dataset_sha256": dataset.dataset_sha256,
-                "negative_type_counts": dataset.negative_type_counts,
-                "skipped_missing_evidence": dataset.skipped_missing_evidence,
+                "pair_count": (
+                    negative_summary["selected_pair_count"]
+                    if dataset is None else dataset.pair_count
+                ),
+                "example_count": (
+                    negative_summary["selected_pair_count"] * 2
+                    if dataset is None else len(dataset.examples)
+                ),
+                "training_query_count": (
+                    negative_summary["training_query_count"]
+                    if dataset is None else len(dataset.query_ids)
+                ),
+                "training_query_ids": sorted(
+                    expected_training_ids
+                    if dataset is None else dataset.query_ids
+                ),
+                "dataset_sha256": (
+                    "dry-run-streaming-validation"
+                    if dataset is None else dataset.dataset_sha256
+                ),
+                "negative_type_counts": negative_summary,
+                "skipped_missing_evidence": 0,
                 "negative_source": str(negative_path),
                 "negative_source_sha256": _sha256(negative_path),
                 "leakage_policy": (
                     "all fold_F training records must exclude fold F validation IDs"
                 ),
+                "negative_validation_summary": negative_summary,
             },
         )
-        if args.resume and paths["metrics"].is_file() and paths["baseline"].is_file() and paths["finetuned"].is_file():
+        if (
+            args.resume
+            and paths["completion"].is_file()
+            and paths["metrics"].is_file()
+            and paths["baseline"].is_file()
+            and paths["finetuned"].is_file()
+        ):
+            completion = json.loads(paths["completion"].read_text(encoding="utf-8"))
+            if completion.get("status") != "COMPLETE":
+                raise ValueError(f"invalid completion marker for fold {fold}")
             previous_dataset = json.loads(paths["dataset"].read_text(encoding="utf-8"))
             if previous_dataset.get("dataset_sha256") != dataset.dataset_sha256:
                 raise ValueError(f"resume hash mismatch for fold {fold}: dataset changed")
+            if completion.get("dataset_sha256") != dataset.dataset_sha256:
+                raise ValueError(f"resume hash mismatch for fold {fold}: completion changed")
             previous_report = json.loads(paths["metrics"].read_text(encoding="utf-8"))
             if previous_report.get("dataset_sha256") != dataset.dataset_sha256:
                 raise ValueError(f"resume hash mismatch for fold {fold}: metrics changed")
@@ -979,10 +1223,12 @@ def _run_one_ablation(
                     "fold": fold,
                     "status": "DRY_RUN",
                     "validation_query_count": len(validation_ids),
-                    "training_pair_count": dataset.pair_count,
-                    "dataset_sha256": dataset.dataset_sha256,
+                    "training_pair_count": negative_summary["selected_pair_count"],
+                    "dataset_sha256": "dry-run-streaming-validation",
+                    **negative_summary,
                 }
             )
+            del negative_records, dataset
             continue
         baseline = backend_factory(args, fold=fold)
         try:
@@ -1053,6 +1299,17 @@ def _run_one_ablation(
             "training_history": history,
         }
         _write_json(paths["metrics"], fold_report)
+        _write_json_atomic(
+            paths["completion"],
+            {
+                "schema_version": "task1-p13-fold-completion-v1",
+                "status": "COMPLETE",
+                "fold": fold,
+                "ablation": ablation,
+                "dataset_sha256": dataset.dataset_sha256,
+                "completed_at_utc": datetime.now(timezone.utc).isoformat(),
+            },
+        )
         fold_reports.append(fold_report)
         for before, after in zip(baseline_rows, tuned_rows):
             oof_rows.append(
@@ -1067,6 +1324,7 @@ def _run_one_ablation(
                     "fine_tuned_matched_gold": after["matched_gold"],
                 }
             )
+        del negative_records, dataset
     manifest = {
         "schema_version": "task1-p13-finetune-v1",
         "created_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -1099,6 +1357,8 @@ def _run_one_ablation(
             "selection_policy": args.selection_policy,
             "folds_to_run": sorted(requested_folds),
             "early_stopping_patience": args.early_stopping_patience,
+            "requested_device": args.device,
+            "resolved_device": args.device,
         },
         "document_unit": {
             "candidate_depth": args.candidate_depth,
@@ -1260,17 +1520,34 @@ def run(
 
     if args.learning_rate <= 0.0:
         raise ValueError("--learning-rate must be greater than zero")
+    # Resolve explicit CUDA before touching input artifacts or model paths so a
+    # local CPU-only invocation fails with the actionable device message first.
+    args.device = _resolve_device(args.device, dry_run=args.dry_run)
+    if args.diagnostic_only:
+        _print_device_diagnostics(args.device, diagnostic_only=True)
+    if not args.train.is_file():
+        raise FileNotFoundError(f"train file not found: {args.train}")
+    if not args.folds.is_file():
+        raise FileNotFoundError(f"strict folds file not found: {args.folds}")
+    if not args.candidates.is_file():
+        raise FileNotFoundError(f"candidate file not found: {args.candidates}")
+    if not Path(args.base_model).is_dir():
+        raise FileNotFoundError(f"base model directory not found: {args.base_model}")
     if args.ablation == "all":
         ablations = ABLATATIONS
     else:
         ablations = (args.ablation,)
     train = load_train(args.train)
     fold_map = load_fold_map(args.folds)
-    candidates = load_document_candidates(
-        args.candidates,
-        candidate_depth=args.candidate_depth,
-        evidence_limit=args.evidence_limit,
-    )
+    if args.dry_run:
+        candidate_ids = load_candidate_query_ids(args.candidates)
+        candidates = {query_id: [] for query_id in candidate_ids}
+    else:
+        candidates = load_document_candidates(
+            args.candidates,
+            candidate_depth=args.candidate_depth,
+            evidence_limit=args.evidence_limit,
+        )
     output_roots: list[Path] = []
     for ablation in ablations:
         run_args = argparse.Namespace(**vars(args))
