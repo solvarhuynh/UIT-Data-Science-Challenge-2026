@@ -1,0 +1,30 @@
+# Beam uploads should stay tiny. The real project source, data, and model
+# archives are staged on the Beam Volume, not uploaded from the local repo.
+*
+
+# Current Beam entrypoints that may be invoked from this checkout.
+!scripts/
+!scripts/beam/
+!scripts/beam/beam_gpu_test.py
+!scripts/beam/beam_p13_diag.py
+!scripts/beam/beam_p13_run_all.py
+!scripts/beam/beam_p13_serverless.py
+
+# Local Beam backup/scratch files. These are useful locally only.
+beam*.bak*
+beam*.save
+beam*_backup*.py
+beam*_tmp*.py
+scripts/beam/beam*.bak*
+scripts/beam/beam*.save
+scripts/beam/beam*_backup*.py
+scripts/beam/beam*_tmp*.py
+
+# Heavy/generated runtime state must stay out of Beam source upload.
+artifacts/
+data/
+models/
+.venv/
+__pycache__/
+.pytest_cache/
+.pytest_runtime_*/
