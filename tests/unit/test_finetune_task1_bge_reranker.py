@@ -242,3 +242,32 @@ def test_config_validation_rejects_nonpositive_learning_rate(tmp_path: Path) -> 
     )
     with pytest.raises(ValueError, match="learning-rate"):
         MODULE.run(args)
+
+
+def test_cpu_diagnostic_uses_requested_tiny_subset(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    train, folds, candidates, negatives = _write_fixture_inputs(tmp_path)
+    args = MODULE.build_parser().parse_args(
+        [
+            "--train", str(train),
+            "--folds", str(folds),
+            "--candidates", str(candidates),
+            "--negatives-dir", str(negatives),
+            "--base-model", "models/reranker",
+            "--output-dir", str(tmp_path / "cpu-diagnostic"),
+            "--device", "cpu",
+            "--diagnostic-only",
+            "--folds-to-run", "0",
+            "--max-training-pairs", "20",
+            "--max-validation-queries", "1",
+        ]
+    )
+    MODULE.run(args, backend_factory=_fake_factory)
+    assert "diagnostic_device = cpu" in capsys.readouterr().out
+
+
+def test_explicit_cuda_requires_available_cuda() -> None:
+    torch = pytest.importorskip("torch")
+    if torch.cuda.is_available():
+        pytest.skip("CUDA is available in this environment")
+    with pytest.raises(RuntimeError, match="CUDA is required"):
+        MODULE._resolve_device("cuda", dry_run=False)

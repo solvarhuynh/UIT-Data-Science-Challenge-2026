@@ -5,7 +5,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
+
+from tqdm import tqdm
 
 
 def _sha256(path: Path) -> str:
@@ -14,6 +17,25 @@ def _sha256(path: Path) -> str:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def _count_records(path: Path) -> int:
+    """Count non-empty JSONL records without retaining file contents."""
+
+    with path.open("r", encoding="utf-8-sig") as stream:
+        return sum(bool(line.strip()) for line in stream)
+
+
+def _write_manifest(manifest: dict, path: Path) -> None:
+    """Atomically publish the completed manifest."""
+
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    os.replace(temporary, path)
 
 
 def collapse(row: dict, *, document_depth: int, evidence_limit: int) -> dict:
@@ -67,12 +89,36 @@ def main() -> int:
     if args.document_depth <= 0:
         raise SystemExit("--document-depth must be positive")
     args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.manifest.parent.mkdir(parents=True, exist_ok=True)
+    total = _count_records(args.input)
+    temporary_output = args.output.with_name(args.output.name + ".tmp")
     count = 0
-    with args.input.open(encoding="utf-8-sig") as source, args.output.open("w", encoding="utf-8", newline="\n") as target:
+    with args.input.open("r", encoding="utf-8-sig") as source, temporary_output.open(
+        "w", encoding="utf-8", newline="\n"
+    ) as target, tqdm(
+        total=total,
+        desc="Collapse",
+        unit="q",
+        bar_format=(
+            "{desc}: {n_fmt}/{total_fmt} [{percentage:3.1f}%] | "
+            "{rate_fmt} | elapsed {elapsed} | ETA {remaining}"
+        ),
+    ) as progress:
         for line in source:
-            if line.strip():
-                target.write(json.dumps(collapse(json.loads(line), document_depth=args.document_depth, evidence_limit=args.evidence_limit), ensure_ascii=False) + "\n")
-                count += 1
+            if not line.strip():
+                continue
+            record = json.loads(line)
+            result = collapse(
+                record,
+                document_depth=args.document_depth,
+                evidence_limit=args.evidence_limit,
+            )
+            target.write(json.dumps(result, ensure_ascii=False) + "\n")
+            count += 1
+            progress.update(1)
+            del record, result
+        target.flush()
+    os.replace(temporary_output, args.output)
     manifest = {
         "schema_version": "task1-document-candidates-v1",
         "raw_predictions": str(args.input),
@@ -81,10 +127,11 @@ def main() -> int:
         "document_depth": args.document_depth,
         "evidence_limit": args.evidence_limit,
         "query_count": count,
+        "record_count": count,
         "collapse_version": "task1-document-collapse-v1",
+        "complete": count == total,
     }
-    args.manifest.parent.mkdir(parents=True, exist_ok=True)
-    args.manifest.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8", newline="\n")
+    _write_manifest(manifest, args.manifest)
     print(args.output)
     return 0
 

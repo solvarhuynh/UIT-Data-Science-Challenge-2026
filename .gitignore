@@ -192,6 +192,16 @@ outputs/
 .pytest_runtime/
 data/processed/metadata/index_errors.json
 
+# Local Beam scratch/backups
+beam*.bak*
+beam*.save
+beam*_backup*.py
+beam*_tmp*.py
+scripts/beam/beam*.bak*
+scripts/beam/beam*.save
+scripts/beam/beam*_backup*.py
+scripts/beam/beam*_tmp*.py
+
 # Ignore documentation files
 cam_nang.md
 PROJECT_STATUS.md

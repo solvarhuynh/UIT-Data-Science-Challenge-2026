@@ -1,4 +1,4 @@
-# TV2 - Full Retrieval Specialist
+# TV2 — Chuyên trách truy hồi đầy đủ
 
 ## 1. Tổng quan vai trò
 
@@ -6,7 +6,7 @@ TV2 phụ trách toàn bộ Retrieval Pipeline của hệ thống RAG Pháp lu�
 
 TV2 cũng quản lý các adapter hạ tầng liên quan trực tiếp đến retrieval như `src/udsc2026/infrastructure/embedding/` và `src/udsc2026/infrastructure/vector_db/`. TV2 không viết Web Frontend, không viết FastAPI router, không thiết kế prompt và không sinh câu trả lời bằng LLM.
 
-Output chuẩn của TV2 là `list[RetrievalHit]` có score, metadata citation và thông tin nguồn đầy đủ để TV1 điều phối, TV5 rerank và TV3 sinh câu trả lời.
+Đầu ra chuẩn của TV2 là `list[RetrievalHit]` có score, metadata citation và thông tin nguồn đầy đủ để TV1 điều phối, TV5 rerank và TV3 sinh câu trả lời.
 
 ## 2. Nhiệm vụ kỹ thuật chi tiết
 
@@ -26,20 +26,20 @@ Output chuẩn của TV2 là `list[RetrievalHit]` có score, metadata citation v
 - [ ] Thêm config cho model path, vector DB type, collection name, BM25 index path, batch size, device và trọng số hybrid trong `configs/`.
 - [ ] Viết unit test/mock cho embedder, vector store adapter, BM25 tokenizer, sparse search, score normalization, hybrid fusion, upsert và dense search.
 
-## 3. Quy chuẩn Clean Code & API Contract
+## 3. Quy chuẩn mã nguồn và contract API
 
-### Clean Code bắt buộc
+### Yêu cầu mã nguồn sạch
 
-- Áp dụng DRY, tách rõ Dense, Sparse và Hybrid nhưng dùng contract chung để tránh trùng logic map result.
+- Áp dụng nguyên tắc tránh lặp lại, tách rõ Dense, Sparse và Hybrid nhưng dùng contract chung để tránh trùng logic map kết quả.
 - Dùng type hinting đầy đủ cho mọi input/output; config, chunk input, retrieval output và score breakdown nên dùng Pydantic hoặc typing rõ ràng.
 - Mỗi hàm chỉ làm một trách nhiệm: load model, tokenize, encode, upsert, search, normalize score hoặc merge result.
 - Hàm nên ngắn gọn, tên rõ nghĩa, tránh side effect ẩn và tránh hard-code path/config trong logic retrieval.
-- Không copy-paste logic search giữa Qdrant và FAISS; dùng adapter chung với implementation ngắn.
-- Không copy-paste normalize/fusion giữa nhiều retriever; viết helper riêng và có test.
+- Không sao chép logic search giữa Qdrant và FAISS; dùng adapter chung với implementation ngắn.
+- Không sao chép normalize/fusion giữa nhiều retriever; viết helper riêng và có test.
 - Không viết frontend, FastAPI router, prompt, QA generation hoặc reranking trong phạm vi TV2.
 - Không định nghĩa lại schema `RetrievalHit` hoặc `LegalChunk`; luôn import từ contract chung.
 
-### API Contract
+### Contract API
 
 Dense retrieval:
 
@@ -112,7 +112,7 @@ Hybrid hit cần có score breakdown:
 chunk_id, score, dense_score, sparse_score, hybrid_score, metadata
 ```
 
-## 4. Tiêu chuẩn nghiệm thu (Definition of Done)
+## 4. Tiêu chuẩn nghiệm thu
 
 - [ ] Model HCMUTE embedding v2 load được từ local path, không phụ thuộc cloud API.
 - [ ] Encode query và encode batch document chạy ổn định trên dataset mẫu.
