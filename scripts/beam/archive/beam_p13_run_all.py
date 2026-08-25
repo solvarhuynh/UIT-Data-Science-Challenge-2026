@@ -1,6 +1,7 @@
 from beam import function, Image, Volume
 
 
+import json
 import os
 import shutil
 import subprocess
@@ -27,6 +28,44 @@ TRAINER = (
     / "scripts/training/"
       "finetune_task1_bge_reranker.py"
 )
+
+
+def synced_trainer_source() -> Path:
+    """Locate the patched trainer shipped with the Beam source bundle."""
+    here = Path(__file__).resolve().parent
+
+    candidates = [
+        # Production root launcher on Beam:
+        # /mnt/code/beam_p13_run_all.py
+        here / "finetune_task1_bge_reranker.py",
+
+        # Local/canonical nested layout.
+        here / "scripts" / "training" / "finetune_task1_bge_reranker.py",
+        here.parent / "training" / "finetune_task1_bge_reranker.py",
+    ]
+
+    for candidate in candidates:
+        if candidate.is_file():
+            print(
+                f"Patched trainer source: {candidate}",
+                flush=True,
+            )
+            return candidate
+
+    raise FileNotFoundError(
+        "Beam source bundle is missing patched "
+        "finetune_task1_bge_reranker.py"
+    )
+
+def sync_patched_trainer() -> None:
+    """Overlay the uploaded trainer onto the persistent extracted runtime."""
+
+    source = synced_trainer_source()
+    TRAINER.parent.mkdir(parents=True, exist_ok=True)
+    temporary = TRAINER.with_name(TRAINER.name + ".sync.tmp")
+    shutil.copy2(source, temporary)
+    os.replace(temporary, TRAINER)
+    print(f"Synced patched trainer: {source} -> {TRAINER}", flush=True)
 
 
 # ============================================================
@@ -324,53 +363,131 @@ def count_lines(path: Path):
         return sum(1 for _ in f)
 
 
-def remove_incomplete_fold(fold_dir: Path, completion: Path):
-    """Remove a partial fold safely.
+def has_valid_completion(completion: Path) -> bool:
+    """Legacy completed folds remain valid without new per-stage markers."""
 
-    This trainer does not persist model/optimizer checkpoints mid-fold.
-    Therefore an incomplete fold cannot resume at batch/epoch level and must
-    restart cleanly. Completed folds are never removed.
-    """
-    if completion.exists() or not fold_dir.exists():
-        return
-
+    if not completion.is_file():
+        return False
     try:
-        has_anything = any(fold_dir.iterdir())
-    except FileNotFoundError:
-        return
+        payload = json.loads(completion.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return payload.get("status") == "COMPLETE"
 
-    if not has_anything:
-        return
 
-    print(
-        f"Incomplete {fold_dir.name} detected. "
-        "No mid-fold checkpoint exists -> restarting this fold cleanly.",
-        flush=True,
-    )
+def _read_json(path: Path):
+    return json.loads(path.read_text(encoding="utf-8"))
 
-    last_error = None
-    for attempt in range(1, 6):
-        try:
-            shutil.rmtree(fold_dir)
-            last_error = None
-            break
-        except FileNotFoundError:
-            last_error = None
-            break
-        except Exception as e:
-            last_error = e
-            print(
-                f"WARNING: remove attempt {attempt}/5 failed: {e}",
-                flush=True,
-            )
-            time.sleep(3)
 
-    if last_error is not None or fold_dir.exists():
+def _jsonl_query_ids(path: Path) -> list[str]:
+    ids: list[str] = []
+    with path.open(encoding="utf-8-sig") as stream:
+        for line_number, line in enumerate(stream, 1):
+            if not line.strip():
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise RuntimeError(f"invalid JSONL at {path}:{line_number}") from exc
+            query_id = str(row.get("query_id", "")).strip()
+            if not query_id:
+                raise RuntimeError(f"missing query_id at {path}:{line_number}")
+            ids.append(query_id)
+    return ids
+
+
+def validate_fold_for_oof(fold_dir: Path, fold: int) -> dict:
+    """Validate legacy/new completed folds by artifacts, not stage-marker age.
+
+    Fold 0-3 may predate per-stage READY markers.  They are accepted only when
+    completion/metrics/dataset hashes and both exact validation prediction files
+    agree.  New stage-tracked folds must have all four READY markers.
+    """
+
+    required = {
+        "completion": fold_dir / "completion.json",
+        "metrics": fold_dir / "metrics.json",
+        "dataset": fold_dir / "dataset_manifest.json",
+        "validation_ids": fold_dir / "validation_ids.json",
+        "baseline": fold_dir / "baseline_predictions.jsonl",
+        "finetuned": fold_dir / "finetuned_predictions.jsonl",
+    }
+    missing = [name for name, path in required.items() if not path.is_file()]
+    if missing:
+        raise RuntimeError(f"fold_{fold}: missing OOF artifacts: {', '.join(missing)}")
+
+    completion = _read_json(required["completion"])
+    metrics = _read_json(required["metrics"])
+    dataset = _read_json(required["dataset"])
+    validation_ids = [str(x) for x in _read_json(required["validation_ids"])]
+
+    if completion.get("status") != "COMPLETE":
+        raise RuntimeError(f"fold_{fold}: completion status is not COMPLETE")
+    if completion.get("fold", fold) != fold:
+        raise RuntimeError(f"fold_{fold}: completion fold mismatch")
+    if metrics.get("status") != "COMPLETE" or metrics.get("fold") != fold:
+        raise RuntimeError(f"fold_{fold}: metrics status/fold mismatch")
+    if len(validation_ids) != 1400 or len(set(validation_ids)) != 1400:
+        raise RuntimeError(f"fold_{fold}: validation_ids must contain 1400 unique IDs")
+
+    dataset_sha = dataset.get("dataset_sha256")
+    if not dataset_sha:
+        raise RuntimeError(f"fold_{fold}: dataset_manifest missing dataset_sha256")
+    if completion.get("dataset_sha256") != dataset_sha:
+        raise RuntimeError(f"fold_{fold}: completion/dataset hash mismatch")
+    if metrics.get("dataset_sha256") != dataset_sha:
+        raise RuntimeError(f"fold_{fold}: metrics/dataset hash mismatch")
+    if metrics.get("validation_query_count") != 1400:
+        raise RuntimeError(f"fold_{fold}: metrics validation_query_count != 1400")
+    if metrics.get("selected_epoch") != 2:
+        raise RuntimeError(f"fold_{fold}: expected selected_epoch=2")
+
+    history = metrics.get("training_history")
+    history_epochs = [item.get("epoch") for item in history] if isinstance(history, list) else []
+    if history_epochs != [1, 2]:
         raise RuntimeError(
-            f"Could not clean incomplete fold directory: {fold_dir}"
+            f"fold_{fold}: training history must be exactly epochs [1, 2], got {history_epochs}"
         )
 
-    print(f"{fold_dir.name}: partial state removed.", flush=True)
+    baseline_ids = _jsonl_query_ids(required["baseline"])
+    finetuned_ids = _jsonl_query_ids(required["finetuned"])
+    if baseline_ids != validation_ids:
+        raise RuntimeError(f"fold_{fold}: baseline predictions do not match validation_ids exactly")
+    if finetuned_ids != validation_ids:
+        raise RuntimeError(f"fold_{fold}: finetuned predictions do not match validation_ids exactly")
+
+    stages = ["valid1", "epoch1", "epoch2", "valid2"]
+    marker_paths = {stage: fold_dir / "stages" / stage / "READY.json" for stage in stages}
+    marker_exists = {stage: path.is_file() for stage, path in marker_paths.items()}
+    if all(marker_exists.values()):
+        mode = "stage_tracked_v1"
+        for stage, marker_path in marker_paths.items():
+            marker = _read_json(marker_path)
+            if (
+                marker.get("schema_version") != "task1-p13-stage-ready-v1"
+                or marker.get("fold") != fold
+                or marker.get("stage") != stage
+                or marker.get("dataset_sha256") != dataset_sha
+            ):
+                raise RuntimeError(f"fold_{fold}: invalid {stage} READY marker")
+    elif not any(marker_exists.values()):
+        mode = "legacy_complete"
+    else:
+        raise RuntimeError(
+            f"fold_{fold}: COMPLETE fold has a partial stage-marker set: {marker_exists}"
+        )
+
+    return {
+        "fold": fold,
+        "compatibility_mode": mode,
+        "dataset_sha256": dataset_sha,
+        "validation_query_count": 1400,
+        "selected_epoch": 2,
+        "training_history_epochs": history_epochs,
+        "baseline_rows": len(baseline_ids),
+        "finetuned_rows": len(finetuned_ids),
+        "stage_markers": marker_exists,
+    }
 
 
 # ============================================================
@@ -393,8 +510,8 @@ def remove_incomplete_fold(fold_dir: Path, completion: Path):
     # P13 có thể chạy nhiều giờ
     timeout=-1,
 
-    # Không tự chạy lại cả training khi có lỗi
-    retries=0,
+    # Epoch-boundary resume makes container-crash retries safe.
+    retries=2,
 
     # Continue cloud training if local client disconnects
     headless=True,
@@ -505,6 +622,10 @@ def train_all_p13():
             "Bundle already extracted -> SKIP extraction.",
             flush=True,
         )
+
+    # The runtime bundle is deliberately immutable between jobs, but this small
+    # patched trainer is synced with the Beam function source on every launch.
+    sync_patched_trainer()
 
     # --------------------------------------------------------
     # C. REQUIRED FILE CHECK
@@ -673,11 +794,10 @@ def train_all_p13():
         if OUT.exists():
 
             print(
-                "Removing stale full_oof directory...",
+                "Existing full_oof state retained; completed folds and any "
+                "resumable Fold 4 state are never deleted.",
                 flush=True,
             )
-
-            shutil.rmtree(OUT)
 
         OUT.mkdir(
             parents=True,
@@ -726,7 +846,7 @@ def train_all_p13():
 
         print(
             f"fold_{fold}: "
-            f"{'COMPLETE' if completion.exists() else 'NOT COMPLETE'}",
+            f"{'COMPLETE' if has_valid_completion(completion) else 'NOT COMPLETE'}",
             flush=True,
         )
 
@@ -744,7 +864,7 @@ def train_all_p13():
             fold_dir / "completion.json"
         )
 
-        if completion.exists():
+        if has_valid_completion(completion):
 
             print(
                 f"\n#############################################\n"
@@ -829,13 +949,8 @@ def train_all_p13():
             "cuda",
         ]
 
-        # Completed folds are skipped above. A partial fold cannot be resumed
-        # at batch/epoch level because this trainer does not persist model /
-        # optimizer checkpoints mid-fold, so restart only that fold cleanly.
-        remove_incomplete_fold(
-            fold_dir=fold_dir,
-            completion=completion,
-        )
+        # Preserve incomplete fold state.  The trainer validates and resumes a
+        # READY epoch checkpoint, or starts epoch 1 if none is valid.
 
         # For folds 1..4, --resume preserves the already-completed earlier folds
         # in the shared full_oof output directory.
@@ -911,7 +1026,7 @@ def train_all_p13():
                     fold_dir,
                 )
 
-        if not completion.exists():
+        if not has_valid_completion(completion):
 
             raise RuntimeError(
                 f"Fold {fold} process exited successfully "
@@ -931,63 +1046,116 @@ def train_all_p13():
 
     print("\n=== [H] FINAL 5-FOLD VALIDATION ===", flush=True)
 
-    all_complete = True
+    # Fold 0-3 may have produced a stale, partial root aggregate before Fold 4
+    # existed.  Re-run only the trainer's aggregation path: completed folds are
+    # loaded through --resume and no model training is repeated.
+    print("Rebuilding strict OOF aggregate from all five completed folds...", flush=True)
+    run(
+        [
+            sys.executable,
+            "-u",
+            "scripts/training/finetune_task1_bge_reranker.py",
+            "--train", "data/raw/btc/LegalIR/train.json",
+            "--folds", "artifacts/task1/evaluation/strict_cv_v2/folds.json",
+            "--negatives-dir", "artifacts/task1/training/negatives",
+            "--candidates", "artifacts/task1/candidates/train7000_document_candidates.jsonl",
+            "--base-model", "/tmp/p13_model_stage/models/reranker",
+            "--output-dir", str(OUT),
+            "--folds-to-run", "0", "1", "2", "3", "4",
+            "--selection-policy", "fixed_epochs",
+            "--ablation", "semi-hard-plus-hard",
+            "--candidate-depth", "200",
+            "--evidence-limit", "2",
+            "--learning-rate", "2e-5",
+            "--epochs", "2",
+            "--batch-size", "4",
+            "--gradient-accumulation", "4",
+            "--max-length", "512",
+            "--warmup-ratio", "0.1",
+            "--seed", "2026",
+            "--device", "cuda",
+            "--resume",
+        ],
+        cwd=RUNTIME,
+        log_path=OUT / "beam_logs" / "aggregate.log",
+    )
+
+    compatibility_rows = []
+    validation_union: set[str] = set()
 
     for fold in range(5):
-
         fold_dir = OUT / f"fold_{fold}"
-
-        completion = (
-            fold_dir / "completion.json"
-        )
-
-        predictions = (
-            fold_dir
-            / "finetuned_predictions.jsonl"
-        )
-
-        if not completion.exists():
-
-            print(
-                f"fold_{fold}: MISSING completion.json",
-                flush=True,
+        audit = validate_fold_for_oof(fold_dir, fold)
+        compatibility_rows.append(audit)
+        fold_validation_ids = [
+            str(x) for x in _read_json(fold_dir / "validation_ids.json")
+        ]
+        overlap = validation_union.intersection(fold_validation_ids)
+        if overlap:
+            raise RuntimeError(
+                f"fold_{fold}: validation IDs overlap earlier folds: {sorted(overlap)[:5]}"
             )
-
-            all_complete = False
-            continue
-
-        if not predictions.exists():
-
-            print(
-                f"fold_{fold}: MISSING finetuned_predictions.jsonl",
-                flush=True,
-            )
-
-            all_complete = False
-            continue
-
-        n = count_lines(predictions)
-
+        validation_union.update(fold_validation_ids)
         print(
-            f"fold_{fold}: COMPLETE, "
-            f"OOF predictions = {n}",
+            f"fold_{fold}: OOF COMPAT PASS; mode={audit['compatibility_mode']}; "
+            "Valid1=1400, Epochs=[1,2], Valid2=1400",
             flush=True,
         )
 
-        if n != 1400:
-
-            print(
-                f"WARNING: expected 1400 rows, got {n}",
-                flush=True,
-            )
-
-            all_complete = False
-
-    if not all_complete:
-
+    if len(validation_union) != 7000:
         raise RuntimeError(
-            "P13 5-fold validation FAILED."
+            f"strict validation union must be 7000 unique IDs, got {len(validation_union)}"
         )
+
+    compatibility_manifest = OUT / "OOF_FOLD_COMPATIBILITY.json"
+    compatibility_manifest.write_text(
+        json.dumps(
+            {
+                "schema_version": "task1-p13-oof-fold-compatibility-v1",
+                "status": "PASS",
+                "note": (
+                    "legacy_complete folds predate per-stage READY markers; "
+                    "stage markers are crash-recovery metadata and do not change OOF scoring"
+                ),
+                "expected_fold_count": 5,
+                "expected_validation_queries_per_fold": 1400,
+                "expected_total_oof_queries": 7000,
+                "folds": compatibility_rows,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ) + "\n",
+        encoding="utf-8",
+    )
+
+    aggregate_oof = OUT / "oof_predictions.jsonl"
+    aggregate_required = (
+        aggregate_oof,
+        OUT / "comparison.json",
+        OUT / "comparison.md",
+        OUT / "final_decision.json",
+    )
+    missing_aggregate = [str(path) for path in aggregate_required if not path.is_file()]
+    if missing_aggregate:
+        raise RuntimeError("P13 aggregate outputs missing:\n" + "\n".join(missing_aggregate))
+    aggregate_rows = count_lines(aggregate_oof)
+    print(f"Aggregate OOF predictions = {aggregate_rows}", flush=True)
+    if aggregate_rows != 7000:
+        raise RuntimeError(
+            "P13 aggregate is not a complete strict OOF result: "
+            f"expected 7000 rows, got {aggregate_rows}"
+        )
+    aggregate_ids = _jsonl_query_ids(aggregate_oof)
+    if len(set(aggregate_ids)) != 7000:
+        raise RuntimeError("aggregate OOF contains duplicate query IDs")
+    if set(aggregate_ids) != validation_union:
+        raise RuntimeError("aggregate OOF query IDs do not equal the strict 5-fold validation union")
+    comparison_payload = _read_json(OUT / "comparison.json")
+    if comparison_payload.get("fold_count") != 5:
+        raise RuntimeError("comparison.json fold_count is not 5")
+    if comparison_payload.get("partial_oof") is not False:
+        raise RuntimeError("comparison.json says OOF is partial")
+    print("Aggregate OOF identity/fold compatibility PASS.", flush=True)
 
     # --------------------------------------------------------
     # I. SUCCESS MARKER ON PERSISTENT VOLUME
