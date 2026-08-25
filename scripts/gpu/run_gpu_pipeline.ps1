@@ -69,15 +69,15 @@ Invoke-CheckedPython -PythonArgs @(
     "--benchmark", (Join-Path $ProcessedRoot "benchmarks/synthetic_qa.jsonl"),
     "--config-env", "gpu",
     "--limit", "$SmokeQuestions",
-    "--benchmark-subset", "artifacts/tv2/smoke_benchmark.jsonl",
-    "--output", "artifacts/tv2/smoke_dense_predictions.jsonl",
-    "--manifest", "artifacts/tv2/smoke_dense_manifest.json"
+    "--benchmark-subset", "artifacts/tv2/research/smoke/smoke_benchmark.jsonl",
+    "--output", "artifacts/tv2/research/smoke/smoke_dense_predictions.jsonl",
+    "--manifest", "artifacts/tv2/research/smoke/smoke_dense_manifest.json"
 )
 
 Invoke-CheckedPython -PythonArgs @(
     "scripts/evaluation/benchmark_reranker.py",
-    "--benchmark", "artifacts/tv2/smoke_benchmark.jsonl",
-    "--candidates", "artifacts/tv2/smoke_dense_predictions.jsonl",
+    "--benchmark", "artifacts/tv2/research/smoke/smoke_benchmark.jsonl",
+    "--candidates", "artifacts/tv2/research/smoke/smoke_dense_predictions.jsonl",
     "--model", "models/reranker",
     "--device", "cuda",
     "--batch-size", "8",
@@ -101,14 +101,14 @@ Invoke-CheckedPython -PythonArgs @(
     "scripts/evaluation/generate_dense_candidates.py",
     "--benchmark", (Join-Path $ProcessedRoot "benchmarks/synthetic_qa.jsonl"),
     "--config-env", "gpu",
-    "--output", "artifacts/tv2/dense_predictions.jsonl",
-    "--manifest", "artifacts/tv2/dense_run_manifest.json"
+    "--output", "artifacts/tv2/production/dense_predictions.jsonl",
+    "--manifest", "artifacts/tv2/production/dense_run_manifest.json"
 )
 
 Invoke-CheckedPython -PythonArgs @(
     "scripts/evaluation/benchmark_reranker.py",
     "--benchmark", (Join-Path $ProcessedRoot "benchmarks/synthetic_qa.jsonl"),
-    "--candidates", "artifacts/tv2/dense_predictions.jsonl",
+    "--candidates", "artifacts/tv2/production/dense_predictions.jsonl",
     "--model", "models/reranker",
     "--device", "cuda",
     "--batch-size", "8",

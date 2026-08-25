@@ -52,7 +52,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--error-report",
         type=Path,
-        default=Path("artifacts/tv2/index_errors.json"),
+        default=Path("artifacts/tv2/diagnostics/index_errors.json"),
         help=(
             "Operational indexing error report. It must stay outside the "
             "immutable processed corpus."

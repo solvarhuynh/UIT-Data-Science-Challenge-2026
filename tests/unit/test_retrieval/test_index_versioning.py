@@ -60,7 +60,7 @@ def test_batch_size_cli_defaults_to_config_value():
 
     args = module.parse_args([])
     assert args.batch_size is None
-    assert args.error_report == Path("artifacts/tv2/index_errors.json")
+    assert args.error_report == Path("artifacts/tv2/diagnostics/index_errors.json")
     assert module.resolve_batch_size(None, {"batch_size": 64}) == 64
     assert module.resolve_batch_size(128, {"batch_size": 64}) == 128
 

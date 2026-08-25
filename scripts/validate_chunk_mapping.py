@@ -18,11 +18,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--chunks-dir", default="data/processed_v3/chunks")
     parser.add_argument("--ir-train-file")
     parser.add_argument(
-        "--report", default="artifacts/tv2/data_audit/chunk_mapping_report.json"
+        "--report", default="artifacts/tv2/diagnostics/data_audit/chunk_mapping_report.json"
     )
     parser.add_argument(
         "--audit-report",
-        default="artifacts/tv2/data_audit/chunk_file_audit.json",
+        default="artifacts/tv2/diagnostics/data_audit/chunk_file_audit.json",
     )
     return parser.parse_args()
 

@@ -54,6 +54,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Organizer LegalIR train.json; use this for full 7,000-query candidates.",
     )
+    question_group.add_argument(
+        "--public-official",
+        type=Path,
+        help="Label-free public-official.json; use this for production public candidates.",
+    )
     parser.add_argument("--config-env", default="gpu")
     parser.add_argument("--candidate-k", type=_positive_int, default=50)
     parser.add_argument("--query-batch-size", type=_positive_int, default=64)
@@ -67,18 +72,18 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--benchmark-subset",
         type=Path,
-        default=Path("artifacts/tv2/smoke_benchmark.jsonl"),
+        default=Path("artifacts/tv2/research/smoke/smoke_benchmark.jsonl"),
         help="Filtered benchmark written when --limit is used.",
     )
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("artifacts/tv2/dense_predictions.jsonl"),
+        default=Path("artifacts/tv2/production/dense_predictions.jsonl"),
     )
     parser.add_argument(
         "--manifest",
         type=Path,
-        default=Path("artifacts/tv2/dense_run_manifest.json"),
+        default=Path("artifacts/tv2/production/dense_run_manifest.json"),
     )
     return parser
 
@@ -140,13 +145,23 @@ def _write_prediction_batch(stream: Any, predictions: list[PredictionSample]) ->
 
 
 def run(args: argparse.Namespace) -> list[Path]:
-    question_source = args.legal_ir_train or args.benchmark
+    question_source = args.legal_ir_train or args.benchmark or args.public_official
     if question_source is None:
         question_source = Path("data/processed_v3/benchmarks/synthetic_qa.jsonl")
     if args.legal_ir_train is not None:
         samples = [
             (sample.id, sample.question) for sample in load_warmup(question_source)
         ]
+    elif args.public_official is not None:
+        payload = json.loads(args.public_official.read_text(encoding="utf-8-sig"))
+        if not isinstance(payload, dict):
+            raise ValueError("public-official questions must be an object")
+        samples = []
+        for question_id, record in payload.items():
+            if not isinstance(record, dict) or not isinstance(record.get("question"), str):
+                raise ValueError(f"invalid public question {question_id!r}")
+            # Public answers are intentionally never accessed.
+            samples.append((str(question_id), str(record["question"])))
     else:
         samples = [
             (sample.question_id, sample.question)
@@ -273,7 +288,7 @@ def run(args: argparse.Namespace) -> list[Path]:
         "question_source": str(question_source),
         "question_source_sha256": _sha256(question_source),
         "question_source_type": (
-            "legal_ir_train" if args.legal_ir_train is not None else "benchmark"
+            "legal_ir_train" if args.legal_ir_train is not None else ("public_official" if args.public_official is not None else "benchmark")
         ),
         "question_count": len(samples),
         "candidate_k": args.candidate_k,
