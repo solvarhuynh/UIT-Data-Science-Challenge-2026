@@ -45,7 +45,7 @@ source .venv_beam312/bin/activate
 
 Xem ảnh để lấy token tài khoản của mình
 
-Không commit hoặc chia sẻ ảnh/API token. Lấy token trực tiếp trong Beam Onboarding và cấu hình local bằng `beam configure default --token <TOKEN>`.
+Xem hướng dẫn trong [ảnh lấy token](cách%20lấy%20token.png). Ảnh đã che email và API token; không chia sẻ token gốc.
 
 Vào Onboarding -> chạy lệnh 1 ở ubuntu wsl -> chạy lệnh 2 kết nối token với tài khoản
 
