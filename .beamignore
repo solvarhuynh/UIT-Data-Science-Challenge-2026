@@ -1,14 +1,48 @@
-# Beam uploads should stay tiny. The real project source, data, and model
-# archives are staged on the Beam Volume, not uploaded from the local repo.
-*
+# Upload source code so Beam can import scripts.beam.*. Runtime data, model
+# weights, and artifacts remain on the mounted Volume and are excluded below.
 
-# Current Beam entrypoints that may be invoked from this checkout.
-!scripts/
-!scripts/beam/
-!scripts/beam/beam_gpu_test.py
-!scripts/beam/beam_p13_diag.py
-!scripts/beam/beam_p13_run_all.py
-!scripts/beam/beam_p13_serverless.py
+# Local/repository areas not needed by Beam launchers.
+.benchmarks/
+.cache/
+.coverage*
+.git/
+.pytest_runtime/
+.ruff_cache/
+docker/
+docs/
+experiments/
+frontend/
+outputs/
+prompts/
+tests/
+
+# Rescue V1 only needs scripts/beam plus the BGE reranker trainer. Avoid
+# uploading the full local scripts tree on every Beam submit.
+scripts/audit_legal_ir_warmup.py
+scripts/audit_legal_qa_warmup.py
+scripts/benchmark_retrieval_internal.py
+scripts/evaluate.py
+scripts/evaluate_legal_ir.py
+scripts/evaluate_legal_qa.py
+scripts/make_legal_qa_warmup_smoke_submission.py
+scripts/make_warmup_smoke_submission.py
+scripts/package_codabench_legal_ir.py
+scripts/package_kaggle.py
+scripts/package_kaggle_task1.py
+scripts/validate_chunk_mapping.py
+scripts/validate_legal_ir_submission.py
+scripts/validate_legal_qa_submission.py
+scripts/write_legal_ir_submission.py
+scripts/write_legal_qa_submission.py
+scripts/write_submission.py
+scripts/_run_compat.py
+scripts/ci_cd/
+scripts/data_prep/
+scripts/gpu/
+scripts/submission/
+scripts/task1/
+scripts/training/mine_task1_negatives.py
+scripts/training/train_legal_qa_parent_crossencoder.py
 
 # Local Beam backup/scratch files. These are useful locally only.
 beam*.bak*
@@ -19,6 +53,7 @@ scripts/beam/beam*.bak*
 scripts/beam/beam*.save
 scripts/beam/beam*_backup*.py
 scripts/beam/beam*_tmp*.py
+scripts/beam/*.before_*
 
 # Heavy/generated runtime state must stay out of Beam source upload.
 artifacts/
@@ -28,3 +63,24 @@ models/
 __pycache__/
 .pytest_cache/
 .pytest_runtime_*/
+
+# Local python virtual environments
+# `.venv/` matches only that exact directory name; the dedicated WSL Beam CLI
+# environment is `.venv_beam312`, so exclude every dot-prefixed venv name too.
+.venv*/
+venv_linux/
+venv*/
+.env
+
+# --- Beam runtime: assets already persisted in udsc-p13 volume ---
+beam_task1_download/
+artifacts/
+models/
+data/
+scripts/beam/archive/
+rescue_fold0.log
+rescue_fold0_clean.log
+submission.json
+cam_nang.md
+PROJECT_STATUS.md
+README.md

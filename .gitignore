@@ -201,6 +201,7 @@ scripts/beam/beam*.bak*
 scripts/beam/beam*.save
 scripts/beam/beam*_backup*.py
 scripts/beam/beam*_tmp*.py
+scripts/beam/*.before_*
 
 # Ignore documentation files
 cam_nang.md

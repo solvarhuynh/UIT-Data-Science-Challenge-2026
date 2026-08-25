@@ -247,20 +247,46 @@ versioning, parent expansion, reranker, metric LegalIR/LegalQA, API và submissi
 ## Cấu trúc repository
 
 ```text
-configs/                 Cấu hình base, development và GPU
-data/                    Raw/processed/index local; file lớn không commit
-docs/members/            Kế hoạch, setup và runbook của TV1–TV5
-docs/models/             Registry và ghi chú model
-docs/project/            Thiết kế hệ thống, API, data pipeline, Git workflow
-experiments/             Thử nghiệm tách theo thành viên
-frontend/                Web UI demo
-prompts/                 System prompt và RAG template có version
-scripts/data_prep/       Ingestion và indexing
-scripts/evaluation/      Candidate generation, metric và reranker benchmark
-scripts/gpu/             Preflight và pipeline RTX
-scripts/submission/      Writer/validator submission LegalIR và LegalQA
-src/udsc2026/            Mã nguồn production
-tests/                   Unit và integration tests
+.
+├── configs/                         Cấu hình base, development và GPU
+├── data/                            Raw/processed/index local; file lớn không commit
+│   └── processed_v3/                Corpus chính thức đã audit
+├── docs/
+│   ├── members/                     Kế hoạch, setup và runbook của TV1–TV5
+│   ├── models/                      Registry và ghi chú model
+│   └── project/                     Thiết kế hệ thống, API, data pipeline, Git workflow
+├── experiments/                     Thử nghiệm tách theo thành viên
+├── frontend/                        Web UI demo
+├── models/                          Model local; không commit weight lớn
+├── outputs/                         Log chạy local/GPU
+├── prompts/                         System prompt và RAG template có version
+├── scripts/
+│   ├── beam/                        Runner và thí nghiệm Task1 trên Beam
+│   │   ├── task1_v2/                Module V2 score-first reranker
+│   │   ├── task1_v3_residual/       Module V3 residual policy/ranking
+│   │   │   ├── common.py            Helper chung và đường dẫn artifact V3
+│   │   │   ├── train_residual_policy.py
+│   │   │   ├── train_residual_policy_v3b.py
+│   │   │   ├── forensic_benefit_neutral_signal.py
+│   │   │   └── train_delta_recall_residual.py
+│   │   ├── beam_task1_v1a_real.py
+│   │   ├── beam_task1_v1a_eval_only.py
+│   │   ├── beam_task1_v2_prepare_cpu.py
+│   │   ├── beam_task1_v2_fold0.py
+│   │   ├── beam_task1_v3_prepare_cpu.py
+│   │   ├── beam_task1_v3_policy_cpu.py
+│   │   ├── beam_task1_v3b_policy_cpu.py
+│   │   ├── beam_task1_v3b_fold0_eval_cpu.py
+│   │   └── beam_task1_delta_recall_residual_cpu.py
+│   ├── ci_cd/                       Script CI/CD
+│   ├── data_prep/                   Ingestion và indexing
+│   ├── evaluation/                  Candidate generation, metric và reranker benchmark
+│   ├── gpu/                         Preflight và pipeline RTX
+│   ├── submission/                  Writer/validator submission LegalIR và LegalQA
+│   ├── task1/                       Script Task1 tiện ích/đóng gói
+│   └── training/                    Fine-tune/training script
+├── src/udsc2026/                    Mã nguồn production
+└── tests/                           Unit và integration tests
 ```
 
 ## Phân công
