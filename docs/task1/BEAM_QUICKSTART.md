@@ -1,17 +1,14 @@
 # Beam Quickstart cho repo UDSC2026
 
-Tài liệu này thay cho các note Beam rời rạc. Mục tiêu: tạo môi trường CLI riêng, kết nối account, dùng Volume, upload/download artifact và chạy launcher an toàn.
-
 ## 1. Nguyên tắc
 
-- Chạy Beam CLI trong **WSL**.
+- Chạy Beam CLI trong **WSL** (tải ubuntu wsl - xem ytb).
 - Repo: `/mnt/d/udsc2026`.
-- Dùng môi trường CLI riêng `.venv_beam312`, không trộn với `venv_linux`.
+- Dùng môi trường CLI riêng `.venv_beam312`
 - Python CLI nên là **3.12**.
 - Beam Volume hiện dùng tên `udsc-p13`.
 - Launcher mount volume tại `/workspace/p13`; dữ liệu runtime nằm dưới `/workspace/p13/runtime`.
 - Trước job tốn GPU, luôn chạy `--preflight` nếu launcher hỗ trợ.
-- Không lưu API token vào repo, file `.md`, shell script hoặc commit Git.
 
 ## 2. Tạo môi trường Beam CLI
 
@@ -36,17 +33,8 @@ python -m pip install \
   'websockets==15.0.1'
 ```
 
-Kiểm tra:
 
-```bash
-python --version
-which python
-which beam
-beam --version
-python -m pip check
-```
-
-Mỗi lần mở WSL mới:
+## Mỗi lần mở WSL mới:
 
 ```bash
 cd /mnt/d/udsc2026
@@ -55,27 +43,12 @@ source .venv_beam312/bin/activate
 
 ## 3. Kết nối account Beam
 
-Tạo một config mới:
+Xem ảnh để lấy token tài khoản của mình
 
-```bash
-beam config create <ten-config>
-```
+Không commit hoặc chia sẻ ảnh/API token. Lấy token trực tiếp trong Beam Onboarding và cấu hình local bằng `beam configure default --token <TOKEN>`.
 
-CLI sẽ yêu cầu thông tin/token cần thiết. Không paste token vào source code hoặc tài liệu.
+Vào Onboarding -> chạy lệnh 1 ở ubuntu wsl -> chạy lệnh 2 kết nối token với tài khoản
 
-Chọn config:
-
-```bash
-beam config select <ten-config>
-```
-
-Test kết nối:
-
-```bash
-beam task list
-```
-
-Nếu lệnh này trả danh sách task hoặc danh sách rỗng mà không báo Unauthorized thì CLI đã kết nối được account/workspace.
 
 ## 4. Beam Volume
 
@@ -94,9 +67,9 @@ Mount:           /workspace/p13
 Runtime root:    /workspace/p13/runtime
 ```
 
-Volume là vùng lưu trữ bền hơn container của một task. Container có thể được tạo/xóa cho từng job, còn model, data và artifact cần dùng lại nên đặt trong Volume.
+Volume là vùng lưu trữ các file mình tải lên or output khi chạy trên beam.
 
-## 5. Upload / download
+## 5. Upload / download  -- ví dụ thôi (chỉ upload các file cần thiết với task của mình)
 
 ### Upload một file
 
@@ -126,17 +99,9 @@ beam cp \
 
 `beam cp` giữ dữ liệu trên Volume; code launcher không nên chứa model/data lớn nếu có thể tránh.
 
-## 6. Cách launcher hoạt động
+## 6. Cách run files
 
-Các launcher trong `scripts/beam/` thường:
-
-1. chạy local để kiểm tra input/config;
-2. khai báo Beam `Image`, CPU/GPU, RAM và `Volume`;
-3. submit function remote;
-4. container Beam mount `udsc-p13` vào `/workspace/p13`;
-5. code remote đọc/ghi dưới `/workspace/p13/runtime`.
-
-Với các launcher của repo này, cách dùng thông thường là chạy file Python trực tiếp, ví dụ:
+Sẽ quy định gpu trước (ví dụ RTX 4090 5090 A10G ...)
 
 ```bash
 python scripts/beam/<launcher>.py --preflight
@@ -158,36 +123,13 @@ Ví dụ:
 python scripts/beam/beam_task1_v3_frozen_features.py --preflight --public
 ```
 
-Chỉ submit khi thấy trạng thái PASS và đúng:
-- mode;
-- model/input path;
-- query count;
-- GPU;
-- output path;
-- `remote_submitted=false` trong preflight.
+Chỉ submit khi thấy trạng thái PASS và đúng
 
-Preflight là kiểm tra local; nó giúp tránh mất credit vì thiếu file hoặc sai contract.
+## 8. Đọc log đúng cách - kinh nghiệm cá nhân thôi
 
-## 8. Đọc log đúng cách
+> Thường nếu chọn gpu phổ biến sẽ phải chờ beam cấp gpu và trên web ở mục task sẽ hiện là pending, nếu ở ubuntu wsl báo `erorr` mà web vẫn hiện pending thì chấc chắn bị lôi, (xem có tải đủ môi trường chưa, kết nối mạng, gpu quá hiếm, torch sai phiên bản ...)
 
-Mốc log nên hiểu như sau:
-
-```text
-Chưa có [BOOT]
-    -> thường là scheduler/container/GPU provisioning chưa khởi động được Python.
-
-Có [BOOT]
-    -> Python của launcher đã thực sự chạy trong container.
-
-Có [SCORE]
-    -> inference/scoring GPU đã bắt đầu.
-
-Có [WRITE]
-    -> đang ghi/publish output.
-
-Có [DONE] hoặc task Complete + output hợp lệ
-    -> job hoàn tất.
-```
+> Nếu lỗi thì copy log ở mục task trên web, chọn task mới nhất bị lỗi (load trang lại) chọn all log, và copy từ chỗ bị lỗi tới hết
 
 Web UI có thể cập nhật trạng thái chậm hơn CLI hoặc ngược lại. Khi nghi ngờ, kiểm tra cả task log và output trên Volume; không retry mù một job GPU chỉ vì một màn hình vẫn hiện `Pending`.
 
@@ -200,20 +142,7 @@ beam task list
 # volume
 beam volume list
 
-# chuyển account/workspace config
-beam config select <ten-config>
+# xem log của 1 task
+beam logs --task-id <id task bị lỗi (hiện khi nhấn vào task đó, ở trên cùng)> (ko có dấu < >)
 
-# kiểm tra CLI env
-python --version
-beam --version
-python -m pip check
 ```
-
-## 10. Quy tắc vận hành
-
-- Một job fail ở `nvidia-container-cli` trước khi có log Python thường là lỗi provisioning/runtime GPU, không phải lỗi scoring code.
-- Không sửa model/scoring logic để chữa lỗi provisioning.
-- Không auto-retry GPU job.
-- Nếu remote báo thiếu đúng một file, upload đúng file đó; không upload cả cây dữ liệu khổng lồ nếu không cần.
-- Sau khi job quan trọng Complete, download output và report về local ngay.
-- Giữ manifest/report/hash đi cùng artifact production để kiểm tra provenance.
