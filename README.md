@@ -12,24 +12,26 @@ sinh câu trả lời bằng LLM local, đánh giá và đóng gói submission.
 
 ## Trạng thái hiện tại
 
-- Corpus chính thức duy nhất: `data/processed_v3`.
-- Pipeline GPU đã khóa về đúng corpus V3 và kiểm tra hash trước khi index.
-- Ba model inference chạy local; không phụ thuộc API LLM thương mại.
-- Retrieval giữ `parent_id`; sau rerank, QA mở rộng parent theo cửa sổ và token
-  budget thay vì đưa toàn bộ văn bản dài vào prompt.
-- Test hợp nhất gần nhất: **851 passed, 15 skipped**.
+- Corpus xử lý chính: `data/processed_v3`; dữ liệu nguồn nằm tại `data/raw/`.
+- Toàn bộ model runtime được tải local, không gọi API model thương mại.
+- Retrieval giữ `parent_id`; QA chỉ mở rộng parent trong giới hạn sau khi rerank.
+- Workflow A của Task1 đã đóng; Workflow B TV2 đang ở bước audit B2a-0 về
+  provenance và tài liệu dài.
+- Các báo cáo, manifest và progress log trong `reports/task1/` là nguồn kiểm tra
+  trạng thái có thẩm quyền; tên file trong `artifacts/` không tự quyết định
+  production.
 
 ## Mô hình chính thức
 
-| Vai trò | Checkpoint | Local path | Cấu hình GPU |
+| Vai trò | Checkpoint | Local path | Công dụng |
 | --- | --- | --- | --- |
-| Embedding | [`huyydangg/DEk21_hcmute_embedding_v2`](https://huggingface.co/huyydangg/DEk21_hcmute_embedding_v2) | `models/dek21-v2` | CUDA, batch 128, vector 768 chiều |
-| Reranker | [`BAAI/bge-reranker-v2-m3`](https://huggingface.co/BAAI/bge-reranker-v2-m3) | `models/reranker` | CUDA FP16, batch 8, max length 1024 |
-| LLM | [`thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2`](https://huggingface.co/thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2) | `models/qwen3-legal` | CUDA BF16 |
+| Embedding | [`huyydangg/DEk21_hcmute_embedding_v2`](https://huggingface.co/huyydangg/DEk21_hcmute_embedding_v2) | `models/dek21-v2` | Vector hóa query và chunk |
+| Reranker | [`Qwen/Qwen3-Reranker-0.6B`](https://huggingface.co/Qwen/Qwen3-Reranker-0.6B) | `models/reranker` | Chấm điểm mức liên quan của cặp query–document |
+| LLM | [`thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2`](https://huggingface.co/thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2) | `models/qwen3-legal` | Sinh câu trả lời pháp luật có citation |
 
-Task1 production dùng HCMUTE embedding + BGE reranker. Model được tải bằng
-`download_models.py`; revision thực tế được ghi vào
-`models/download_manifest.json`. Xem thêm [Model Registry](docs/models/model_registry.md).
+Task1 hiện dùng HCMUTE embedding và Qwen3 Reranker theo manifest local. Revision
+đã resolve của từng model được ghi trong `models/download_manifest.json`; không
+nên thay model chỉ dựa trên tên thư mục. Xem thêm [Model Registry](docs/models/model_registry.md).
 
 Tải đúng model production Task1:
 
@@ -49,7 +51,7 @@ flowchart LR
     CHILD --> BM25[BM25]
     DENSE --> HYBRID[Hybrid fusion]
     BM25 --> HYBRID
-    HYBRID --> RERANK[BGE cross-encoder]
+    HYBRID --> RERANK[Qwen3 Reranker]
     RERANK --> EXPAND[Bounded parent expansion]
     PARENT --> EXPAND
     EXPAND --> LLM[Qwen3 legal]
@@ -97,7 +99,7 @@ Dữ liệu lớn không nằm trong Git. Khi chuyển sang máy khác, copy ngu
 thư mục `documents`, `chunks`, `parents`, `benchmarks`, `metadata` bên trong
 `data/processed_v3`; không trộn với corpus cũ. Xem [Data README](data/README.md).
 
-## Cài đặt local
+## Bắt đầu nhanh
 
 Khuyến nghị Python 3.11. Với PowerShell trên Windows:
 
@@ -113,53 +115,15 @@ python -m pip install -r requirements_dev.txt
 $env:PYTHONPATH = "$PWD\src"
 ```
 
-Tải model nếu cần chạy inference:
+Tải model nếu cần chạy local:
 
 ```powershell
 python download_models.py
 ```
 
-Máy CPU có thể chạy unit/integration test và smoke nhỏ. Full embedding,
-reranking và LLM nên chạy trên GPU.
-
-## Chạy trọn pipeline trên RTX 5060 Ti
-
-Máy GPU Windows không nên cài Torch theo luồng CPU ở trên. Script chính thức sẽ
-cài PyTorch CUDA 12.8 trước, tải model, chạy preflight, smoke rồi mới chạy toàn bộ
-corpus:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/gpu/run_gpu_pipeline.ps1 `
-  -ProcessedRoot data/processed_v3
-```
-
-Nếu dependency và model đã có sẵn:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/gpu/run_gpu_pipeline.ps1 `
-  -ProcessedRoot data/processed_v3 `
-  -SkipInstall `
-  -SkipDownload
-```
-
-Theo dõi và lưu log:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts/gpu/run_gpu_pipeline.ps1 `
-  -ProcessedRoot data/processed_v3 2>&1 | `
-  Tee-Object -FilePath outputs/tv5_gpu_pipeline.log
-```
-
-Pipeline sẽ dừng nếu corpus, benchmark, model hoặc CUDA không qua preflight.
-Hướng dẫn chi tiết và xử lý OOM nằm tại
-[TV5 GPU Runbook](docs/members/tv5/tv5_gpu_runbook.md).
-
-Runbook từng cell cho Task1 trên Kaggle nằm tại
-[TV2 Task1 Kaggle Runbook](docs/members/tv2/tv2_task1_kaggle.md).
-
-Với RTX 5060 Ti 16 GB và RAM 28 GB, pipeline chính dùng dense FAISS top-50 →
-reranker top-5; không build full `rank_bm25` trong cùng lượt vì tốn RAM. Lần chạy
-đầu nên dành khoảng 2–4 giờ, tùy mạng và SSD.
+Các lệnh kiểm tra nhỏ và test tự động có thể chạy ngay sau khi cài dependency.
+Các file lớn trong `data/`, `artifacts/` và trọng số trong `models/` thường được
+quản lý ngoài Git; hãy đọc manifest trước khi sao chép hoặc xóa.
 
 ## Chạy từng thành phần
 
@@ -188,17 +152,16 @@ python scripts/evaluation/benchmark_reranker.py `
   --benchmark data/processed_v3/benchmarks/synthetic_qa.jsonl `
   --candidates artifacts/tv2/dense_predictions.jsonl `
   --model models/reranker `
-  --device cuda `
+  --device cpu `
   --batch-size 8 `
   --max-length 1024 `
   --candidate-k 50 `
   --top-n 5 `
-  --fp16 `
-  --output-dir artifacts/tv5/bge-reranker-v2-m3
+  --output-dir artifacts/task1/reranker-evaluation
 ```
 
-Kết quả chính:
-`artifacts/tv5/bge-reranker-v2-m3/evaluation/comparison.md`.
+Kết quả được ghi tại thư mục output do lệnh chỉ định; hãy lưu kèm manifest model
+và corpus để có thể tái lập.
 
 ### Backend và dịch vụ phụ trợ
 
@@ -311,7 +274,6 @@ versioning, parent expansion, reranker, metric LegalIR/LegalQA, API và submissi
 - [TV3 Setup](docs/members/tv3/tv3_setup.md)
 - [TV4 Setup](docs/members/tv4/tv4_setup.md)
 - [TV5 Setup](docs/members/tv5/tv5_setup.md)
-- [TV5 GPU Runbook](docs/members/tv5/tv5_gpu_runbook.md)
 - [Prompt Registry](prompts/README.md)
 
 ## Quy tắc làm việc
