@@ -1,0 +1,358 @@
+{
+  "status": "PASS",
+  "experiment": "STEP 2-P1 \u2014 Controlled Query-Aware (Pairwise) Policy Objective Experiment at Fixed K77",
+  "experiment_type": "CONTROLLED_DIAGNOSTIC_TRAINING",
+  "scientific_status": "DIAGNOSTIC_ONLY",
+  "adopted_research_K": 77,
+  "production_K_selected": false,
+  "policy_oof_strict": true,
+  "end_to_end_selection_oof": false,
+  "k77_selected_exploratorily_on_folds_1_4": true,
+  "interpretation_scope": "PAIRWISE_POLICY_REALIZABILITY_CONDITIONAL_ON_EXPLORATORY_FIXED_K77",
+  "folds_used": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "fold0_touched": false,
+  "fold0_payload_materialized": false,
+  "fold0_used_in_training": false,
+  "fold0_used_in_threshold_selection": false,
+  "fold0_used_in_evaluation": false,
+  "fold0_labels_used": false,
+  "public_labels_used": false,
+  "model_contract_path": "reports/task1/step2p1_model_contract.json",
+  "oof_decisions_path": "reports/task1/step2p1_oof_policy_decisions.jsonl",
+  "fixed_contract": {
+    "feature_count": 36,
+    "K": 77,
+    "drop_ranks": [
+      4,
+      5
+    ],
+    "model": "HistGradientBoostingClassifier",
+    "objective": "PAIRWISE_DIFFERENCE_BINARY_LOGLOSS",
+    "truth_order": "BENEFICIAL>NEUTRAL>HARMFUL",
+    "action_score": "MEAN_PAIRWISE_WIN_PROBABILITY"
+  },
+  "pair_counts": {
+    "inner_runs": [
+      {
+        "outer_held_out": 1,
+        "inner_validation_fold": 2,
+        "train_folds": [
+          3,
+          4
+        ],
+        "mirrored_training_rows_total": 1710456
+      },
+      {
+        "outer_held_out": 1,
+        "inner_validation_fold": 3,
+        "train_folds": [
+          2,
+          4
+        ],
+        "mirrored_training_rows_total": 1643498
+      },
+      {
+        "outer_held_out": 1,
+        "inner_validation_fold": 4,
+        "train_folds": [
+          2,
+          3
+        ],
+        "mirrored_training_rows_total": 1705022
+      },
+      {
+        "outer_held_out": 2,
+        "inner_validation_fold": 1,
+        "train_folds": [
+          3,
+          4
+        ],
+        "mirrored_training_rows_total": 1710456
+      },
+      {
+        "outer_held_out": 2,
+        "inner_validation_fold": 3,
+        "train_folds": [
+          1,
+          4
+        ],
+        "mirrored_training_rows_total": 1628268
+      },
+      {
+        "outer_held_out": 2,
+        "inner_validation_fold": 4,
+        "train_folds": [
+          1,
+          3
+        ],
+        "mirrored_training_rows_total": 1689792
+      },
+      {
+        "outer_held_out": 3,
+        "inner_validation_fold": 1,
+        "train_folds": [
+          2,
+          4
+        ],
+        "mirrored_training_rows_total": 1643498
+      },
+      {
+        "outer_held_out": 3,
+        "inner_validation_fold": 2,
+        "train_folds": [
+          1,
+          4
+        ],
+        "mirrored_training_rows_total": 1628268
+      },
+      {
+        "outer_held_out": 3,
+        "inner_validation_fold": 4,
+        "train_folds": [
+          1,
+          2
+        ],
+        "mirrored_training_rows_total": 1622834
+      },
+      {
+        "outer_held_out": 4,
+        "inner_validation_fold": 1,
+        "train_folds": [
+          2,
+          3
+        ],
+        "mirrored_training_rows_total": 1705022
+      },
+      {
+        "outer_held_out": 4,
+        "inner_validation_fold": 2,
+        "train_folds": [
+          1,
+          3
+        ],
+        "mirrored_training_rows_total": 1689792
+      },
+      {
+        "outer_held_out": 4,
+        "inner_validation_fold": 3,
+        "train_folds": [
+          1,
+          2
+        ],
+        "mirrored_training_rows_total": 1622834
+      }
+    ],
+    "outer_runs": [
+      {
+        "outer_fold_held_out": 1,
+        "train_folds": [
+          2,
+          3,
+          4
+        ],
+        "threshold": 0.8871766063648394,
+        "mirrored_training_rows_total": 2529488
+      },
+      {
+        "outer_fold_held_out": 2,
+        "train_folds": [
+          1,
+          3,
+          4
+        ],
+        "threshold": 0.9158352964999534,
+        "mirrored_training_rows_total": 2514258
+      },
+      {
+        "outer_fold_held_out": 3,
+        "train_folds": [
+          1,
+          2,
+          4
+        ],
+        "threshold": 0.8885338990548798,
+        "mirrored_training_rows_total": 2447300
+      },
+      {
+        "outer_fold_held_out": 4,
+        "train_folds": [
+          1,
+          2,
+          3
+        ],
+        "threshold": 0.9072451320464932,
+        "mirrored_training_rows_total": 2508824
+      }
+    ],
+    "all_folds": {
+      "B_vs_N_unordered_pairs": 125576,
+      "B_vs_H_unordered_pairs": 1625,
+      "N_vs_H_unordered_pairs": 1539444,
+      "unordered_total": 1666645,
+      "mirrored_training_rows_total": 3333290
+    }
+  },
+  "outer_runs": [
+    {
+      "outer_fold_held_out": 1,
+      "train_folds": [
+        2,
+        3,
+        4
+      ],
+      "threshold": 0.8871766063648394,
+      "mirrored_training_rows_total": 2529488
+    },
+    {
+      "outer_fold_held_out": 2,
+      "train_folds": [
+        1,
+        3,
+        4
+      ],
+      "threshold": 0.9158352964999534,
+      "mirrored_training_rows_total": 2514258
+    },
+    {
+      "outer_fold_held_out": 3,
+      "train_folds": [
+        1,
+        2,
+        4
+      ],
+      "threshold": 0.8885338990548798,
+      "mirrored_training_rows_total": 2447300
+    },
+    {
+      "outer_fold_held_out": 4,
+      "train_folds": [
+        1,
+        2,
+        3
+      ],
+      "threshold": 0.9072451320464932,
+      "mirrored_training_rows_total": 2508824
+    }
+  ],
+  "pooled": {
+    "query_count": 5600,
+    "baseline_macro_recall": 0.9259285714285714,
+    "pairwise_policy_macro_recall": 0.9252142857142857,
+    "D77_pairwise": -0.0007142857142857784,
+    "baseline_macro_precision": 0.19739285714285715,
+    "pairwise_policy_macro_precision": 0.19717857142857143,
+    "precision_delta": -0.0002142857142857224,
+    "queries_execute": 410,
+    "queries_no_op": 5190,
+    "executed_beneficial": 6,
+    "executed_neutral": 392,
+    "executed_harmful": 12,
+    "positive_gain_queries": 6,
+    "harmful_gain_queries": 12,
+    "C77": 0.058785714285714274,
+    "C_minus_D": 0.05950000000000005,
+    "realization_ratio": -0.012150668286756865
+  },
+  "per_fold": {
+    "1": {
+      "query_count": 1400,
+      "baseline_macro_recall": 0.9363690476190477,
+      "pairwise_policy_macro_recall": 0.9373214285714285,
+      "D77_pairwise": 0.0009523809523808158,
+      "baseline_macro_precision": 0.19842857142857143,
+      "pairwise_policy_macro_precision": 0.1987142857142857,
+      "precision_delta": 0.00028571428571427804,
+      "queries_execute": 167,
+      "queries_no_op": 1233,
+      "executed_beneficial": 3,
+      "executed_neutral": 163,
+      "executed_harmful": 1,
+      "positive_gain_queries": 3,
+      "harmful_gain_queries": 1
+    },
+    "2": {
+      "query_count": 1400,
+      "baseline_macro_recall": 0.9283333333333333,
+      "pairwise_policy_macro_recall": 0.9283333333333333,
+      "D77_pairwise": 0.0,
+      "baseline_macro_precision": 0.19771428571428573,
+      "pairwise_policy_macro_precision": 0.19771428571428573,
+      "precision_delta": 0.0,
+      "queries_execute": 5,
+      "queries_no_op": 1395,
+      "executed_beneficial": 0,
+      "executed_neutral": 5,
+      "executed_harmful": 0,
+      "positive_gain_queries": 0,
+      "harmful_gain_queries": 0
+    },
+    "3": {
+      "query_count": 1400,
+      "baseline_macro_recall": 0.919404761904762,
+      "pairwise_policy_macro_recall": 0.9170238095238095,
+      "D77_pairwise": -0.0023809523809524835,
+      "baseline_macro_precision": 0.195,
+      "pairwise_policy_macro_precision": 0.19428571428571428,
+      "precision_delta": -0.0007142857142857229,
+      "queries_execute": 132,
+      "queries_no_op": 1268,
+      "executed_beneficial": 3,
+      "executed_neutral": 121,
+      "executed_harmful": 8,
+      "positive_gain_queries": 3,
+      "harmful_gain_queries": 8
+    },
+    "4": {
+      "query_count": 1400,
+      "baseline_macro_recall": 0.9196071428571428,
+      "pairwise_policy_macro_recall": 0.9181785714285715,
+      "D77_pairwise": -0.0014285714285713347,
+      "baseline_macro_precision": 0.19842857142857143,
+      "pairwise_policy_macro_precision": 0.19799999999999998,
+      "precision_delta": -0.0004285714285714448,
+      "queries_execute": 106,
+      "queries_no_op": 1294,
+      "executed_beneficial": 0,
+      "executed_neutral": 103,
+      "executed_harmful": 3,
+      "positive_gain_queries": 0,
+      "harmful_gain_queries": 3
+    }
+  },
+  "comparators": {
+    "pointwise_step2r1_D77": 0.0,
+    "pairwise_minus_pointwise_D77": -0.0007142857142857784
+  },
+  "original_step2_gate_comparison": {
+    "gate_binding": false,
+    "pooled_D_gt_0": false,
+    "all_fold_D_ge_0": false,
+    "precision_guardrail": false,
+    "result": "FAIL"
+  },
+  "sanity_checks": {
+    "canonical_preconditions_verified": true,
+    "feature_count_36": true,
+    "feature_columns_unique": true,
+    "k77_incoming_403322": true,
+    "k77_actions_806644": true,
+    "all_queries_ge_two_actions": true,
+    "full_pair_counts_exact": true,
+    "pair_contract_written_before_fit": true,
+    "final_metrics_recomputed_from_serialized_decisions": true,
+    "oof_rows_5600": true,
+    "unique_query_ids_5600": true,
+    "D_le_C": true,
+    "fold0_payload_not_materialized": true,
+    "public_labels_not_used": true
+  },
+  "workflow_document_updated": true,
+  "notes": [
+    "All pairwise fits use complete deterministic mirrored cross-class pairs and uniform weights."
+  ]
+}

@@ -1,0 +1,16 @@
+﻿{
+    "timestamp":  "2026-08-31T22:29:40.7645272+07:00",
+    "logical_cpu":  "16",
+    "physical_cpu":  null,
+    "total_ram_bytes":  0,
+    "available_ram_bytes":  0,
+    "committed_virtual_bytes":  0,
+    "commit_limit_bytes":  0,
+    "pagefile_allocated_bytes":  0,
+    "pagefile_current_usage_bytes":  0,
+    "pagefile_peak_usage_bytes":  0,
+    "repository_disk_free_bytes":  null,
+    "temp_path":  "C:\\Users\\Nghia\\AppData\\Local\\Temp",
+    "temp_disk_free_bytes":  null,
+    "lightgbm_n_jobs":  1
+}

@@ -1,0 +1,106 @@
+{
+  "experiment": "B1",
+  "status": "FROZEN_PRE_FIT",
+  "estimator": "lightgbm.LGBMRanker",
+  "surrogate": "LambdaRank/NDCG@1",
+  "parameters": {
+    "objective": "lambdarank",
+    "metric": "ndcg",
+    "eval_at": [
+      1
+    ],
+    "label_gain": [
+      0,
+      1,
+      2
+    ],
+    "learning_rate": 0.05,
+    "n_estimators": 200,
+    "num_leaves": 31,
+    "max_depth": 5,
+    "min_child_samples": 20,
+    "reg_alpha": 0.0,
+    "reg_lambda": 1.0,
+    "feature_fraction": 1.0,
+    "bagging_fraction": 1.0,
+    "bagging_freq": 0,
+    "deterministic": true,
+    "force_col_wise": true,
+    "verbosity": -1,
+    "random_state": 20260827,
+    "n_jobs": 1
+  },
+  "K": 77,
+  "feature_columns": [
+    "incoming_union_rank",
+    "incoming_reciprocal_union_rank",
+    "incoming_source_support",
+    "incoming_min_source_rank",
+    "incoming_has_bge_support",
+    "incoming_bm25_rank",
+    "incoming_adaptive_k500_rank",
+    "incoming_knn_char_rank",
+    "incoming_knn_word_rank",
+    "incoming_bm25_missing",
+    "incoming_adaptive_k500_missing",
+    "incoming_knn_char_missing",
+    "incoming_knn_word_missing",
+    "incoming_question_token_length",
+    "incoming_question_char_length",
+    "incoming_baseline_rank",
+    "incoming_is_baseline_top5",
+    "dropped_union_rank",
+    "dropped_reciprocal_union_rank",
+    "dropped_source_support",
+    "dropped_min_source_rank",
+    "dropped_has_bge_support",
+    "dropped_bm25_rank",
+    "dropped_adaptive_k500_rank",
+    "dropped_knn_char_rank",
+    "dropped_knn_word_rank",
+    "dropped_bm25_missing",
+    "dropped_adaptive_k500_missing",
+    "dropped_knn_char_missing",
+    "dropped_knn_word_missing",
+    "dropped_question_token_length",
+    "dropped_question_char_length",
+    "dropped_baseline_rank",
+    "dropped_is_baseline_top5",
+    "diff_union_rank",
+    "diff_source_support"
+  ],
+  "label_encoding": {
+    "HARMFUL": 0,
+    "NEUTRAL": 1,
+    "BENEFICIAL": 2
+  },
+  "outer_folds": {
+    "1": [
+      2,
+      3,
+      4
+    ],
+    "2": [
+      1,
+      3,
+      4
+    ],
+    "3": [
+      1,
+      2,
+      4
+    ],
+    "4": [
+      1,
+      2,
+      3
+    ]
+  },
+  "success": {
+    "pooled_recall_delta_gte": 0.003,
+    "each_fold_recall_delta_gte": 0.0,
+    "precision_delta_gte": -0.001
+  },
+  "scientific_comparator": "canonical Workflow-A P1 F1-F4 OOF policy",
+  "public_incumbent_used": false
+}

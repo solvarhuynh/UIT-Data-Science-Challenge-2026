@@ -210,3 +210,9 @@ PROJECT_STATUS.md
 # Ignore raw data and prossessed data
 data/
 
+# Large Task1 outputs archived outside GitHub's file-size limits.
+artifacts/task1/large_outputs/
+task1_large_outputs.zip
+
+
+.cline_pytest_tmp/

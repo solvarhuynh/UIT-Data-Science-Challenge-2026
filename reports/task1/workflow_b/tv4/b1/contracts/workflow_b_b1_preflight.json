@@ -1,0 +1,23 @@
+{
+  "status": "PASS",
+  "contracts_read": {
+    "reports\\task1\\task1_active_metric_contract.md": "f55a8f71a46f06bffcbcc4963e182857126243d849ff0a6dbe82eb505f22ad74",
+    "reports\\task1\\step2p1_model_contract.json": "93f88cf956fe59d2bd8345d0d303a398186d697871e023e47aa2423322ce8061",
+    "reports\\task1\\step2_k77_model_contract_v2.json": "1dffe080780e43b1a687473ddba8dddc84bfc878c64672a77332b4157cdc5fb8",
+    "reports\\task1\\progress_log.md": "53f8571dfe0957f8597e41b5286a07f8358ed827ae791718e4138d692bb3032f",
+    "reports\\task1\\step4_workflow_a_finalization.md": "cceb94bb11d4f42c73906e42ccf00d21b1af36961a752c3c781faa8584fcb9e1",
+    "docs\\task1\\workflow_A_new.md": "c19880b56f65c2e979868eb44755557a4893f75d63f4daa22caefbb975a0676c"
+  },
+  "K": 77,
+  "feature_count": 36,
+  "feature_schema_exact": true,
+  "target_encoding": {
+    "HARMFUL": 0,
+    "NEUTRAL": 1,
+    "BENEFICIAL": 2
+  },
+  "tie_break": "drop_rank5_then_lower_union_rank_then_lexicographic_doc_id",
+  "threshold_contract": "candidates=+Infinity plus unique finite inner-OOF top-action scores; max(gain_sum, precision_delta, threshold); score >= threshold",
+  "fold0_used": false,
+  "public_labels_used": false
+}

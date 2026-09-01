@@ -1,0 +1,127 @@
+{
+  "status": "FROZEN_PRE_FIT",
+  "contract_version": "p1",
+  "created_before_first_fit": true,
+  "experiment": "STEP 2-P1 \u2014 Controlled Query-Aware (Pairwise) Policy Objective Experiment at Fixed K77",
+  "parent_feature_contract": "reports/task1/step2_k77_model_contract_v2.json",
+  "feature_columns": [
+    "incoming_union_rank",
+    "incoming_reciprocal_union_rank",
+    "incoming_source_support",
+    "incoming_min_source_rank",
+    "incoming_has_bge_support",
+    "incoming_bm25_rank",
+    "incoming_adaptive_k500_rank",
+    "incoming_knn_char_rank",
+    "incoming_knn_word_rank",
+    "incoming_bm25_missing",
+    "incoming_adaptive_k500_missing",
+    "incoming_knn_char_missing",
+    "incoming_knn_word_missing",
+    "incoming_question_token_length",
+    "incoming_question_char_length",
+    "incoming_baseline_rank",
+    "incoming_is_baseline_top5",
+    "dropped_union_rank",
+    "dropped_reciprocal_union_rank",
+    "dropped_source_support",
+    "dropped_min_source_rank",
+    "dropped_has_bge_support",
+    "dropped_bm25_rank",
+    "dropped_adaptive_k500_rank",
+    "dropped_knn_char_rank",
+    "dropped_knn_word_rank",
+    "dropped_bm25_missing",
+    "dropped_adaptive_k500_missing",
+    "dropped_knn_char_missing",
+    "dropped_knn_word_missing",
+    "dropped_question_token_length",
+    "dropped_question_char_length",
+    "dropped_baseline_rank",
+    "dropped_is_baseline_top5",
+    "diff_union_rank",
+    "diff_source_support"
+  ],
+  "feature_order": "exact_v2_order",
+  "fixed_K": 77,
+  "drop_ranks": [
+    4,
+    5
+  ],
+  "pairwise_truth_order": "BENEFICIAL>NEUTRAL>HARMFUL",
+  "pair_generation": "all unordered cross-class action pairs within each training query; deterministic rank/doc/drop ordering; two mirrored rows per pair",
+  "mirroring": true,
+  "pair_weights": "uniform_1.0",
+  "model_family": "sklearn.ensemble.HistGradientBoostingClassifier",
+  "hyperparameters": {
+    "loss": "log_loss",
+    "learning_rate": 0.05,
+    "max_iter": 200,
+    "max_depth": 5,
+    "max_leaf_nodes": 31,
+    "min_samples_leaf": 20,
+    "l2_regularization": 1.0,
+    "early_stopping": false,
+    "random_state": 20260827
+  },
+  "random_seed": 20260827,
+  "pairwise_action_score": "mean P(a outranks b) over all other actions; score both ordered directions",
+  "tie_break": "drop_rank5_then_lower_union_rank_then_lexicographic_doc_id",
+  "outer_oof_protocol": {
+    "held_out_folds": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "train_is_complement": true
+  },
+  "inner_threshold_protocol": "same nested inner-OOF candidate threshold protocol as Step2-R1",
+  "original_gate_comparison": "non_binding original Step2 gate",
+  "oof_caveat": {
+    "policy_oof_strict": true,
+    "end_to_end_selection_oof": false,
+    "k77_selected_exploratorily_on_folds_1_4": true,
+    "interpretation_scope": "PAIRWISE_POLICY_REALIZABILITY_CONDITIONAL_ON_EXPLORATORY_FIXED_K77"
+  },
+  "fold0_allowed": false,
+  "public_labels_allowed": false,
+  "pair_preflight_counts": {
+    "1": {
+      "B_vs_N_unordered_pairs": 28372,
+      "B_vs_H_unordered_pairs": 639,
+      "N_vs_H_unordered_pairs": 372890,
+      "unordered_total": 401901,
+      "mirrored_training_rows_total": 803802
+    },
+    "2": {
+      "B_vs_N_unordered_pairs": 30804,
+      "B_vs_H_unordered_pairs": 422,
+      "N_vs_H_unordered_pairs": 378290,
+      "unordered_total": 409516,
+      "mirrored_training_rows_total": 819032
+    },
+    "3": {
+      "B_vs_N_unordered_pairs": 33316,
+      "B_vs_H_unordered_pairs": 142,
+      "N_vs_H_unordered_pairs": 409537,
+      "unordered_total": 442995,
+      "mirrored_training_rows_total": 885990
+    },
+    "4": {
+      "B_vs_N_unordered_pairs": 33084,
+      "B_vs_H_unordered_pairs": 422,
+      "N_vs_H_unordered_pairs": 378727,
+      "unordered_total": 412233,
+      "mirrored_training_rows_total": 824466
+    }
+  },
+  "outer_final_fit_mirrored_rows": {
+    "1": 2529488,
+    "2": 2514258,
+    "3": 2447300,
+    "4": 2508824
+  },
+  "largest_final_fit_matrix_float32_bytes": 364246272,
+  "largest_final_fit_minimum_data_bytes": 387011664
+}

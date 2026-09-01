@@ -1,0 +1,197 @@
+{
+  "status": "PASS",
+  "branch_gate": "DIAGNOSTIC_ONLY_NO_BRANCH_GATE",
+  "official_metric": "macro_recall",
+  "folds_used": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "fold0_touched": false,
+  "fold0_payload_materialized": false,
+  "fold0_used_in_statistics": false,
+  "fold0_used_in_oracle": false,
+  "fold0_labels_used": false,
+  "public_labels_used": false,
+  "total_queries": 5600,
+  "affected_queries": 162,
+  "affected_queries_per_fold": {
+    "1": 40,
+    "2": 39,
+    "3": 41,
+    "4": 42
+  },
+  "baseline_non_target_records_skipped": 1400,
+  "candidate_non_target_records_skipped": 1400,
+  "action_non_target_records_skipped": 43084,
+  "input_artifacts": {
+    "step0_report": "reports\\task1\\step0_metric_contract_report.json",
+    "step1a_report": "reports\\task1\\exp_1a_recall_gap_report.json",
+    "step1b_report": "reports\\task1\\exp_1b_oracle_gap_decomposition_report.json",
+    "professor_review": "reports\\task1\\professor_review_after_step1b.md",
+    "train_labels": "data\\raw\\btc\\LegalIR\\train.json",
+    "fold_mapping": "artifacts\\task1\\evaluation\\strict_cv_v2\\folds.json",
+    "baseline_top5": "artifacts\\task1\\recovery_096\\baseline_093_oof\\predictions.jsonl",
+    "full_candidate_pool": "artifacts\\task1\\recovery_096\\inference_matched_reranker_v1\\compact\\candidate_refs_full.jsonl",
+    "current_action_space": "artifacts\\task1\\recovery_096\\v3_residual\\policy\\actions.jsonl"
+  },
+  "pipeline_trace": [
+    {
+      "stage_id": "stage1_union_rank_le_20",
+      "stage_name": "union_rank <= 20 shortlist cutoff",
+      "source_file": "scripts/beam/task1_v3_residual/build_shortlist_features.py",
+      "source_lines": "40-53",
+      "input_set_definition": "S0 = unique full candidate docs minus baseline top5",
+      "exact_filter_condition": "retain pool candidates where int(union_rank) <= 20; baseline docs are later unioned for anchor only and remain excluded from incoming set",
+      "ordering_rule": "sort by (union_rank, doc_id)",
+      "tie_break_rule": "doc_id lexicographic",
+      "output_set_definition": "non-baseline shortlist docs, passed to build_actions.py as incoming docs",
+      "stage_is_composite": false,
+      "input_candidate_count_total": 1092015,
+      "output_candidate_count_total": 86169,
+      "queries_changed_by_stage": 5600,
+      "queries_with_positive_oracle_loss": 162,
+      "sum_oracle_loss": 123.44999999999996,
+      "pooled_macro_recall_loss": 0.02204464285714285,
+      "share_of_total_action_space_gap": 1.0,
+      "per_fold": {
+        "1": {
+          "query_count": 1400,
+          "sum_loss": 28.25,
+          "queries_with_positive_loss": 40,
+          "pooled_loss": 0.020178571428571428
+        },
+        "2": {
+          "query_count": 1400,
+          "sum_loss": 29.166666666666664,
+          "queries_with_positive_loss": 39,
+          "pooled_loss": 0.020833333333333332
+        },
+        "3": {
+          "query_count": 1400,
+          "sum_loss": 33.33333333333333,
+          "queries_with_positive_loss": 41,
+          "pooled_loss": 0.023809523809523805
+        },
+        "4": {
+          "query_count": 1400,
+          "sum_loss": 32.699999999999996,
+          "queries_with_positive_loss": 42,
+          "pooled_loss": 0.023357142857142854
+        }
+      }
+    }
+  ],
+  "endpoint_crosscheck": {
+    "expected_pooled_A": 0.06381547619047619,
+    "measured_pooled_A": 0.06381547619047619,
+    "expected_pooled_B": 0.04177083333333334,
+    "measured_pooled_B": 0.04177083333333334,
+    "expected_action_space_gap": 0.02204464285714285,
+    "measured_action_space_gap": 0.02204464285714285
+  },
+  "final_actionspace_exact_match_queries": 5600,
+  "final_actionspace_mismatch_queries": 0,
+  "stage_attribution": [
+    {
+      "stage_id": "stage1_union_rank_le_20",
+      "stage_name": "union_rank <= 20 shortlist cutoff",
+      "source_file": "scripts/beam/task1_v3_residual/build_shortlist_features.py",
+      "source_lines": "40-53",
+      "input_set_definition": "S0 = unique full candidate docs minus baseline top5",
+      "exact_filter_condition": "retain pool candidates where int(union_rank) <= 20; baseline docs are later unioned for anchor only and remain excluded from incoming set",
+      "ordering_rule": "sort by (union_rank, doc_id)",
+      "tie_break_rule": "doc_id lexicographic",
+      "output_set_definition": "non-baseline shortlist docs, passed to build_actions.py as incoming docs",
+      "stage_is_composite": false,
+      "input_candidate_count_total": 1092015,
+      "output_candidate_count_total": 86169,
+      "queries_changed_by_stage": 5600,
+      "queries_with_positive_oracle_loss": 162,
+      "sum_oracle_loss": 123.44999999999996,
+      "pooled_macro_recall_loss": 0.02204464285714285,
+      "share_of_total_action_space_gap": 1.0,
+      "per_fold": {
+        "1": {
+          "query_count": 1400,
+          "sum_loss": 28.25,
+          "queries_with_positive_loss": 40,
+          "pooled_loss": 0.020178571428571428
+        },
+        "2": {
+          "query_count": 1400,
+          "sum_loss": 29.166666666666664,
+          "queries_with_positive_loss": 39,
+          "pooled_loss": 0.020833333333333332
+        },
+        "3": {
+          "query_count": 1400,
+          "sum_loss": 33.33333333333333,
+          "queries_with_positive_loss": 41,
+          "pooled_loss": 0.023809523809523805
+        },
+        "4": {
+          "query_count": 1400,
+          "sum_loss": 32.699999999999996,
+          "queries_with_positive_loss": 42,
+          "pooled_loss": 0.023357142857142854
+        }
+      }
+    }
+  ],
+  "dominant_stage": "stage1_union_rank_le_20",
+  "dominant_stage_share": 1.0,
+  "professor_direction": "DOMINANT_SINGLE_FILTER_STAGE",
+  "query_heterogeneity": "DESCRIPTIVE_ONLY_NO_PRE_REGISTERED_GATE",
+  "heterogeneity_summary": {
+    "first_positive_loss_stage_distribution": {
+      "stage1_union_rank_le_20": 162
+    },
+    "dominant_loss_stage_distribution": {
+      "stage1_union_rank_le_20": 162
+    }
+  },
+  "per_fold": {
+    "1": {
+      "query_count": 1400,
+      "sum_loss": 28.25,
+      "queries_with_positive_loss": 40,
+      "pooled_loss": 0.020178571428571428
+    },
+    "2": {
+      "query_count": 1400,
+      "sum_loss": 29.166666666666664,
+      "queries_with_positive_loss": 39,
+      "pooled_loss": 0.020833333333333332
+    },
+    "3": {
+      "query_count": 1400,
+      "sum_loss": 33.33333333333333,
+      "queries_with_positive_loss": 41,
+      "pooled_loss": 0.023809523809523805
+    },
+    "4": {
+      "query_count": 1400,
+      "sum_loss": 32.699999999999996,
+      "queries_with_positive_loss": 42,
+      "pooled_loss": 0.023357142857142854
+    }
+  },
+  "sanity_checks": {
+    "professor_contract_verified": true,
+    "step1b_endpoint_crosscheck": true,
+    "affected_query_count_match": true,
+    "final_actionspace_exact_match": true,
+    "oracle_ceiling_nonincreasing": true,
+    "per_query_telescoping_identity": true,
+    "pooled_telescoping_identity": true,
+    "per_fold_loss_accounting": true,
+    "fold0_payload_not_materialized": true
+  },
+  "workflow_document_updated": true,
+  "notes": [
+    "One deterministic A→B filter stage was identified and replayed: union_rank <= 20. Baseline union in shortlist() preserves baseline anchors but does not create incoming candidates.",
+    "No training, inference, Fold0 payload materialization, public-label use, GPU, Modal or Beam job was performed."
+  ]
+}

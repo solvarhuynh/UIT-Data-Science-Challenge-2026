@@ -1,0 +1,9 @@
+{
+  "fold": 1,
+  "rows": 201652,
+  "mismatch_count": 0,
+  "rebuilt_row_serialization_sha256": "696507f29454ac564735365579e3c4ba2db824777498f1d7a72f55fff8fcb89f",
+  "persisted_row_serialization_sha256": "696507f29454ac564735365579e3c4ba2db824777498f1d7a72f55fff8fcb89f",
+  "hash_match": true,
+  "artifact_hash_match": true
+}

@@ -1,0 +1,688 @@
+{
+  "status": "PASS",
+  "branch_gate": "DIAGNOSTIC_ONLY_NO_BRANCH_GATE",
+  "official_metric": "macro_recall",
+  "folds_used": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "fold0_touched": false,
+  "fold0_payload_materialized": false,
+  "fold0_used_in_statistics": false,
+  "fold0_used_in_oracle": false,
+  "fold0_labels_used": false,
+  "public_labels_used": false,
+  "total_queries": 5600,
+  "baseline_non_target_records_skipped": 1400,
+  "candidate_non_target_records_skipped": 1400,
+  "input_artifacts": {
+    "step0_report": "reports\\task1\\step0_metric_contract_report.json",
+    "step1a_report": "reports\\task1\\exp_1a_recall_gap_report.json",
+    "step1b_report": "reports\\task1\\exp_1b_oracle_gap_decomposition_report.json",
+    "step1c_report": "reports\\task1\\exp_1c_action_space_filter_loss_attribution_report.json",
+    "train_labels": "data\\raw\\btc\\LegalIR\\train.json",
+    "fold_mapping": "artifacts\\task1\\evaluation\\strict_cv_v2\\folds.json",
+    "baseline_top5": "artifacts\\task1\\recovery_096\\baseline_093_oof\\predictions.jsonl",
+    "full_candidate_pool": "artifacts\\task1\\recovery_096\\inference_matched_reranker_v1\\compact\\candidate_refs_full.jsonl"
+  },
+  "step1c_crosscheck": {
+    "current_K": 20,
+    "expected_K20_gain": 0.04177083333333334,
+    "measured_K20_gain": 0.04177083333333333,
+    "expected_full_pool_A": 0.06381547619047619,
+    "total_action_space_gap": 0.02204464285714285
+  },
+  "k_selection": {
+    "method": "nearest-rank percentiles of lost beneficial union_rank distribution",
+    "percentiles": [
+      0.1,
+      0.25,
+      0.5,
+      0.75,
+      0.9,
+      1.0
+    ],
+    "lost_beneficial_candidate_count": 169,
+    "rank_min": 21,
+    "rank_max": 197,
+    "raw_percentile_K_values": {
+      "0.1": 23,
+      "0.25": 29,
+      "0.5": 45,
+      "0.75": 77,
+      "0.9": 135,
+      "1.0": 197
+    },
+    "final_K_values": [
+      20,
+      23,
+      29,
+      45,
+      77,
+      135,
+      197
+    ],
+    "diagnostic_label_conditioned_not_production_selection": true
+  },
+  "action_generator_contract": {
+    "source_file": "scripts/beam/task1_v3_residual/build_actions.py",
+    "source_lines": "110-113",
+    "drop_ranks": [
+      4,
+      5
+    ],
+    "extra_eligibility_rules": [
+      "incoming doc must be a non-baseline shortlist doc; baseline anchor docs must be present"
+    ],
+    "verified": true
+  },
+  "sweep": [
+    {
+      "K": 20,
+      "pooled_macro_recall_oracle_gain": 0.04177083333333333,
+      "absolute_recovered_gain_from_K20": -6.938893903907228e-18,
+      "fraction_of_action_space_gap_recovered": -3.147655395859092e-16,
+      "incoming_candidate_count_total": 86169,
+      "incoming_candidates_per_query": {
+        "mean": 15.387321428571429,
+        "median": 15.0,
+        "p90": 16,
+        "p95": 17,
+        "max": 20
+      },
+      "estimated_total_actions_current_contract": 172338,
+      "mean_actions_per_query": 30.774642857142858,
+      "per_fold": {
+        "1": {
+          "query_count": 1400,
+          "sum_oracle_gain": 48.5,
+          "incoming_total": 21520,
+          "affected_recovered_positive_gain_vs_K20": 0,
+          "affected_sum_recovered_gain": 0.0,
+          "pooled_macro_recall_oracle_gain": 0.03464285714285714,
+          "absolute_recovered_gain_from_K20": -6.938893903907228e-18,
+          "fraction_of_fold_action_space_gap_recovered": -3.438743881582343e-16,
+          "mean_incoming_candidates_per_query": 15.371428571428572,
+          "total_downstream_actions": 43040,
+          "affected_mean_recovered_gain": 0.0
+        },
+        "2": {
+          "query_count": 1400,
+          "sum_oracle_gain": 60.41666666666667,
+          "incoming_total": 21555,
+          "affected_recovered_positive_gain_vs_K20": 0,
+          "affected_sum_recovered_gain": 0.0,
+          "pooled_macro_recall_oracle_gain": 0.04315476190476191,
+          "absolute_recovered_gain_from_K20": 6.938893903907228e-18,
+          "fraction_of_fold_action_space_gap_recovered": 3.3306690738754696e-16,
+          "mean_incoming_candidates_per_query": 15.396428571428572,
+          "total_downstream_actions": 43110,
+          "affected_mean_recovered_gain": 0.0
+        },
+        "3": {
+          "query_count": 1400,
+          "sum_oracle_gain": 58.50000000000001,
+          "incoming_total": 21536,
+          "affected_recovered_positive_gain_vs_K20": 0,
+          "affected_sum_recovered_gain": 0.0,
+          "pooled_macro_recall_oracle_gain": 0.041785714285714294,
+          "absolute_recovered_gain_from_K20": 0.0,
+          "fraction_of_fold_action_space_gap_recovered": 0.0,
+          "mean_incoming_candidates_per_query": 15.382857142857143,
+          "total_downstream_actions": 43072,
+          "affected_mean_recovered_gain": 0.0
+        },
+        "4": {
+          "query_count": 1400,
+          "sum_oracle_gain": 66.50000000000001,
+          "incoming_total": 21558,
+          "affected_recovered_positive_gain_vs_K20": 0,
+          "affected_sum_recovered_gain": 0.0,
+          "pooled_macro_recall_oracle_gain": 0.04750000000000001,
+          "absolute_recovered_gain_from_K20": 6.938893903907228e-18,
+          "fraction_of_fold_action_space_gap_recovered": 2.970780264669762e-16,
+          "mean_incoming_candidates_per_query": 15.398571428571428,
+          "total_downstream_actions": 43116,
+          "affected_mean_recovered_gain": 0.0
+        }
+      },
+      "affected_subset": {
+        "affected_queries_with_recovered_positive_gain_vs_K20": 0,
+        "sum_recovered_gain": 0.0,
+        "mean_recovered_gain": 0.0
+      }
+    },
+    {
+      "K": 23,
+      "pooled_macro_recall_oracle_gain": 0.04447916666666667,
+      "absolute_recovered_gain_from_K20": 0.0027083333333333265,
+      "fraction_of_action_space_gap_recovered": 0.12285675712164142,
+      "incoming_candidate_count_total": 102407,
+      "incoming_candidates_per_query": {
+        "mean": 18.286964285714287,
+        "median": 18.0,
+        "p90": 19,
+        "p95": 20,
+        "max": 23
+      },
+      "estimated_total_actions_current_contract": 204814,
+      "mean_actions_per_query": 36.573928571428574,
+      "per_fold": {
+        "1": {
+          "query_count": 1400,
+          "sum_oracle_gain": 52.333333333333336,
+          "incoming_total": 25580,
+          "affected_recovered_positive_gain_vs_K20": 5,
+          "affected_sum_recovered_gain": 3.8333333333333335,
+          "pooled_macro_recall_oracle_gain": 0.03738095238095238,
+          "absolute_recovered_gain_from_K20": 0.002738095238095234,
+          "fraction_of_fold_action_space_gap_recovered": 0.13569321533923284,
+          "mean_incoming_candidates_per_query": 18.271428571428572,
+          "total_downstream_actions": 51160,
+          "affected_mean_recovered_gain": 0.09583333333333334
+        },
+        "2": {
+          "query_count": 1400,
+          "sum_oracle_gain": 64.25,
+          "incoming_total": 25610,
+          "affected_recovered_positive_gain_vs_K20": 5,
+          "affected_sum_recovered_gain": 3.8333333333333335,
+          "pooled_macro_recall_oracle_gain": 0.045892857142857145,
+          "absolute_recovered_gain_from_K20": 0.002738095238095241,
+          "fraction_of_fold_action_space_gap_recovered": 0.13142857142857156,
+          "mean_incoming_candidates_per_query": 18.292857142857144,
+          "total_downstream_actions": 51220,
+          "affected_mean_recovered_gain": 0.09829059829059829
+        },
+        "3": {
+          "query_count": 1400,
+          "sum_oracle_gain": 60.50000000000001,
+          "incoming_total": 25606,
+          "affected_recovered_positive_gain_vs_K20": 2,
+          "affected_sum_recovered_gain": 2.0,
+          "pooled_macro_recall_oracle_gain": 0.04321428571428572,
+          "absolute_recovered_gain_from_K20": 0.0014285714285714249,
+          "fraction_of_fold_action_space_gap_recovered": 0.05999999999999986,
+          "mean_incoming_candidates_per_query": 18.29,
+          "total_downstream_actions": 51212,
+          "affected_mean_recovered_gain": 0.04878048780487805
+        },
+        "4": {
+          "query_count": 1400,
+          "sum_oracle_gain": 72.0,
+          "incoming_total": 25611,
+          "affected_recovered_positive_gain_vs_K20": 6,
+          "affected_sum_recovered_gain": 5.5,
+          "pooled_macro_recall_oracle_gain": 0.05142857142857143,
+          "absolute_recovered_gain_from_K20": 0.003928571428571427,
+          "fraction_of_fold_action_space_gap_recovered": 0.16819571865443422,
+          "mean_incoming_candidates_per_query": 18.29357142857143,
+          "total_downstream_actions": 51222,
+          "affected_mean_recovered_gain": 0.13095238095238096
+        }
+      },
+      "affected_subset": {
+        "affected_queries_with_recovered_positive_gain_vs_K20": 18,
+        "sum_recovered_gain": 15.166666666666668,
+        "mean_recovered_gain": 0.09362139917695474
+      }
+    },
+    {
+      "K": 29,
+      "pooled_macro_recall_oracle_gain": 0.048110119047619054,
+      "absolute_recovered_gain_from_K20": 0.006339285714285714,
+      "fraction_of_action_space_gap_recovered": 0.2875658161198867,
+      "incoming_candidate_count_total": 135404,
+      "incoming_candidates_per_query": {
+        "mean": 24.179285714285715,
+        "median": 24.0,
+        "p90": 25,
+        "p95": 25,
+        "max": 29
+      },
+      "estimated_total_actions_current_contract": 270808,
+      "mean_actions_per_query": 48.35857142857143,
+      "per_fold": {
+        "1": {
+          "query_count": 1400,
+          "sum_oracle_gain": 53.333333333333336,
+          "incoming_total": 33840,
+          "affected_recovered_positive_gain_vs_K20": 6,
+          "affected_sum_recovered_gain": 4.833333333333333,
+          "pooled_macro_recall_oracle_gain": 0.0380952380952381,
+          "absolute_recovered_gain_from_K20": 0.00345238095238095,
+          "fraction_of_fold_action_space_gap_recovered": 0.1710914454277285,
+          "mean_incoming_candidates_per_query": 24.17142857142857,
+          "total_downstream_actions": 67680,
+          "affected_mean_recovered_gain": 0.12083333333333332
+        },
+        "2": {
+          "query_count": 1400,
+          "sum_oracle_gain": 72.75000000000001,
+          "incoming_total": 33857,
+          "affected_recovered_positive_gain_vs_K20": 15,
+          "affected_sum_recovered_gain": 12.333333333333332,
+          "pooled_macro_recall_oracle_gain": 0.05196428571428573,
+          "absolute_recovered_gain_from_K20": 0.008809523809523823,
+          "fraction_of_fold_action_space_gap_recovered": 0.4228571428571435,
+          "mean_incoming_candidates_per_query": 24.18357142857143,
+          "total_downstream_actions": 67714,
+          "affected_mean_recovered_gain": 0.3162393162393162
+        },
+        "3": {
+          "query_count": 1400,
+          "sum_oracle_gain": 68.0,
+          "incoming_total": 33864,
+          "affected_recovered_positive_gain_vs_K20": 11,
+          "affected_sum_recovered_gain": 9.5,
+          "pooled_macro_recall_oracle_gain": 0.04857142857142857,
+          "absolute_recovered_gain_from_K20": 0.006785714285714277,
+          "fraction_of_fold_action_space_gap_recovered": 0.2849999999999997,
+          "mean_incoming_candidates_per_query": 24.18857142857143,
+          "total_downstream_actions": 67728,
+          "affected_mean_recovered_gain": 0.23170731707317074
+        },
+        "4": {
+          "query_count": 1400,
+          "sum_oracle_gain": 75.33333333333333,
+          "incoming_total": 33843,
+          "affected_recovered_positive_gain_vs_K20": 11,
+          "affected_sum_recovered_gain": 8.833333333333334,
+          "pooled_macro_recall_oracle_gain": 0.05380952380952381,
+          "absolute_recovered_gain_from_K20": 0.0063095238095238065,
+          "fraction_of_fold_action_space_gap_recovered": 0.27013251783893977,
+          "mean_incoming_candidates_per_query": 24.173571428571428,
+          "total_downstream_actions": 67686,
+          "affected_mean_recovered_gain": 0.21031746031746032
+        }
+      },
+      "affected_subset": {
+        "affected_queries_with_recovered_positive_gain_vs_K20": 43,
+        "sum_recovered_gain": 35.5,
+        "mean_recovered_gain": 0.2191358024691358
+      }
+    },
+    {
+      "K": 45,
+      "pooled_macro_recall_oracle_gain": 0.053839285714285715,
+      "absolute_recovered_gain_from_K20": 0.012068452380952374,
+      "fraction_of_action_space_gap_recovered": 0.5474551100310516,
+      "incoming_candidate_count_total": 224371,
+      "incoming_candidates_per_query": {
+        "mean": 40.06625,
+        "median": 40.0,
+        "p90": 40,
+        "p95": 41,
+        "max": 43
+      },
+      "estimated_total_actions_current_contract": 448742,
+      "mean_actions_per_query": 80.1325,
+      "per_fold": {
+        "1": {
+          "query_count": 1400,
+          "sum_oracle_gain": 64.66666666666667,
+          "incoming_total": 56083,
+          "affected_recovered_positive_gain_vs_K20": 22,
+          "affected_sum_recovered_gain": 16.166666666666668,
+          "pooled_macro_recall_oracle_gain": 0.04619047619047619,
+          "absolute_recovered_gain_from_K20": 0.011547619047619043,
+          "fraction_of_fold_action_space_gap_recovered": 0.5722713864306782,
+          "mean_incoming_candidates_per_query": 40.059285714285714,
+          "total_downstream_actions": 112166,
+          "affected_mean_recovered_gain": 0.4041666666666667
+        },
+        "2": {
+          "query_count": 1400,
+          "sum_oracle_gain": 77.75,
+          "incoming_total": 56094,
+          "affected_recovered_positive_gain_vs_K20": 21,
+          "affected_sum_recovered_gain": 17.333333333333336,
+          "pooled_macro_recall_oracle_gain": 0.055535714285714285,
+          "absolute_recovered_gain_from_K20": 0.012380952380952381,
+          "fraction_of_fold_action_space_gap_recovered": 0.5942857142857143,
+          "mean_incoming_candidates_per_query": 40.067142857142855,
+          "total_downstream_actions": 112188,
+          "affected_mean_recovered_gain": 0.44444444444444453
+        },
+        "3": {
+          "query_count": 1400,
+          "sum_oracle_gain": 79.16666666666667,
+          "incoming_total": 56096,
+          "affected_recovered_positive_gain_vs_K20": 25,
+          "affected_sum_recovered_gain": 20.666666666666668,
+          "pooled_macro_recall_oracle_gain": 0.05654761904761905,
+          "absolute_recovered_gain_from_K20": 0.014761904761904754,
+          "fraction_of_fold_action_space_gap_recovered": 0.6199999999999998,
+          "mean_incoming_candidates_per_query": 40.06857142857143,
+          "total_downstream_actions": 112192,
+          "affected_mean_recovered_gain": 0.5040650406504066
+        },
+        "4": {
+          "query_count": 1400,
+          "sum_oracle_gain": 79.91666666666667,
+          "incoming_total": 56098,
+          "affected_recovered_positive_gain_vs_K20": 18,
+          "affected_sum_recovered_gain": 13.416666666666668,
+          "pooled_macro_recall_oracle_gain": 0.05708333333333334,
+          "absolute_recovered_gain_from_K20": 0.00958333333333334,
+          "fraction_of_fold_action_space_gap_recovered": 0.41029561671763537,
+          "mean_incoming_candidates_per_query": 40.07,
+          "total_downstream_actions": 112196,
+          "affected_mean_recovered_gain": 0.3194444444444445
+        }
+      },
+      "affected_subset": {
+        "affected_queries_with_recovered_positive_gain_vs_K20": 86,
+        "sum_recovered_gain": 67.58333333333334,
+        "mean_recovered_gain": 0.4171810699588478
+      }
+    },
+    {
+      "K": 77,
+      "pooled_macro_recall_oracle_gain": 0.05878571428571428,
+      "absolute_recovered_gain_from_K20": 0.01701488095238094,
+      "fraction_of_action_space_gap_recovered": 0.771837451059808,
+      "incoming_candidate_count_total": 403322,
+      "incoming_candidates_per_query": {
+        "mean": 72.02178571428571,
+        "median": 72.0,
+        "p90": 72,
+        "p95": 72,
+        "max": 74
+      },
+      "estimated_total_actions_current_contract": 806644,
+      "mean_actions_per_query": 144.04357142857143,
+      "per_fold": {
+        "1": {
+          "query_count": 1400,
+          "sum_oracle_gain": 68.91666666666667,
+          "incoming_total": 100826,
+          "affected_recovered_positive_gain_vs_K20": 29,
+          "affected_sum_recovered_gain": 20.416666666666664,
+          "pooled_macro_recall_oracle_gain": 0.04922619047619048,
+          "absolute_recovered_gain_from_K20": 0.01458333333333333,
+          "fraction_of_fold_action_space_gap_recovered": 0.7227138643067845,
+          "mean_incoming_candidates_per_query": 72.01857142857143,
+          "total_downstream_actions": 201652,
+          "affected_mean_recovered_gain": 0.5104166666666666
+        },
+        "2": {
+          "query_count": 1400,
+          "sum_oracle_gain": 84.58333333333333,
+          "incoming_total": 100830,
+          "affected_recovered_positive_gain_vs_K20": 31,
+          "affected_sum_recovered_gain": 24.166666666666668,
+          "pooled_macro_recall_oracle_gain": 0.06041666666666666,
+          "absolute_recovered_gain_from_K20": 0.017261904761904756,
+          "fraction_of_fold_action_space_gap_recovered": 0.8285714285714283,
+          "mean_incoming_candidates_per_query": 72.02142857142857,
+          "total_downstream_actions": 201660,
+          "affected_mean_recovered_gain": 0.6196581196581197
+        },
+        "3": {
+          "query_count": 1400,
+          "sum_oracle_gain": 85.5,
+          "incoming_total": 100828,
+          "affected_recovered_positive_gain_vs_K20": 33,
+          "affected_sum_recovered_gain": 26.999999999999996,
+          "pooled_macro_recall_oracle_gain": 0.06107142857142857,
+          "absolute_recovered_gain_from_K20": 0.019285714285714274,
+          "fraction_of_fold_action_space_gap_recovered": 0.8099999999999997,
+          "mean_incoming_candidates_per_query": 72.02,
+          "total_downstream_actions": 201656,
+          "affected_mean_recovered_gain": 0.6585365853658536
+        },
+        "4": {
+          "query_count": 1400,
+          "sum_oracle_gain": 90.19999999999999,
+          "incoming_total": 100838,
+          "affected_recovered_positive_gain_vs_K20": 32,
+          "affected_sum_recovered_gain": 23.7,
+          "pooled_macro_recall_oracle_gain": 0.06442857142857142,
+          "absolute_recovered_gain_from_K20": 0.016928571428571418,
+          "fraction_of_fold_action_space_gap_recovered": 0.7247706422018345,
+          "mean_incoming_candidates_per_query": 72.02714285714286,
+          "total_downstream_actions": 201676,
+          "affected_mean_recovered_gain": 0.5642857142857143
+        }
+      },
+      "affected_subset": {
+        "affected_queries_with_recovered_positive_gain_vs_K20": 125,
+        "sum_recovered_gain": 95.28333333333333,
+        "mean_recovered_gain": 0.5881687242798354
+      }
+    },
+    {
+      "K": 135,
+      "pooled_macro_recall_oracle_gain": 0.06202976190476191,
+      "absolute_recovered_gain_from_K20": 0.020258928571428567,
+      "fraction_of_action_space_gap_recovered": 0.9189955447549616,
+      "incoming_candidate_count_total": 728038,
+      "incoming_candidates_per_query": {
+        "mean": 130.0067857142857,
+        "median": 130.0,
+        "p90": 130,
+        "p95": 130,
+        "max": 132
+      },
+      "estimated_total_actions_current_contract": 1456076,
+      "mean_actions_per_query": 260.0135714285714,
+      "per_fold": {
+        "1": {
+          "query_count": 1400,
+          "sum_oracle_gain": 71.75,
+          "incoming_total": 182009,
+          "affected_recovered_positive_gain_vs_K20": 33,
+          "affected_sum_recovered_gain": 23.249999999999996,
+          "pooled_macro_recall_oracle_gain": 0.05125,
+          "absolute_recovered_gain_from_K20": 0.016607142857142848,
+          "fraction_of_fold_action_space_gap_recovered": 0.8230088495575217,
+          "mean_incoming_candidates_per_query": 130.00642857142856,
+          "total_downstream_actions": 364018,
+          "affected_mean_recovered_gain": 0.5812499999999999
+        },
+        "2": {
+          "query_count": 1400,
+          "sum_oracle_gain": 88.08333333333333,
+          "incoming_total": 182006,
+          "affected_recovered_positive_gain_vs_K20": 36,
+          "affected_sum_recovered_gain": 27.666666666666668,
+          "pooled_macro_recall_oracle_gain": 0.06291666666666666,
+          "absolute_recovered_gain_from_K20": 0.01976190476190476,
+          "fraction_of_fold_action_space_gap_recovered": 0.9485714285714284,
+          "mean_incoming_candidates_per_query": 130.00428571428571,
+          "total_downstream_actions": 364012,
+          "affected_mean_recovered_gain": 0.7094017094017094
+        },
+        "3": {
+          "query_count": 1400,
+          "sum_oracle_gain": 90.33333333333333,
+          "incoming_total": 182006,
+          "affected_recovered_positive_gain_vs_K20": 39,
+          "affected_sum_recovered_gain": 31.83333333333333,
+          "pooled_macro_recall_oracle_gain": 0.06452380952380952,
+          "absolute_recovered_gain_from_K20": 0.02273809523809523,
+          "fraction_of_fold_action_space_gap_recovered": 0.9549999999999998,
+          "mean_incoming_candidates_per_query": 130.00428571428571,
+          "total_downstream_actions": 364012,
+          "affected_mean_recovered_gain": 0.7764227642276421
+        },
+        "4": {
+          "query_count": 1400,
+          "sum_oracle_gain": 97.19999999999999,
+          "incoming_total": 182017,
+          "affected_recovered_positive_gain_vs_K20": 40,
+          "affected_sum_recovered_gain": 30.700000000000003,
+          "pooled_macro_recall_oracle_gain": 0.06942857142857142,
+          "absolute_recovered_gain_from_K20": 0.021928571428571422,
+          "fraction_of_fold_action_space_gap_recovered": 0.9388379204892965,
+          "mean_incoming_candidates_per_query": 130.01214285714286,
+          "total_downstream_actions": 364034,
+          "affected_mean_recovered_gain": 0.730952380952381
+        }
+      },
+      "affected_subset": {
+        "affected_queries_with_recovered_positive_gain_vs_K20": 148,
+        "sum_recovered_gain": 113.44999999999999,
+        "mean_recovered_gain": 0.7003086419753086
+      }
+    },
+    {
+      "K": 197,
+      "pooled_macro_recall_oracle_gain": 0.06381547619047619,
+      "absolute_recovered_gain_from_K20": 0.022044642857142846,
+      "fraction_of_action_space_gap_recovered": 0.9999999999999999,
+      "incoming_candidate_count_total": 1075215,
+      "incoming_candidates_per_query": {
+        "mean": 192.00267857142856,
+        "median": 192.0,
+        "p90": 192,
+        "p95": 192,
+        "max": 193
+      },
+      "estimated_total_actions_current_contract": 2150430,
+      "mean_actions_per_query": 384.0053571428571,
+      "per_fold": {
+        "1": {
+          "query_count": 1400,
+          "sum_oracle_gain": 76.75,
+          "incoming_total": 268802,
+          "affected_recovered_positive_gain_vs_K20": 40,
+          "affected_sum_recovered_gain": 28.249999999999996,
+          "pooled_macro_recall_oracle_gain": 0.05482142857142857,
+          "absolute_recovered_gain_from_K20": 0.02017857142857142,
+          "fraction_of_fold_action_space_gap_recovered": 0.9999999999999997,
+          "mean_incoming_candidates_per_query": 192.00142857142856,
+          "total_downstream_actions": 537604,
+          "affected_mean_recovered_gain": 0.7062499999999999
+        },
+        "2": {
+          "query_count": 1400,
+          "sum_oracle_gain": 89.58333333333333,
+          "incoming_total": 268802,
+          "affected_recovered_positive_gain_vs_K20": 39,
+          "affected_sum_recovered_gain": 29.166666666666668,
+          "pooled_macro_recall_oracle_gain": 0.06398809523809523,
+          "absolute_recovered_gain_from_K20": 0.02083333333333333,
+          "fraction_of_fold_action_space_gap_recovered": 0.9999999999999998,
+          "mean_incoming_candidates_per_query": 192.00142857142856,
+          "total_downstream_actions": 537604,
+          "affected_mean_recovered_gain": 0.7478632478632479
+        },
+        "3": {
+          "query_count": 1400,
+          "sum_oracle_gain": 91.83333333333333,
+          "incoming_total": 268802,
+          "affected_recovered_positive_gain_vs_K20": 41,
+          "affected_sum_recovered_gain": 33.33333333333333,
+          "pooled_macro_recall_oracle_gain": 0.0655952380952381,
+          "absolute_recovered_gain_from_K20": 0.0238095238095238,
+          "fraction_of_fold_action_space_gap_recovered": 0.9999999999999999,
+          "mean_incoming_candidates_per_query": 192.00142857142856,
+          "total_downstream_actions": 537604,
+          "affected_mean_recovered_gain": 0.8130081300813007
+        },
+        "4": {
+          "query_count": 1400,
+          "sum_oracle_gain": 99.19999999999999,
+          "incoming_total": 268809,
+          "affected_recovered_positive_gain_vs_K20": 42,
+          "affected_sum_recovered_gain": 32.7,
+          "pooled_macro_recall_oracle_gain": 0.07085714285714285,
+          "absolute_recovered_gain_from_K20": 0.023357142857142854,
+          "fraction_of_fold_action_space_gap_recovered": 1.0,
+          "mean_incoming_candidates_per_query": 192.00642857142856,
+          "total_downstream_actions": 537618,
+          "affected_mean_recovered_gain": 0.7785714285714287
+        }
+      },
+      "affected_subset": {
+        "affected_queries_with_recovered_positive_gain_vs_K20": 162,
+        "sum_recovered_gain": 123.44999999999999,
+        "mean_recovered_gain": 0.762037037037037
+      }
+    }
+  ],
+  "marginal_intervals": [
+    {
+      "K_prev": 20,
+      "K_next": 23,
+      "delta_recall": 0.0027083333333333334,
+      "delta_candidate_count": 16238,
+      "marginal_recall_gain_per_added_candidate": 1.6678983454448414e-07,
+      "macro_recall_gain_per_1000_added_candidates": 0.00016678983454448414
+    },
+    {
+      "K_prev": 23,
+      "K_next": 29,
+      "delta_recall": 0.0036309523809523875,
+      "delta_candidate_count": 32997,
+      "marginal_recall_gain_per_added_candidate": 1.1003886356191131e-07,
+      "macro_recall_gain_per_1000_added_candidates": 0.00011003886356191132
+    },
+    {
+      "K_prev": 29,
+      "K_next": 45,
+      "delta_recall": 0.00572916666666666,
+      "delta_candidate_count": 88967,
+      "marginal_recall_gain_per_added_candidate": 6.439653654351231e-08,
+      "macro_recall_gain_per_1000_added_candidates": 6.439653654351231e-05
+    },
+    {
+      "K_prev": 45,
+      "K_next": 77,
+      "delta_recall": 0.004946428571428567,
+      "delta_candidate_count": 178951,
+      "marginal_recall_gain_per_added_candidate": 2.7641245767995523e-08,
+      "macro_recall_gain_per_1000_added_candidates": 2.7641245767995522e-05
+    },
+    {
+      "K_prev": 77,
+      "K_next": 135,
+      "delta_recall": 0.0032440476190476256,
+      "delta_candidate_count": 324716,
+      "marginal_recall_gain_per_added_candidate": 9.990415067467035e-09,
+      "macro_recall_gain_per_1000_added_candidates": 9.990415067467034e-06
+    },
+    {
+      "K_prev": 135,
+      "K_next": 197,
+      "delta_recall": 0.0017857142857142794,
+      "delta_candidate_count": 347177,
+      "marginal_recall_gain_per_added_candidate": 5.14352703581827e-09,
+      "macro_recall_gain_per_1000_added_candidates": 5.14352703581827e-06
+    }
+  ],
+  "affected_subset": {
+    "query_count": 162,
+    "per_fold": {
+      "1": 40,
+      "2": 39,
+      "3": 41,
+      "4": 42
+    }
+  },
+  "K_max_covers_entire_full_pool": false,
+  "sanity_checks": {
+    "all_queries_covered": true,
+    "k20_pooled_crosscheck": true,
+    "k20_per_fold_crosscheck": true,
+    "incoming_sets_nested": true,
+    "per_query_oracle_monotonic": true,
+    "per_fold_oracle_monotonic": true,
+    "pooled_oracle_monotonic": true,
+    "action_generator_contract_verified": true,
+    "fold0_payload_not_materialized": true
+  },
+  "workflow_document_updated": true,
+  "curve_observations": [
+    "Descriptive oracle/cost curve only; no production K is selected.",
+    "Expanded-K results do not imply production policy benefit."
+  ],
+  "notes": [
+    "K values derive from labeled research folds solely for diagnostic characterization.",
+    "No model training, reranker inference, policy replay, Fold0 materialization, public labels, GPU, Modal or Beam job."
+  ]
+}

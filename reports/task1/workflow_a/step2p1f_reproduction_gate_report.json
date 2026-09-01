@@ -1,0 +1,66 @@
+{
+  "status": "RECONSTRUCTION_MISMATCH",
+  "experiment": "STEP 2-P1F-R \u2014 Exact Frozen-P1 Reconstruction and Pairwise Failure Attribution",
+  "phase": "DETERMINISTIC_FROZEN_MODEL_RECONSTRUCTION",
+  "scientific_new_training": false,
+  "mechanical_model_fit_executed": true,
+  "policy_oof_strict": true,
+  "end_to_end_selection_oof": false,
+  "k77_selected_exploratorily_on_folds_1_4": true,
+  "interpretation_scope": "PAIRWISE_POLICY_FAILURE_ATTRIBUTION_CONDITIONAL_ON_EXPLORATORY_FIXED_K77",
+  "thresholds": {
+    "1": {
+      "expected": 0.8871766063648394,
+      "measured": 0.8871766063648394,
+      "exact_match": true
+    },
+    "2": {
+      "expected": 0.9158352964999534,
+      "measured": 0.9158352964999534,
+      "exact_match": true
+    },
+    "3": {
+      "expected": 0.8885338990548798,
+      "measured": 0.8885338990548798,
+      "exact_match": true
+    },
+    "4": {
+      "expected": 0.9072451320464932,
+      "measured": 0.9072451320464932,
+      "exact_match": true
+    }
+  },
+  "decision_reproduction": {
+    "total": 5600,
+    "executed_match": 410,
+    "executed_expected": 410,
+    "noop_match": 5190,
+    "noop_expected": 5190
+  },
+  "class_counts": {
+    "NEUTRAL": 392,
+    "HARMFUL": 12,
+    "BENEFICIAL": 6
+  },
+  "D77": {
+    "expected": -0.0007142857142857784,
+    "measured": -0.0007142857142857143
+  },
+  "per_fold_D77": {
+    "1": 0.0009523809523809524,
+    "2": 0.0,
+    "3": -0.002380952380952381,
+    "4": -0.0014285714285714286
+  },
+  "top_score_reproduction": {
+    "score_rows_available": 5600,
+    "score_rows_matched": 5600,
+    "max_abs_error": 0.0,
+    "max_rel_error": 0.0
+  },
+  "models_persisted": [],
+  "reproduction_gate_pass": false,
+  "notes": [
+    "Authorized deterministic exact refit only; no new scientific training."
+  ]
+}

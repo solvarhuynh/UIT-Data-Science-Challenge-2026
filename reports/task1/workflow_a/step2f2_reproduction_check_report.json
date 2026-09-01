@@ -1,0 +1,54 @@
+{
+  "status": "PASS",
+  "thresholds": {
+    "1": {
+      "expected": 0.9336471149727648,
+      "measured": 0.9336471149727648,
+      "match": true
+    },
+    "2": {
+      "expected": "+Infinity",
+      "measured": "+Infinity",
+      "match": true
+    },
+    "3": {
+      "expected": 0.9009323675256211,
+      "measured": 0.9009323675256211,
+      "match": true
+    },
+    "4": {
+      "expected": 0.8974011769826262,
+      "measured": 0.8974011769826262,
+      "match": true
+    }
+  },
+  "executed_action_identity_match": {
+    "matched": 362,
+    "expected": 362
+  },
+  "noop_decision_match": {
+    "matched": 5238,
+    "expected": 5238
+  },
+  "top_score_match": {
+    "matched": 5600,
+    "expected": 5600,
+    "max_abs_error": 0.0,
+    "max_rel_error": 0.0
+  },
+  "selected_action_count": 362,
+  "noop_count": 5238,
+  "class_counts": {
+    "BENEFICIAL": 7,
+    "NEUTRAL": 348,
+    "HARMFUL": 7
+  },
+  "D77": 0.0,
+  "per_fold_D77": {
+    "1": 0.00035714285714285714,
+    "2": 0.0,
+    "3": -0.00035714285714285714,
+    "4": 0.0
+  },
+  "reproduction_gate_pass": true
+}

@@ -1,0 +1,142 @@
+{
+  "schema_version": "active-scorer-provenance-and-parity-audit-v1",
+  "active_scorer_contract": "UNRESOLVED",
+  "exact_active_coda_bench_scorer_obtained": false,
+  "exact_scorer_package_path": null,
+  "exact_scorer_sha256": null,
+  "competition_task_provenance": null,
+  "docker_image": null,
+  "docker_image_digest": null,
+  "documentation_contract": {
+    "artifact": "docs/competition/DSC2026_Task1_LegalIR_Data_Overview.docx",
+    "sha256": "e250cb1b82ebfca2e43baa3194fb26a0f2c3bda84fb8b1192457c7e8e6d0b0e8",
+    "summary": "Recall is primary and Precision secondary; returned document IDs are scored as sets; at most five IDs; macro aggregation.",
+    "metric_names": [
+      "Recall",
+      "Precision"
+    ],
+    "ranking_depth": "1..5 IDs; >5 receives zero per-query Recall/Precision",
+    "aggregation": "macro mean",
+    "primary_secondary": "Recall primary; Precision secondary tie-break",
+    "display_score_mapping": "DISPLAY_SCORE_MAPPING_UNSPECIFIED",
+    "mentions_mrr": false,
+    "mentions_recall_at_3": false
+  },
+  "candidate_scorers": [
+    {
+      "path": "docs/Scoring-Program-Task-LegalIR/scoring.py",
+      "exists": true,
+      "sha256": "84d7e4459469b9d7d183d577b30c9668a184a7d4a7382a5fd8a8ae7379d7083a",
+      "file_tree": [
+        "scoring.py"
+      ],
+      "confidence": "LIKELY_ORGANIZER_SCORER_BUT_VERSION_UNPROVEN",
+      "classification": "TOP5_SET_MACRO_RECALL; TOP5_SET_MACRO_PRECISION",
+      "metric_behavior": "1..5 only; empty or >5 is zero; unordered sets",
+      "docker_image": null,
+      "docker_digest": null,
+      "immutable_active_task_provenance": null,
+      "git_provenance": {
+        "last_committing_revision": "7e1d76263fb31fadefebc01f3fe43987a326e9b7",
+        "worktree_status": "clean_or_untracked"
+      }
+    },
+    {
+      "path": "src/udsc2026/evaluation/legal_ir.py",
+      "exists": true,
+      "sha256": "8facfac86a3e9ee7a7d8f16c0f37cbaf75bacd82659774e7a706f1b8b963a045",
+      "file_tree": [
+        "legal_ir.py"
+      ],
+      "confidence": "LOCAL_REPOSITORY_SCORER_ONLY",
+      "classification": "TOP5_SET_MACRO_RECALL; TOP5_SET_MACRO_PRECISION",
+      "metric_behavior": "1..5 only; empty or >5 is zero; unordered sets",
+      "docker_image": null,
+      "docker_digest": null,
+      "immutable_active_task_provenance": null,
+      "git_provenance": {
+        "last_committing_revision": "0b38595b4f98791bf7dca31231c7569f45d3ba3b",
+        "worktree_status": "clean_or_untracked"
+      }
+    },
+    {
+      "path": "src/udsc2026/evaluation/legal_ir_recovery.py",
+      "exists": true,
+      "sha256": "253d7524e0b5f0ebdd89b57d73f8c470ae38ed440b8f3c7c8c4531756cf0e21f",
+      "file_tree": [
+        "legal_ir_recovery.py"
+      ],
+      "confidence": "LOCAL_REPOSITORY_SCORER_ONLY",
+      "classification": "TOP5_SET_MACRO_RECALL; TOP5_SET_MACRO_PRECISION",
+      "metric_behavior": "uses predicted[:5] as an unordered set",
+      "docker_image": null,
+      "docker_digest": null,
+      "immutable_active_task_provenance": null,
+      "git_provenance": {
+        "last_committing_revision": "a76330540c06864dddf34ace2bf42a3e083c0ea2",
+        "worktree_status": "clean_or_untracked"
+      }
+    },
+    {
+      "path": "docs/competition/DSC2026_Task1_LegalIR_Data_Overview.docx",
+      "exists": true,
+      "sha256": "e250cb1b82ebfca2e43baa3194fb26a0f2c3bda84fb8b1192457c7e8e6d0b0e8",
+      "file_tree": [
+        "DSC2026_Task1_LegalIR_Data_Overview.docx"
+      ],
+      "confidence": "LOCAL_REPOSITORY_SCORER_ONLY",
+      "classification": "documentation",
+      "metric_behavior": "official competition overview; not executable",
+      "docker_image": null,
+      "docker_digest": null,
+      "immutable_active_task_provenance": null,
+      "git_provenance": {
+        "last_committing_revision": "765f41cc00ffb9b12980f5f38d5fdba460e94207",
+        "worktree_status": "clean_or_untracked"
+      }
+    },
+    {
+      "path": "docs/Scoring-Program-Task-LegalIR/metadata.yaml",
+      "exists": true,
+      "sha256": "7aa33a3c190a9cd687e40a0a1aa99aeefebf9c6c86bf7f083c05f6ea7254ad3a",
+      "file_tree": [
+        "metadata.yaml"
+      ],
+      "confidence": "LOCAL_REPOSITORY_SCORER_ONLY",
+      "classification": "metadata",
+      "metric_behavior": "command: python3 scoring.py; no task/package/image provenance",
+      "docker_image": null,
+      "docker_digest": null,
+      "immutable_active_task_provenance": null,
+      "git_provenance": {
+        "last_committing_revision": "7e1d76263fb31fadefebc01f3fe43987a326e9b7",
+        "worktree_status": "clean_or_untracked"
+      }
+    }
+  ],
+  "known_submission_structure": {
+    "queries": 1000,
+    "top1_top2_top3_changes": 0,
+    "rank4_changes": 110,
+    "rank5_changes": 218,
+    "prediction_set_differences": 328,
+    "public_truth_used": false
+  },
+  "mathematical_compatibility": {
+    "recall_at_3_alone_explains_public_delta": "NO",
+    "local_top5_set_scorer_explains_structural_delta": "DEPENDS_ON_UNKNOWN_TRUTH",
+    "mrr_can_distinguish_rank4_or_rank5_changes": "DEPENDS_ON_UNKNOWN_TRUTH"
+  },
+  "decision_reason": "No immutable active CodaBench bundle/package hash, phase/task mapping, source revision, or image digest was found locally. Local behavior cannot establish the active deployed contract.",
+  "safe_to_open_workflow_b": false,
+  "acquisition_checklist": [
+    "active scoring_program.zip or competition bundle",
+    "competition and phase/task identifiers plus task mapping/competition.yaml",
+    "scorer package SHA256",
+    "scorer source revision",
+    "Docker image name and immutable digest",
+    "official phase metadata/export",
+    "participant UI evidence whether bundle, scoring program, phase/task metadata, image name, or competition dump is downloadable"
+  ],
+  "ui_availability": "Not locally verifiable; no automatic organizer artifact retrieval was attempted."
+}

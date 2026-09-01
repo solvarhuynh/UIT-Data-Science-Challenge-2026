@@ -321,3 +321,32 @@ versioning, parent expansion, reranker, metric LegalIR/LegalQA, API và submissi
 - Không tái sử dụng index/candidate khi corpus hash hoặc model revision thay đổi.
 - Mọi thay đổi contract phải kèm test và cập nhật tài liệu liên quan.
 - Không force-push nhánh thành viên; hợp nhất bằng merge/fast-forward có kiểm tra.
+
+## Cập nhật Task1 trên nhánh TV2
+
+Các nhóm công việc đã hoàn tất và được commit trên `tv2` gồm: tái tổ chức tài liệu
+Task1/Workflow A/B; khóa downloader và provenance cho Qwen3-Reranker; các audit
+B2a-0 (context, GPU gate và long-document root cause); artifact Workflow A/B;
+progress log; cùng tooling đóng gói submission. Các kết quả vẫn giữ nguyên
+điều kiện không dùng Fold0/public labels cho các audit tương ứng.
+
+### Phục hồi các output lớn ngoài Git
+
+GitHub giới hạn file 100 MB, vì vậy các output lớn được gom vào
+`task1_large_outputs.zip` ở thư mục gốc và thư mục giải nén cục bộ
+`artifacts/task1/large_outputs/` (đã được `.gitignore`). ZIP chứa các file với
+tên gốc; cần đặt từng file về đúng đường dẫn sau trước khi chạy lại công cụ:
+
+```text
+step2p4_proxy_predictions.jsonl       -> reports/task1/workflow_a/
+step2p5_fused_scores.jsonl            -> reports/task1/workflow_a/
+step2p5_p1_inner_full_action_scores.jsonl -> reports/task1/workflow_a/
+step2p1f_full_action_scores.jsonl     -> reports/task1/workflow_a/
+step2p1a_median_scores.jsonl           -> reports/task1/workflow_a/
+step2f2_full_action_scores.jsonl       -> reports/task1/workflow_a/
+step2p4_proxy_inner_oof_predictions.jsonl -> reports/task1/workflow_a/
+f1_actions.npz ... f4_actions.npz     -> reports/task1/workflow_b/tv4/b1/recovery/workflow_b_b1_recovery/
+```
+
+Sau khi giải nén, kiểm tra `artifacts/task1/large_outputs/MANIFEST.txt` để đối
+chiếu kích thước và SHA256. Không commit thư mục output hoặc file ZIP này.

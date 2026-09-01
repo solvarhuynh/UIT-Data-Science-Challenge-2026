@@ -1,0 +1,310 @@
+{
+  "status": "PASS",
+  "official_metric": "macro_recall",
+  "folds_used": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "fold0_touched": false,
+  "public_labels_used": false,
+  "aggregate_artifacts_contain_fold0": true,
+  "fold0_payload_materialized": false,
+  "fold0_used_in_statistics": false,
+  "fold0_used_in_oracle": false,
+  "fold0_labels_used": false,
+  "baseline_non_target_records_skipped": 1400,
+  "candidate_non_target_records_skipped": 1400,
+  "total_queries": 5600,
+  "audited_queries": 5600,
+  "input_artifacts": {
+    "step0_report": "reports\\task1\\step0_metric_contract_report.json",
+    "train_labels": "data\\raw\\btc\\LegalIR\\train.json",
+    "fold_mapping": "artifacts\\task1\\evaluation\\strict_cv_v2\\folds.json",
+    "baseline_top5": "artifacts\\task1\\recovery_096\\baseline_093_oof\\predictions.jsonl",
+    "full_candidate_pool": "artifacts\\task1\\recovery_096\\inference_matched_reranker_v1\\compact\\candidate_refs_full.jsonl"
+  },
+  "input_provenance": {
+    "baseline_trace": "scripts/beam/archive/build_public093_strict_oof.py → baseline_093_oof/predictions.jsonl → scripts/beam/beam_task1_v3_prepare_cpu.py → scripts/beam/task1_v3_residual/build_shortlist_features.py",
+    "candidate_pool_trace": "scripts/beam/materialize_inference_matched_reranker_compact_direct.py → candidate_refs_full.jsonl → scripts/beam/beam_task1_v3_prepare_cpu.py → scripts/beam/task1_v3_residual/build_shortlist_features.py; shortlist is applied only afterwards."
+  },
+  "queries_below_capacity_ceiling": 505,
+  "missing_gold_total": 573,
+  "missing_gold_found_in_pool_total": 507,
+  "queries_with_any_missing_gold_in_full_pool": 463,
+  "queries_with_all_missing_gold_in_full_pool": 444,
+  "queries_with_positive_one_swap_gain": 463,
+  "sum_one_swap_gain": 357.3666666666666,
+  "one_swap_candidate_ceiling_gain": 0.06381547619047619,
+  "sum_unconstrained_gain": 374.51666666666665,
+  "unconstrained_top5_repair_ceiling_gain": 0.06687797619047618,
+  "per_fold": {
+    "1": {
+      "query_count": 1400,
+      "queries_below_capacity_ceiling": 112,
+      "missing_gold_total": 130,
+      "missing_gold_found_in_pool_total": 120,
+      "queries_with_any_missing_gold_in_full_pool": 105,
+      "queries_with_all_missing_gold_in_full_pool": 102,
+      "queries_with_positive_one_swap_gain": 105,
+      "sum_gain": 76.75,
+      "macro_gain": 0.05482142857142857,
+      "sum_unconstrained_gain": 82.75,
+      "unconstrained_macro_gain": 0.05910714285714286
+    },
+    "2": {
+      "query_count": 1400,
+      "queries_below_capacity_ceiling": 124,
+      "missing_gold_total": 135,
+      "missing_gold_found_in_pool_total": 123,
+      "queries_with_any_missing_gold_in_full_pool": 115,
+      "queries_with_all_missing_gold_in_full_pool": 112,
+      "queries_with_positive_one_swap_gain": 115,
+      "sum_gain": 89.58333333333334,
+      "macro_gain": 0.06398809523809525,
+      "sum_unconstrained_gain": 92.83333333333333,
+      "unconstrained_macro_gain": 0.0663095238095238
+    },
+    "3": {
+      "query_count": 1400,
+      "queries_below_capacity_ceiling": 135,
+      "missing_gold_total": 156,
+      "missing_gold_found_in_pool_total": 130,
+      "queries_with_any_missing_gold_in_full_pool": 118,
+      "queries_with_all_missing_gold_in_full_pool": 112,
+      "queries_with_positive_one_swap_gain": 118,
+      "sum_gain": 91.83333333333333,
+      "macro_gain": 0.0655952380952381,
+      "sum_unconstrained_gain": 96.41666666666667,
+      "unconstrained_macro_gain": 0.06886904761904762
+    },
+    "4": {
+      "query_count": 1400,
+      "queries_below_capacity_ceiling": 134,
+      "missing_gold_total": 152,
+      "missing_gold_found_in_pool_total": 134,
+      "queries_with_any_missing_gold_in_full_pool": 125,
+      "queries_with_all_missing_gold_in_full_pool": 118,
+      "queries_with_positive_one_swap_gain": 125,
+      "sum_gain": 99.19999999999997,
+      "macro_gain": 0.07085714285714284,
+      "sum_unconstrained_gain": 102.51666666666667,
+      "unconstrained_macro_gain": 0.07322619047619047
+    }
+  },
+  "sanity_checks": {
+    "all_queries_covered": true,
+    "one_swap_nonnegative": true,
+    "unconstrained_ge_one_swap": true,
+    "recall_in_valid_range": true,
+    "fold0_payload_not_materialized": true
+  },
+  "sample_query_ids": [
+    {
+      "query_id": "96",
+      "fold": 3,
+      "relevant_count": 1,
+      "baseline_recall": 0.0,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 1.0,
+      "best_unconstrained_gain": 1.0
+    },
+    {
+      "query_id": "222",
+      "fold": 4,
+      "relevant_count": 1,
+      "baseline_recall": 0.0,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 1.0,
+      "best_unconstrained_gain": 1.0
+    },
+    {
+      "query_id": "426",
+      "fold": 1,
+      "relevant_count": 2,
+      "baseline_recall": 0.5,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 0.5,
+      "best_unconstrained_gain": 0.5
+    },
+    {
+      "query_id": "1524",
+      "fold": 4,
+      "relevant_count": 1,
+      "baseline_recall": 0.0,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 1.0,
+      "best_unconstrained_gain": 1.0
+    },
+    {
+      "query_id": "2008",
+      "fold": 1,
+      "relevant_count": 2,
+      "baseline_recall": 0.5,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 0.5,
+      "best_unconstrained_gain": 0.5
+    },
+    {
+      "query_id": "2108",
+      "fold": 1,
+      "relevant_count": 2,
+      "baseline_recall": 0.5,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 0.5,
+      "best_unconstrained_gain": 0.5
+    },
+    {
+      "query_id": "2746",
+      "fold": 3,
+      "relevant_count": 2,
+      "baseline_recall": 0.5,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 0.5,
+      "best_unconstrained_gain": 0.5
+    },
+    {
+      "query_id": "3338",
+      "fold": 3,
+      "relevant_count": 1,
+      "baseline_recall": 0.0,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 1.0,
+      "best_unconstrained_gain": 1.0
+    },
+    {
+      "query_id": "4062",
+      "fold": 1,
+      "relevant_count": 2,
+      "baseline_recall": 0.5,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 0.5,
+      "best_unconstrained_gain": 0.5
+    },
+    {
+      "query_id": "4532",
+      "fold": 1,
+      "relevant_count": 1,
+      "baseline_recall": 0.0,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 1.0,
+      "best_unconstrained_gain": 1.0
+    },
+    {
+      "query_id": "4580",
+      "fold": 1,
+      "relevant_count": 1,
+      "baseline_recall": 0.0,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 1.0,
+      "best_unconstrained_gain": 1.0
+    },
+    {
+      "query_id": "5728",
+      "fold": 1,
+      "relevant_count": 1,
+      "baseline_recall": 0.0,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 1.0,
+      "best_unconstrained_gain": 1.0
+    },
+    {
+      "query_id": "5742",
+      "fold": 1,
+      "relevant_count": 1,
+      "baseline_recall": 0.0,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 1.0,
+      "best_unconstrained_gain": 1.0
+    },
+    {
+      "query_id": "5760",
+      "fold": 1,
+      "relevant_count": 2,
+      "baseline_recall": 0.5,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 0.5,
+      "best_unconstrained_gain": 0.5
+    },
+    {
+      "query_id": "6046",
+      "fold": 1,
+      "relevant_count": 1,
+      "baseline_recall": 0.0,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 1.0,
+      "best_unconstrained_gain": 1.0
+    },
+    {
+      "query_id": "6222",
+      "fold": 4,
+      "relevant_count": 1,
+      "baseline_recall": 0.0,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 1.0,
+      "best_unconstrained_gain": 1.0
+    },
+    {
+      "query_id": "6724",
+      "fold": 4,
+      "relevant_count": 1,
+      "baseline_recall": 0.0,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 1.0,
+      "best_unconstrained_gain": 1.0
+    },
+    {
+      "query_id": "6748",
+      "fold": 1,
+      "relevant_count": 1,
+      "baseline_recall": 0.0,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 1.0,
+      "best_unconstrained_gain": 1.0
+    },
+    {
+      "query_id": "7332",
+      "fold": 3,
+      "relevant_count": 3,
+      "baseline_recall": 0.3333333333333333,
+      "missing_gold_count": 2,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 0.3333333333333333,
+      "best_unconstrained_gain": 0.3333333333333333
+    },
+    {
+      "query_id": "7584",
+      "fold": 2,
+      "relevant_count": 1,
+      "baseline_recall": 0.0,
+      "missing_gold_count": 1,
+      "missing_gold_found_in_pool_count": 1,
+      "best_one_swap_gain": 1.0,
+      "best_unconstrained_gain": 1.0
+    }
+  ],
+  "notes": [
+    "Aggregate JSONL rows were scanned for top-level query_id metadata before payload decoding.",
+    "Only target-fold payloads were decoded and materialized.",
+    "The unconstrained ceiling is forensic only and is not the Step 1A gate."
+  ]
+}

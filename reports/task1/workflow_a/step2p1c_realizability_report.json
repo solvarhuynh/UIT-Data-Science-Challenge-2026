@@ -1,0 +1,375 @@
+{
+  "status": "PASS",
+  "experiment": "STEP 2-P1C \u2014 Nested-OOF Threshold/Calibration Experiment for Frozen Pairwise Score",
+  "experiment_type": "AUTHORIZED_NESTED_OOF_THRESHOLD_EXPERIMENT_TRAINING",
+  "training_terminology": "AUTHORIZED_NESTED_OOF_THRESHOLD_EXPERIMENT_TRAINING",
+  "scientific_status": "DIAGNOSTIC_ONLY_NO_BRANCH_GATE",
+  "policy_oof_strict": true,
+  "end_to_end_selection_oof": false,
+  "k77_selected_exploratorily_on_folds_1_4": true,
+  "interpretation_scope": "NESTED_OOF_THRESHOLD_CALIBRATION_CONDITIONAL_ON_EXPLORATORY_FIXED_K77",
+  "K": 77,
+  "feature_count": 36,
+  "model_objective_changed": false,
+  "pair_weighting_changed": false,
+  "action_score_changed": false,
+  "outer_models_retrained": false,
+  "inner_models_fit": 12,
+  "inner_models_persisted": 12,
+  "inner_model_paths": [
+    "reports\\task1\\step2p1c_models\\inner_fold_models\\outer_fold1\\inner_valid_fold2.joblib",
+    "reports\\task1\\step2p1c_models\\inner_fold_models\\outer_fold1\\inner_valid_fold3.joblib",
+    "reports\\task1\\step2p1c_models\\inner_fold_models\\outer_fold1\\inner_valid_fold4.joblib",
+    "reports\\task1\\step2p1c_models\\inner_fold_models\\outer_fold2\\inner_valid_fold1.joblib",
+    "reports\\task1\\step2p1c_models\\inner_fold_models\\outer_fold2\\inner_valid_fold3.joblib",
+    "reports\\task1\\step2p1c_models\\inner_fold_models\\outer_fold2\\inner_valid_fold4.joblib",
+    "reports\\task1\\step2p1c_models\\inner_fold_models\\outer_fold3\\inner_valid_fold1.joblib",
+    "reports\\task1\\step2p1c_models\\inner_fold_models\\outer_fold3\\inner_valid_fold2.joblib",
+    "reports\\task1\\step2p1c_models\\inner_fold_models\\outer_fold3\\inner_valid_fold4.joblib",
+    "reports\\task1\\step2p1c_models\\inner_fold_models\\outer_fold4\\inner_valid_fold1.joblib",
+    "reports\\task1\\step2p1c_models\\inner_fold_models\\outer_fold4\\inner_valid_fold2.joblib",
+    "reports\\task1\\step2p1c_models\\inner_fold_models\\outer_fold4\\inner_valid_fold3.joblib"
+  ],
+  "inner_oof_top_score_rows": 16800,
+  "preconditions": {
+    "r2_pass": true,
+    "p1t_pass": true,
+    "K77": true,
+    "features36": true,
+    "full_rows": true,
+    "oracle_positive": true,
+    "trs": true,
+    "old_gain_D": true,
+    "p1t_top": true,
+    "p1t_T": true,
+    "thresholds": true
+  },
+  "historical_threshold_reproduction": {
+    "pass": true,
+    "folds": {
+      "1": {
+        "expected": 0.8871766063648394,
+        "measured": 0.8871766063648394,
+        "pass": true,
+        "candidate_count": 4193,
+        "selected_gain_sum": 1.3333333333333333,
+        "selected_D_inner": 0.00031746031746031746,
+        "tie_count_at_max_objective": 33,
+        "implementation_function": "scripts/analysis/step2p1_controlled_pairwise_policy.py::choose_threshold equivalent candidate/tie-break"
+      },
+      "2": {
+        "expected": 0.9158352964999534,
+        "measured": 0.9158352964999534,
+        "pass": true,
+        "candidate_count": 4192,
+        "selected_gain_sum": 0.3333333333333333,
+        "selected_D_inner": 7.936507936507937e-05,
+        "tie_count_at_max_objective": 17,
+        "implementation_function": "scripts/analysis/step2p1_controlled_pairwise_policy.py::choose_threshold equivalent candidate/tie-break"
+      },
+      "3": {
+        "expected": 0.8885338990548798,
+        "measured": 0.8885338990548798,
+        "pass": true,
+        "candidate_count": 4192,
+        "selected_gain_sum": 1.3333333333333333,
+        "selected_D_inner": 0.00031746031746031746,
+        "tie_count_at_max_objective": 2,
+        "implementation_function": "scripts/analysis/step2p1_controlled_pairwise_policy.py::choose_threshold equivalent candidate/tie-break"
+      },
+      "4": {
+        "expected": 0.9072451320464932,
+        "measured": 0.9072451320464932,
+        "pass": true,
+        "candidate_count": 4192,
+        "selected_gain_sum": 1.3333333333333333,
+        "selected_D_inner": 0.00031746031746031746,
+        "tie_count_at_max_objective": 35,
+        "implementation_function": "scripts/analysis/step2p1_controlled_pairwise_policy.py::choose_threshold equivalent candidate/tie-break"
+      }
+    }
+  },
+  "thresholds": {
+    "old": {
+      "1": 0.8871766063648394,
+      "2": 0.9158352964999534,
+      "3": 0.8885338990548798,
+      "4": 0.9072451320464932
+    },
+    "new": {
+      "1": 0.8871766063648394,
+      "2": 0.9158352964999534,
+      "3": 0.8885338990548798,
+      "4": 0.9072451320464932
+    }
+  },
+  "old_policy": {
+    "gain_sum": -4.0,
+    "D77": -0.0007142857142857143,
+    "executed_B": 6,
+    "executed_N": 392,
+    "executed_H": 12,
+    "S": 6,
+    "T": 63,
+    "R": 357,
+    "S_headroom": 3.6666666666666665,
+    "T_headroom": 51.833333333333336,
+    "R_headroom": 273.7,
+    "harmful_loss_sum": -7.666666666666667,
+    "beneficial_gain_sum": 3.6666666666666665
+  },
+  "new_policy": {
+    "gain_sum": -4.0,
+    "D77": -0.0007142857142857143,
+    "executed_B": 6,
+    "executed_N": 392,
+    "executed_H": 12,
+    "S": 6,
+    "T": 63,
+    "R": 357,
+    "S_headroom": 3.6666666666666665,
+    "T_headroom": 51.833333333333336,
+    "R_headroom": 273.7,
+    "harmful_loss_sum": -7.666666666666667,
+    "beneficial_gain_sum": 3.6666666666666665
+  },
+  "comparison": {
+    "delta_D77_new_minus_old": 0.0,
+    "new_D77_gt_old": false,
+    "new_D77_gt_0": false,
+    "all_fold_D_new_ge_old": true
+  },
+  "crossing_rates": {
+    "old": {
+      "BENEFICIAL": {
+        "executed": 6,
+        "total": 69,
+        "rate": 0.08695652173913043
+      },
+      "NEUTRAL": {
+        "executed": 392,
+        "total": 5405,
+        "rate": 0.0725254394079556
+      },
+      "HARMFUL": {
+        "executed": 12,
+        "total": 126,
+        "rate": 0.09523809523809523
+      }
+    },
+    "new": {
+      "BENEFICIAL": {
+        "executed": 6,
+        "total": 69,
+        "rate": 0.08695652173913043
+      },
+      "NEUTRAL": {
+        "executed": 392,
+        "total": 5405,
+        "rate": 0.0725254394079556
+      },
+      "HARMFUL": {
+        "executed": 12,
+        "total": 126,
+        "rate": 0.09523809523809523
+      }
+    }
+  },
+  "harmful_execution": {
+    "old_count": 12,
+    "old_loss_sum": -7.666666666666667,
+    "new_count": 12,
+    "new_loss_sum": -7.666666666666667
+  },
+  "per_fold": {
+    "1": {
+      "historical_threshold": 0.8871766063648394,
+      "new_inner_selected_threshold": 0.8871766063648394,
+      "threshold_delta": 0.0,
+      "old": {
+        "gain_sum": 1.3333333333333333,
+        "D77": 0.0009523809523809524,
+        "executed_B": 3,
+        "executed_N": 163,
+        "executed_H": 1,
+        "S": 3,
+        "T": 10,
+        "R": 81,
+        "S_headroom": 1.8333333333333333,
+        "T_headroom": 7.833333333333333,
+        "R_headroom": 59.25,
+        "harmful_loss_sum": -0.5,
+        "beneficial_gain_sum": 1.8333333333333333
+      },
+      "new": {
+        "gain_sum": 1.3333333333333333,
+        "D77": 0.0009523809523809524,
+        "executed_B": 3,
+        "executed_N": 163,
+        "executed_H": 1,
+        "S": 3,
+        "T": 10,
+        "R": 81,
+        "S_headroom": 1.8333333333333333,
+        "T_headroom": 7.833333333333333,
+        "R_headroom": 59.25,
+        "harmful_loss_sum": -0.5,
+        "beneficial_gain_sum": 1.8333333333333333
+      },
+      "gain_sum_delta": 0.0,
+      "D_delta": 0.0,
+      "B_top_count": 13,
+      "old_B_crossing_rate": 0.23076923076923078,
+      "new_B_crossing_rate": 0.23076923076923078,
+      "old_H_crossing_rate": 0.03125,
+      "new_H_crossing_rate": 0.03125
+    },
+    "2": {
+      "historical_threshold": 0.9158352964999534,
+      "new_inner_selected_threshold": 0.9158352964999534,
+      "threshold_delta": 0.0,
+      "old": {
+        "gain_sum": 0.0,
+        "D77": 0.0,
+        "executed_B": 0,
+        "executed_N": 5,
+        "executed_H": 0,
+        "S": 0,
+        "T": 28,
+        "R": 79,
+        "S_headroom": 0,
+        "T_headroom": 22.5,
+        "R_headroom": 62.083333333333336,
+        "harmful_loss_sum": 0,
+        "beneficial_gain_sum": 0
+      },
+      "new": {
+        "gain_sum": 0.0,
+        "D77": 0.0,
+        "executed_B": 0,
+        "executed_N": 5,
+        "executed_H": 0,
+        "S": 0,
+        "T": 28,
+        "R": 79,
+        "S_headroom": 0,
+        "T_headroom": 22.5,
+        "R_headroom": 62.083333333333336,
+        "harmful_loss_sum": 0,
+        "beneficial_gain_sum": 0
+      },
+      "gain_sum_delta": 0.0,
+      "D_delta": 0.0,
+      "B_top_count": 28,
+      "old_B_crossing_rate": 0.0,
+      "new_B_crossing_rate": 0.0,
+      "old_H_crossing_rate": 0.0,
+      "new_H_crossing_rate": 0.0
+    },
+    "3": {
+      "historical_threshold": 0.8885338990548798,
+      "new_inner_selected_threshold": 0.8885338990548798,
+      "threshold_delta": 0.0,
+      "old": {
+        "gain_sum": -3.3333333333333335,
+        "D77": -0.002380952380952381,
+        "executed_B": 3,
+        "executed_N": 121,
+        "executed_H": 8,
+        "S": 3,
+        "T": 11,
+        "R": 96,
+        "S_headroom": 1.8333333333333333,
+        "T_headroom": 9.5,
+        "R_headroom": 74.16666666666667,
+        "harmful_loss_sum": -5.166666666666667,
+        "beneficial_gain_sum": 1.8333333333333333
+      },
+      "new": {
+        "gain_sum": -3.3333333333333335,
+        "D77": -0.002380952380952381,
+        "executed_B": 3,
+        "executed_N": 121,
+        "executed_H": 8,
+        "S": 3,
+        "T": 11,
+        "R": 96,
+        "S_headroom": 1.8333333333333333,
+        "T_headroom": 9.5,
+        "R_headroom": 74.16666666666667,
+        "harmful_loss_sum": -5.166666666666667,
+        "beneficial_gain_sum": 1.8333333333333333
+      },
+      "gain_sum_delta": 0.0,
+      "D_delta": 0.0,
+      "B_top_count": 14,
+      "old_B_crossing_rate": 0.21428571428571427,
+      "new_B_crossing_rate": 0.21428571428571427,
+      "old_H_crossing_rate": 0.2857142857142857,
+      "new_H_crossing_rate": 0.2857142857142857
+    },
+    "4": {
+      "historical_threshold": 0.9072451320464932,
+      "new_inner_selected_threshold": 0.9072451320464932,
+      "threshold_delta": 0.0,
+      "old": {
+        "gain_sum": -2.0,
+        "D77": -0.0014285714285714286,
+        "executed_B": 0,
+        "executed_N": 103,
+        "executed_H": 3,
+        "S": 0,
+        "T": 14,
+        "R": 101,
+        "S_headroom": 0,
+        "T_headroom": 12.0,
+        "R_headroom": 78.2,
+        "harmful_loss_sum": -2.0,
+        "beneficial_gain_sum": 0
+      },
+      "new": {
+        "gain_sum": -2.0,
+        "D77": -0.0014285714285714286,
+        "executed_B": 0,
+        "executed_N": 103,
+        "executed_H": 3,
+        "S": 0,
+        "T": 14,
+        "R": 101,
+        "S_headroom": 0,
+        "T_headroom": 12.0,
+        "R_headroom": 78.2,
+        "harmful_loss_sum": -2.0,
+        "beneficial_gain_sum": 0
+      },
+      "gain_sum_delta": 0.0,
+      "D_delta": 0.0,
+      "B_top_count": 14,
+      "old_B_crossing_rate": 0.0,
+      "new_B_crossing_rate": 0.0,
+      "old_H_crossing_rate": 0.08333333333333333,
+      "new_H_crossing_rate": 0.08333333333333333
+    }
+  },
+  "preserved_status": {
+    "remaining_ranking_loss": "PRIMARY_REMAINING_BOTTLENECK",
+    "absolute_score_selectivity": "DIRECTLY_MEASURED_WEAK",
+    "simple_borderline_threshold_hypothesis": "WEAKENED",
+    "mean_pairwise_win_probability": "SUPPORTED_HYPOTHESIS",
+    "pair_family": "UNRESOLVED_NOT_ESTABLISHED",
+    "pair_reweighting": "NOT_AUTHORIZED",
+    "B_vs_N_only": "NOT_AUTHORIZED",
+    "HGB": "UNRESOLVED",
+    "feature_expansion": "NOT_JUSTIFIED",
+    "K77": "NOT_REJECTED",
+    "smaller_K": "DEFERRED",
+    "workflow_B": "NOT_ACTIVE"
+  },
+  "notes": [
+    "Only 12 inner models were fit; persisted outer models were not retrained.",
+    "Existing 806644 frozen outer action scores were reused for outer policy evaluation.",
+    "Outer labels were not used for threshold selection.",
+    "R is the frozen ranking-loss population: 357 oracle-positive queries whose top action is not BENEFICIAL; threshold changes cannot redistribute R.",
+    "R is the frozen ranking-loss population: 357 oracle-positive queries whose top action is not BENEFICIAL; threshold changes cannot redistribute R."
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "per_fold": {
+    "1": {
+      "row_sha256": "696507f29454ac564735365579e3c4ba2db824777498f1d7a72f55fff8fcb89f",
+      "artifact_sha256": "16713b2799528588fafd91db511d243cae0d641f1d54b0cfcc10f25e0daa0762"
+    },
+    "2": {
+      "row_sha256": "08a2c65a893dbc363749d33466d88e824c401e25740bfa356a9719fb7e4f0a27",
+      "artifact_sha256": "3171c4999f3981f593e2945c416ace999a048a1e8f53f8698e675707a23a766c"
+    },
+    "3": {
+      "row_sha256": "331227a7265d1d570901e6a367415540418c05c47135fcf1329dc29f4a85e59f",
+      "artifact_sha256": "0bb9e26109c2b775e8731b48be459a71dd5a5cbd1276a355f5ca767b135d10f7"
+    },
+    "4": {
+      "row_sha256": "4bd366bc29d573acec4cc58ce9d4a6c514407bb3db5079055f4fa1b4d0cb8bb3",
+      "artifact_sha256": "26ae7a3341c7f694d0f9b1653263452277f8e6b6fe3b46c9353541f886ffa424"
+    }
+  },
+  "global_sha256_over_fold_ordered_row_hashes": "d1a5695657105e56d0fbf467dd8b33091e7a61710680f38b4bff62ff946c6a80",
+  "historical_global_hash_available": false
+}

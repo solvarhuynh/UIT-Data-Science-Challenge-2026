@@ -1,0 +1,163 @@
+{
+  "status": "PASS",
+  "official_primary_metric": "macro_recall",
+  "official_secondary_metric": "macro_precision",
+  "ranking_order_affects_official_metric": false,
+  "metric_sources_consistent": true,
+  "metric_source_evidence": [
+    {
+      "source": "official_scorer",
+      "file": "docs/Scoring-Program-Task-LegalIR/scoring.py",
+      "lines": "14-34",
+      "finding": "eval_retrieval extracts answer, computes per-query Recall as len(set(y_true[k]) & set(y_pred[k])) / len(y_true[k]) and Precision as the same intersection cardinality / len(y_pred[k]), then takes the arithmetic mean. It assigns zero when predicted length is empty or greater than 5. Prediction list order is not used by the formula."
+    },
+    {
+      "source": "internal_evaluator",
+      "file": "src/udsc2026/evaluation/legal_ir.py",
+      "lines": "711-759, 869-967",
+      "finding": "The active evaluator uses set intersection cardinalities: Recall = relevant_retrieved_count / relevant_count and Precision = relevant_retrieved_count / predicted_count, averages per-query values, and applies the official empty/>5 prediction guard. Ranked order is retained for diagnostics and validation, but does not directly change official Recall or Precision."
+    },
+    {
+      "source": "internal_evaluator_metric_priority",
+      "file": "src/udsc2026/evaluation/legal_ir.py",
+      "lines": "440-451, 919-929",
+      "finding": "Evaluation mode is official_set and metric_priority is recall then precision; aggregate recall and precision are macro averages over per-query diagnostics."
+    },
+    {
+      "source": "diagnostics",
+      "file": "src/udsc2026/evaluation/legal_ir_diagnostics.py",
+      "lines": "97-110, 154-178, 194-227",
+      "finding": "Document diagnostics call evaluate_legal_ir for official scores. Candidate-depth recall diagnostics are set-based and are explicitly separate from official scoring."
+    },
+    {
+      "source": "retired_rank_metrics",
+      "file": "src/udsc2026/evaluation/legal_ir.py",
+      "lines": "762-809",
+      "finding": "MRR/reciprocal-rank and Recall@3 functions are explicitly documented as retired diagnostics; they are not active official metrics."
+    },
+    {
+      "source": "v3_cv_launcher",
+      "file": "scripts/beam/task1_v3_residual/run_policy_cpu.py",
+      "lines": "60-64",
+      "finding": "The V3 CPU launcher calls build_actions.py, train_residual_policy.py, and evaluate_v3_fold0.py. The latter is a Fold0 evaluation stage, so this launcher cannot be executed under this audit's Fold0 prohibition."
+    },
+    {
+      "source": "v3_cv_metric_helper",
+      "file": "scripts/beam/task1_v3_residual/common.py",
+      "lines": "29-30",
+      "finding": "Historical V3 scoring uses local recall(gold, top5) = len(gold & set(top5)) / len(gold), without the official scorer's empty/>5 prediction guard."
+    },
+    {
+      "source": "v3_action_scoring",
+      "file": "scripts/beam/task1_v3_residual/build_actions.py",
+      "lines": "31-36, 49-52",
+      "finding": "V3 action gains are computed with the local common.recall helper after replacing a top-5 slot; labels and gains therefore follow that local implementation."
+    },
+    {
+      "source": "v3a_cv_aggregation",
+      "file": "scripts/beam/task1_v3_residual/train_residual_policy.py",
+      "lines": "79-95, 117-139",
+      "finding": "V3A aggregates local per-query baseline/policy recall into macro_recall using arithmetic averages and pooled query-count weighting."
+    },
+    {
+      "source": "v3b_cv_aggregation",
+      "file": "scripts/beam/task1_v3_residual/train_residual_policy_v3b.py",
+      "lines": "174-189",
+      "finding": "V3B policy_metrics aggregates baseline_recall and action gain into policy_macro_recall; it consumes action rows produced by the local V3 scoring path, not evaluate_legal_ir."
+    },
+    {
+      "source": "submission_validator",
+      "file": "scripts/submission/validate_legal_ir_submission.py",
+      "lines": "92-151, 155-177",
+      "finding": "The script validates payload structure and optionally question/corpus manifests; it reports document-count bounds observed in the artifact but does not calculate an official score."
+    },
+    {
+      "source": "submission_contract",
+      "file": "src/udsc2026/evaluation/legal_ir_submission.py",
+      "lines": "42-70, 134-163, 210-229, 281-297",
+      "finding": "The validator requires unique question IDs and unique ordered document IDs, exact answer-field shape, optional exact question coverage and corpus membership, and optional complete ranking. It preserves ranking order for the artifact contract; it does not use rank to calculate Recall/Precision."
+    },
+    {
+      "source": "strict_cv_manifest",
+      "file": "artifacts/task1/evaluation/strict_cv_v2/manifest.json",
+      "lines": "3-18",
+      "finding": "The canonical strict-CV input is data/raw/btc/LegalIR/train.json and the manifest names scripts/evaluation/build_strict_legal_ir_cv.py as the fold builder."
+    },
+    {
+      "source": "strict_cv_fold_mapping",
+      "file": "artifacts/task1/evaluation/strict_cv_v2/folds.json",
+      "lines": "1-6, 7014-7015, 14021-14022, 21028-21029, 28035-28036",
+      "finding": "The canonical mapping is the legal-ir-strict-cv-v2 folds array, with validation records for folds 0 through 4. Only the existence and locations of folds 1–4 records were inspected for this blocked preflight; Fold0 values were not read."
+    }
+  ],
+  "cv_evaluator_trace": {
+    "entry_script": "scripts/beam/task1_v3_residual/run_policy_cpu.py",
+    "evaluator_module": "scripts/beam/task1_v3_residual/common.py",
+    "evaluator_function": "recall",
+    "evidence": [
+      "scripts/beam/task1_v3_residual/run_policy_cpu.py:60-64",
+      "scripts/beam/task1_v3_residual/build_actions.py:10-13,31-36,49-52",
+      "scripts/beam/task1_v3_residual/train_residual_policy.py:19-23,79-95,117-139",
+      "scripts/beam/task1_v3_residual/train_residual_policy_v3b.py:174-189",
+      "scripts/beam/task1_v3_residual/common.py:29-30"
+    ],
+    "finding": "The historical V3 residual path is traceable to local common.recall and downstream macro_recall/policy_macro_recall aggregation. It does not call src/udsc2026/evaluation/legal_ir.evaluate_legal_ir. The launcher also calls evaluate_v3_fold0.py, which is prohibited in this audit."
+  },
+  "submission_validator_findings": {
+    "checks": [
+      "root is a non-empty JSON object",
+      "each entry contains exactly answer",
+      "answer is an array and may be empty",
+      "question IDs and document IDs are valid and unique",
+      "optional exact question coverage",
+      "optional document corpus membership",
+      "optional complete ranking diagnostic"
+    ],
+    "max_documents_per_question": "No hard maximum is enforced by the validator itself; the official scorer gives zero for predictions with length > 5 (docs/Scoring-Program-Task-LegalIR/scoring.py:31-32).",
+    "ranking_order": "Preserved and validated as an ordered unique list, but not scored by the validator; validator is output-contract validation, not a metric implementation.",
+    "official_score_calculated": false
+  },
+  "folds_used": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "fold0_touched": false,
+  "public_labels_used": false,
+  "train_label_source": "data/raw/btc/LegalIR/train.json (identified from artifacts/task1/evaluation/strict_cv_v2/manifest.json:6 and README.md:4)",
+  "fold_mapping_source": "artifacts/task1/evaluation/strict_cv_v2/folds.json (schema legal-ir-strict-cv-v2; corroborated by fold_stats.json)",
+  "total_queries": 5600,
+  "relevant_count_distribution": {
+    "1": 5162,
+    "2": 386,
+    "3": 43,
+    "4": 8,
+    "5": 1
+  },
+  "multi_gold_query_count": 438,
+  "multi_gold_rate": 0.07821428571428571,
+  "gold_count_gt5_query_count": 0,
+  "gold_count_gt5_rate": 0.0,
+  "per_query_max_recall_distribution": {
+    "1": 5600
+  },
+  "duplicate_gold_id_query_count": 0,
+  "notes": [
+    "Historical launcher contains evaluate_v3_fold0.py, but Step 0 did not execute the launcher or that stage.",
+    "Implementation guard difference is official empty/>5 prediction handling versus the V3 local helper; every checked V3-domain output was a unique top-5, so the guard was inactive.",
+    "Direct equivalence checked 5600 folds-1–4 queries from the explicit f1to4-only source; mismatch count=0.",
+    "Duplicate gold IDs were found in 0 folds-1–4 queries and counted using unique gold IDs.",
+    "No Fold0 labels/data or public labels were decoded, used, or included in statistics."
+  ],
+  "core_recall_formula_consistent": true,
+  "implementation_guards_consistent": false,
+  "metric_semantics_consistent_on_v3_domain": true,
+  "score_equivalence_check": {
+    "checked_queries": 5600,
+    "mismatch_count": 0,
+    "max_absolute_recall_difference": 0.0,
+    "sample_mismatches": []
+  },
+  "historical_launcher_contains_fold0_stage": true
+}

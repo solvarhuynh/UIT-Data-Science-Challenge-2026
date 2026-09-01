@@ -1,0 +1,10 @@
+{
+  "python": "3.12.6",
+  "lightgbm": "4.5.0",
+  "scikit_learn": "1.7.2",
+  "numpy": "1.26.4",
+  "pandas": "2.3.3",
+  "os": "Windows-11-10.0.26200-SP0",
+  "pip_freeze_sha256": "669ba834dc7e6a686d4c0f9b2e0cf82ed93357914124d9260cb98bba7d874f19",
+  "timestamp": "2026-08-30T21:10:55.464582+00:00"
+}

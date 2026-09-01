@@ -25,7 +25,7 @@ MODELS = (
     ),
     ModelSpec(
         "reranker",
-        "BAAI/bge-reranker-v2-m3",
+        "Qwen/Qwen3-Reranker-0.6B",
         Path("models/reranker"),
     ),
     ModelSpec(

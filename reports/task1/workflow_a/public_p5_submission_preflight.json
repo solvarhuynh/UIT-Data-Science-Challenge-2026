@@ -1,0 +1,77 @@
+{
+  "status": "BLOCKED_PUBLIC_DEPLOYMENT_CONTRACT_UNDEFINED",
+  "task": "Workflow-A P5 Public Submission Build",
+  "preflight_scope": "READ_ONLY_DEPLOYMENT_CONTRACT_AUDIT",
+  "frozen_policy": "P5",
+  "K": 77,
+  "beta": 0.05,
+  "missing_or_ambiguous_contracts": [
+    {
+      "question": "A. Single production P1 model",
+      "status": "UNDEFINED_UNDER_TASK_CONSTRAINTS",
+      "evidence": [
+        "scripts/beam/task1_v3_residual/train_residual_policy.py documents an historical V3A --final-fit path that labels Fold0 after replay and fits an all-fold public model.",
+        "The current task explicitly forbids Fold0 use, and this historical V3A final-fit procedure is neither canonical P1/P1F-R2 nor a P5 production-model contract.",
+        "reports/task1/step2p5a_reproducibility_report.json documents only fold-separated P1 inner models, not one persisted P5-compatible public P1 model or an allowed no-Fold0 final-fit procedure."
+      ],
+      "required_decision": "Specify an existing or newly professor-approved no-Fold0 production P1 fitting/loading contract; this preflight cannot invent one."
+    },
+    {
+      "question": "B. Single production P4 proxy model",
+      "status": "UNDEFINED",
+      "evidence": [
+        "reports/task1/step2p4_proxy_predictions.jsonl and reports/task1/step2p4_proxy_inner_oof_predictions.jsonl are OOF prediction artifacts.",
+        "No persisted single public P4 beneficiality-proxy model, no final-fit manifest, and no code/config specifying how to fit or load one for public P5 inference was found in the inspected historical public/production pipeline."
+      ],
+      "required_decision": "Specify the exact frozen P4 production model provenance and allowed development-only fitting/loading procedure."
+    },
+    {
+      "question": "C. K77 public action-space and 36-feature construction",
+      "status": "UNDEFINED_FOR_P5",
+      "evidence": [
+        "Historical artifacts under artifacts/task1/recovery_096/final_public_v3/ implement the V3A public pipeline, not P5.",
+        "The inspected historical residual-policy code and final-public artifacts do not define a P5 public K77 action-space plus canonical frozen-36 P1/P4 feature-construction contract."
+      ],
+      "required_decision": "Specify the exact existing public K77 action/feature builder and provenance-equivalence checks for P5."
+    },
+    {
+      "question": "D. One public-population threshold",
+      "status": "UNDEFINED",
+      "evidence": [
+        "reports/task1/step2p5_threshold_report.json defines four nested-OOF thresholds, each selected using a different three-fold inner population for its corresponding outer fold.",
+        "No report, workflow section, production manifest, or code path specifies a development-only rule that maps those four OOF thresholds to one threshold for the public population.",
+        "Averaging, selecting, re-optimizing, or otherwise deriving a public threshold would be a new rule and is forbidden by this task."
+      ],
+      "required_decision": "Specify the exact pre-existing development-only public threshold rule."
+    },
+    {
+      "question": "E. P5 fused-action application to final Task1 top-5",
+      "status": "PARTIALLY_TRACEABLE_BUT_NOT_EXECUTABLE",
+      "evidence": [
+        "scripts/beam/task1_v3_residual/train_residual_policy.py contains the historical residual-action-to-top5 conversion for V3A.",
+        "Its use for P5 depends on unresolved A-D and therefore cannot supply an executable P5 deployment contract by itself."
+      ],
+      "required_decision": "After A-D are resolved, identify the exact approved P5 action-selection/threshold input to the existing top-5 conversion contract."
+    }
+  ],
+  "inspected_evidence": [
+    "reports/task1/step4_workflow_a_finalization.md",
+    "docs/task1/workflow_A_new.md",
+    "reports/task1/step2p5_realizability_report.json",
+    "reports/task1/step2p5_threshold_report.json",
+    "reports/task1/step2p5a_reproducibility_report.json",
+    "scripts/submission/",
+    "scripts/beam/task1_v3_residual/train_residual_policy.py",
+    "scripts/beam/task1_v3_residual/evaluate_v3_fold0.py",
+    "artifacts/task1/recovery_096/final_public_v3/",
+    "artifacts/task1/recovery_096/v3_residual/policy/"
+  ],
+  "training_executed": false,
+  "public_inference_executed": false,
+  "submission_validator_executed": false,
+  "fold0_used": false,
+  "public_labels_used": false,
+  "tuning_executed": false,
+  "upload_ready_submission": null,
+  "reason": "The repository does not contain a complete exact reproducible P5 public deployment contract. Proceeding would require inventing model-finalization, K77 public feature/action, and public-threshold rules."
+}

@@ -1,0 +1,229 @@
+{
+  "status": "CONTRACT_ERROR",
+  "experiment": "STEP 2 \u2014 Strict-OOF Policy Realizability Test at Fixed Research K=77",
+  "adopted_research_K": 77,
+  "production_K_selected": false,
+  "official_primary_metric": "macro_recall",
+  "official_secondary_metric": "macro_precision",
+  "folds_used": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "fold0_touched": false,
+  "fold0_payload_materialized": false,
+  "fold0_used_in_training": false,
+  "fold0_used_in_threshold_selection": false,
+  "fold0_used_in_evaluation": false,
+  "fold0_labels_used": false,
+  "public_labels_used": false,
+  "total_queries": 5600,
+  "k77_contract": {
+    "incoming_candidates": 403322,
+    "actions": 806644,
+    "verified": true
+  },
+  "model_contract_path": "reports/task1/step2_k77_model_contract.json",
+  "policy_family": "HistGradientBoostingClassifier",
+  "outer_runs": [
+    {
+      "outer_fold_held_out": 1,
+      "train_folds": [
+        2,
+        3,
+        4
+      ],
+      "inner_validation_folds": [
+        2,
+        3,
+        4
+      ],
+      "threshold": 0.9336471149727648,
+      "inner_oof_query_count": 4200
+    },
+    {
+      "outer_fold_held_out": 2,
+      "train_folds": [
+        1,
+        3,
+        4
+      ],
+      "inner_validation_folds": [
+        1,
+        3,
+        4
+      ],
+      "threshold": "+Infinity",
+      "inner_oof_query_count": 4200
+    },
+    {
+      "outer_fold_held_out": 3,
+      "train_folds": [
+        1,
+        2,
+        4
+      ],
+      "inner_validation_folds": [
+        1,
+        2,
+        4
+      ],
+      "threshold": 0.9009323675256211,
+      "inner_oof_query_count": 4200
+    },
+    {
+      "outer_fold_held_out": 4,
+      "train_folds": [
+        1,
+        2,
+        3
+      ],
+      "inner_validation_folds": [
+        1,
+        2,
+        3
+      ],
+      "threshold": 0.8974011769826262,
+      "inner_oof_query_count": 4200
+    }
+  ],
+  "pooled": {
+    "query_count": 5600,
+    "baseline_macro_recall": 0.9259285714285714,
+    "policy_macro_recall": 0.9259285714285714,
+    "D77_policy_gain": 0.0,
+    "baseline_macro_precision": 0.19739285714285715,
+    "policy_macro_precision": 0.19739285714285715,
+    "precision_delta": 0.0,
+    "queries_selecting_action": 362,
+    "queries_no_op": 5238,
+    "selected_beneficial": 7,
+    "selected_neutral": 348,
+    "selected_harmful": 7,
+    "policy_positive_gain_queries": 7,
+    "policy_harmful_gain_queries": 7,
+    "canonical_C77_oracle_gain": 0.058785714285714274,
+    "decision_policy_gap_C_minus_D": 0.058785714285714274,
+    "realization_ratio_D_over_C": 0.0,
+    "precision_guardrail_pass": true,
+    "oracle_positive_queries": 426,
+    "false_positive_selected_queries": 355
+  },
+  "per_fold": {
+    "1": {
+      "query_count": 1400,
+      "baseline_macro_recall": 0.9363690476190477,
+      "policy_macro_recall": 0.9367261904761905,
+      "D77_policy_gain": 0.00035714285714283367,
+      "baseline_macro_precision": 0.19842857142857143,
+      "policy_macro_precision": 0.19857142857142857,
+      "precision_delta": 0.00014285714285713902,
+      "queries_selecting_action": 45,
+      "queries_no_op": 1355,
+      "selected_beneficial": 1,
+      "selected_neutral": 44,
+      "selected_harmful": 0,
+      "policy_positive_gain_queries": 1,
+      "policy_harmful_gain_queries": 0,
+      "canonical_C77_fold": 0.04922619047619048,
+      "decision_policy_gap_fold": 0.048869047619047645,
+      "realization_ratio_fold": 0.007255139056831446
+    },
+    "2": {
+      "query_count": 1400,
+      "baseline_macro_recall": 0.9283333333333333,
+      "policy_macro_recall": 0.9283333333333333,
+      "D77_policy_gain": 0.0,
+      "baseline_macro_precision": 0.19771428571428573,
+      "policy_macro_precision": 0.19771428571428573,
+      "precision_delta": 0.0,
+      "queries_selecting_action": 0,
+      "queries_no_op": 1400,
+      "selected_beneficial": 0,
+      "selected_neutral": 0,
+      "selected_harmful": 0,
+      "policy_positive_gain_queries": 0,
+      "policy_harmful_gain_queries": 0,
+      "canonical_C77_fold": 0.060416666666666674,
+      "decision_policy_gap_fold": 0.060416666666666674,
+      "realization_ratio_fold": 0.0
+    },
+    "3": {
+      "query_count": 1400,
+      "baseline_macro_recall": 0.919404761904762,
+      "policy_macro_recall": 0.9190476190476191,
+      "D77_policy_gain": -0.00035714285714283367,
+      "baseline_macro_precision": 0.195,
+      "policy_macro_precision": 0.195,
+      "precision_delta": 0.0,
+      "queries_selecting_action": 154,
+      "queries_no_op": 1246,
+      "selected_beneficial": 2,
+      "selected_neutral": 150,
+      "selected_harmful": 2,
+      "policy_positive_gain_queries": 2,
+      "policy_harmful_gain_queries": 2,
+      "canonical_C77_fold": 0.06107142857142857,
+      "decision_policy_gap_fold": 0.0614285714285714,
+      "realization_ratio_fold": -0.005847953216373885
+    },
+    "4": {
+      "query_count": 1400,
+      "baseline_macro_recall": 0.9196071428571428,
+      "policy_macro_recall": 0.9196071428571428,
+      "D77_policy_gain": 0.0,
+      "baseline_macro_precision": 0.19842857142857143,
+      "policy_macro_precision": 0.19828571428571432,
+      "precision_delta": -0.00014285714285711126,
+      "queries_selecting_action": 163,
+      "queries_no_op": 1237,
+      "selected_beneficial": 4,
+      "selected_neutral": 154,
+      "selected_harmful": 5,
+      "policy_positive_gain_queries": 4,
+      "policy_harmful_gain_queries": 5,
+      "canonical_C77_fold": 0.06442857142857143,
+      "decision_policy_gap_fold": 0.06442857142857143,
+      "realization_ratio_fold": 0.0
+    }
+  },
+  "bootstrap": {
+    "status": "NOT_RUN_NO_EXISTING_COMPATIBLE_PROTOCOL",
+    "protocol_source": null,
+    "result": null,
+    "used_in_gate": false
+  },
+  "scientific_gate": {
+    "pass_requires_pooled_D_gt_0": true,
+    "pass_requires_all_fold_D_ge_0": true,
+    "precision_rule": "precision_delta >= -0.5 * D77",
+    "result": "NOT_RUN_CONTRACT_ERROR"
+  },
+  "sanity_checks": {
+    "step1f_k77_verified": true,
+    "step1b_r77_verified": true,
+    "all_queries_covered": true,
+    "four_outer_runs": true,
+    "outer_test_disjoint_from_train": true,
+    "thresholds_inner_only": true,
+    "feature_audit_clean": false,
+    "feature_columns_unique": false,
+    "k77_candidate_count": true,
+    "k77_action_count": true,
+    "oof_decision_rows_5600": true,
+    "oof_query_ids_unique": true,
+    "final_top5_valid": true,
+    "selected_drop_ranks_valid": true,
+    "D_recomputed_from_serialized_decisions": true,
+    "D_le_C": true,
+    "fold0_payload_not_materialized": true
+  },
+  "workflow_document_updated": true,
+  "notes": [
+    "No compatible Task1 query-level bootstrap protocol was found in scripts/tests/docs; none was invented.",
+    "Contract was written before the first model.fit.",
+    "All reported metrics were recomputed by rereading the serialized OOF decisions.",
+    "CONTRACT_ERROR: feature_columns contains duplicated dropped_baseline_rank and incoming_is_baseline_top5 entries. The generated OOF decisions and raw metrics are retained only for audit; they are not a valid Step 2 scientific result and must not resolve D77 or C-D. No rerun was performed."
+  ]
+}

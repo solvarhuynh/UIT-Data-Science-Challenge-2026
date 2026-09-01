@@ -1,0 +1,39 @@
+{
+  "python": "3.12.6 (tags/v3.12.6:a4a2d2b, Sep  6 2024, 20:11:23) [MSC v.1940 64 bit (AMD64)]",
+  "lightgbm": "4.5.0",
+  "numpy": "1.26.4",
+  "pandas": "2.3.3",
+  "sklearn": "1.9.0",
+  "os": "Windows-11-10.0.26200-SP0",
+  "cpu_count": 16,
+  "runtime": "Windows Python virtual environment",
+  "fixed_lightgbm_version": "4.5.0",
+  "script_sha256": "ee8439d26e7cc7f66e248b9fdd0e70cfa14117567b533275733dbe84caef6759",
+  "estimator_parameters": {
+    "objective": "lambdarank",
+    "metric": "ndcg",
+    "eval_at": [
+      1
+    ],
+    "label_gain": [
+      0,
+      1,
+      2
+    ],
+    "learning_rate": 0.05,
+    "n_estimators": 200,
+    "num_leaves": 31,
+    "max_depth": 5,
+    "min_child_samples": 20,
+    "reg_alpha": 0.0,
+    "reg_lambda": 1.0,
+    "feature_fraction": 1.0,
+    "bagging_fraction": 1.0,
+    "bagging_freq": 0,
+    "deterministic": true,
+    "force_col_wise": true,
+    "verbosity": -1,
+    "random_state": 20260827,
+    "n_jobs": 1
+  }
+}

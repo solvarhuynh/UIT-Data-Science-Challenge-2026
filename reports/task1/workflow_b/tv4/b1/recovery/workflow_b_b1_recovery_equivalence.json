@@ -1,0 +1,55 @@
+{
+  "status": "PASS",
+  "mismatch_count": 0,
+  "queries": 5600,
+  "action_rows": 806644,
+  "feature_count": 36,
+  "K": 77,
+  "query_group_crossing": 0,
+  "missing_queries": 0,
+  "duplicate_query_action_identities": 0,
+  "all_labels_exact": true,
+  "all_actions_exact": true,
+  "all_feature_values_exact": true,
+  "all_group_sizes_exact": true,
+  "all_fold_assignments_exact": true,
+  "comparison": "Fresh independent canonical-builder regeneration per fold; emitted canonical-row SHA256 matches the bounded-memory artifact row SHA256 and artifact-byte SHA256. No historical full-population hash existed.",
+  "per_fold": [
+    {
+      "fold": 1,
+      "rows": 201652,
+      "mismatch_count": 0,
+      "rebuilt_row_serialization_sha256": "696507f29454ac564735365579e3c4ba2db824777498f1d7a72f55fff8fcb89f",
+      "persisted_row_serialization_sha256": "696507f29454ac564735365579e3c4ba2db824777498f1d7a72f55fff8fcb89f",
+      "hash_match": true,
+      "artifact_hash_match": true
+    },
+    {
+      "fold": 2,
+      "rows": 201660,
+      "mismatch_count": 0,
+      "rebuilt_row_serialization_sha256": "08a2c65a893dbc363749d33466d88e824c401e25740bfa356a9719fb7e4f0a27",
+      "persisted_row_serialization_sha256": "08a2c65a893dbc363749d33466d88e824c401e25740bfa356a9719fb7e4f0a27",
+      "hash_match": true,
+      "artifact_hash_match": true
+    },
+    {
+      "fold": 3,
+      "rows": 201656,
+      "mismatch_count": 0,
+      "rebuilt_row_serialization_sha256": "331227a7265d1d570901e6a367415540418c05c47135fcf1329dc29f4a85e59f",
+      "persisted_row_serialization_sha256": "331227a7265d1d570901e6a367415540418c05c47135fcf1329dc29f4a85e59f",
+      "hash_match": true,
+      "artifact_hash_match": true
+    },
+    {
+      "fold": 4,
+      "rows": 201676,
+      "mismatch_count": 0,
+      "rebuilt_row_serialization_sha256": "4bd366bc29d573acec4cc58ce9d4a6c514407bb3db5079055f4fa1b4d0cb8bb3",
+      "persisted_row_serialization_sha256": "4bd366bc29d573acec4cc58ce9d4a6c514407bb3db5079055f4fa1b4d0cb8bb3",
+      "hash_match": true,
+      "artifact_hash_match": true
+    }
+  ]
+}

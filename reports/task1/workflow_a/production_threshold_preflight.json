@@ -1,0 +1,31 @@
+{
+  "status": "PASS",
+  "operation": "PRODUCTION_THRESHOLD_SELECTION",
+  "workflow": "A",
+  "policy": "P5",
+  "files_inspected": [
+    "reports/task1/step2p5_threshold_report.json",
+    "reports/task1/step2p5_realizability_report.json",
+    "reports/task1/step2p5_inner_join_preflight.json",
+    "reports/task1/step2p5_p1_inner_full_action_scores.jsonl",
+    "reports/task1/step2p4_proxy_inner_oof_predictions.jsonl",
+    "reports/task1/step2p1_model_contract.json",
+    "reports/task1/step2p4_discriminability_report.json",
+    "reports/task1/production_p1_fit_config.json",
+    "reports/task1/production_p4_fit_config.json",
+    "scripts/analysis/step2p1c_nested_oof_threshold_experiment.py",
+    "scripts/analysis/step2p5_percentile_fusion.py"
+  ],
+  "inner_split_contract": "canonical fold-ID grouped split; pooled production threshold holds each of F1,F2,F3,F4 out once and trains on the other three development folds",
+  "P1_contract": "canonical 36-feature HGB pairwise difference, BENEFICIAL>NEUTRAL>HARMFUL, deterministic cross-class pairs, mirrored rows, uniform weight",
+  "P4_contract": "canonical 36-feature HGB, BENEFICIAL vs NEUTRAL_OR_HARMFUL, no class weighting, no resampling",
+  "percentile_contract": "within-query zero-based averaged midrank0/(n-1)",
+  "fusion_contract": "P1_score + 0.05 * proxy_percentile",
+  "top_action_tie_break": "fused_score descending, drop_rank descending, incoming_union_rank ascending, incoming_doc_id lexicographic ascending",
+  "threshold_contract": "candidates = +Infinity plus all unique frozen top fused scores; APPLY when fused_score >= threshold; maximize(gain_sum, precision_delta, threshold)",
+  "unresolved_fields": [],
+  "temporary_models_trained": false,
+  "fold0_used": false,
+  "public_labels_used": false,
+  "public_inference_executed": false
+}

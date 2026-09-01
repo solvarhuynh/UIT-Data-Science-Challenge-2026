@@ -1,0 +1,345 @@
+{
+  "status": "PASS",
+  "experiment": "STEP 2-P1A \u2014 Controlled Median-Aggregation Action-Score Experiment",
+  "experiment_type": "DETERMINISTIC_POSTHOC_RECOMBINATION",
+  "scientific_status": "DIAGNOSTIC_ONLY_NO_BRANCH_GATE",
+  "model_fit_executed": false,
+  "base_model_training_executed": false,
+  "inner_model_training_executed": false,
+  "outer_model_training_executed": false,
+  "policy_oof_strict": true,
+  "end_to_end_selection_oof": false,
+  "k77_selected_exploratorily_on_folds_1_4": true,
+  "interpretation_scope": "MEDIAN_AGGREGATION_REALIZABILITY_CONDITIONAL_ON_EXPLORATORY_FIXED_K77",
+  "K": 77,
+  "feature_count": 36,
+  "variable_under_test": "ACTION_SCORE_AGGREGATION_MEAN_TO_MEDIAN",
+  "aggregation_sweep": false,
+  "model_objective_changed": false,
+  "pair_weighting_changed": false,
+  "features_changed": false,
+  "K_changed": false,
+  "preconditions": {
+    "p1c_pass": true,
+    "inner_12": true,
+    "outer_4": true,
+    "inner_rows": true,
+    "outer_rows": true,
+    "K77": true,
+    "features36": true,
+    "mean_thresholds": true,
+    "mean_policy": true,
+    "best_BN": true,
+    "oracle_C": true
+  },
+  "pairwise_probability_reconstruction_audit": {
+    "status": "PASS",
+    "queries_checked": 100,
+    "actions_checked": 14404,
+    "max_abs_error": 0.0,
+    "max_rel_error": 0.0,
+    "top_identities_matched": 100,
+    "top_identities_expected": 100,
+    "tolerance": "abs<=1e-12 OR rel<=1e-10"
+  },
+  "outer_median_action_rows": 806644,
+  "inner_median_oof_rows": 16800,
+  "thresholds": {
+    "mean": {
+      "1": 0.8871766063648394,
+      "2": 0.9158352964999534,
+      "3": 0.8885338990548798,
+      "4": 0.9072451320464932
+    },
+    "median": {
+      "1": Infinity,
+      "2": Infinity,
+      "3": 0.9837219720799008,
+      "4": Infinity
+    }
+  },
+  "mean_policy": {
+    "gain_sum": -4.0,
+    "D77": -0.0007142857142857143,
+    "top_B": 69,
+    "top_N": 5405,
+    "top_H": 126,
+    "executed_B": 6,
+    "executed_N": 392,
+    "executed_H": 12,
+    "S": 6,
+    "T": 63,
+    "R": 357,
+    "S_headroom": 3.6666666666666665,
+    "T_headroom": 51.833333333333336,
+    "R_headroom": 273.7,
+    "beneficial_gain_sum": 3.6666666666666665,
+    "harmful_loss_sum": -7.666666666666667,
+    "median_best_B_minus_N": -0.0944695955058123
+  },
+  "median_policy": {
+    "gain_sum": 0.3333333333333333,
+    "D77": 5.9523809523809524e-05,
+    "top_B": 61,
+    "top_N": 5416,
+    "top_H": 123,
+    "executed_B": 1,
+    "executed_N": 16,
+    "executed_H": 0,
+    "S": 1,
+    "T": 60,
+    "R": 365,
+    "S_headroom": 0.3333333333333333,
+    "T_headroom": 48.416666666666664,
+    "R_headroom": 280.45,
+    "beneficial_gain_sum": 0.3333333333333333,
+    "harmful_loss_sum": 0,
+    "median_best_B_minus_N": -0.047746588404987356
+  },
+  "comparison": {
+    "delta_D77_median_minus_mean": 0.0007738095238095238,
+    "median_D77_gt_mean": true,
+    "median_D77_gt_0": true,
+    "all_fold_median_D_ge_mean": false,
+    "median_R_lt_mean_R": false,
+    "median_harmful_loss_less_severe": true,
+    "top_action_change_count": 1318,
+    "top_action_change_fraction": 0.23535714285714285,
+    "top_action_changes_new_classes": {
+      "NEUTRAL": 1283,
+      "HARMFUL": 25,
+      "BENEFICIAL": 10
+    },
+    "oracle_positive_top_action_change_count": 95,
+    "oracle_positive_top_action_changes_new_classes": {
+      "NEUTRAL": 83,
+      "HARMFUL": 2,
+      "BENEFICIAL": 10
+    }
+  },
+  "crossing_rates": {
+    "mean": {
+      "BENEFICIAL": {
+        "executed": 6,
+        "top": 69,
+        "rate": 0.08695652173913043
+      },
+      "NEUTRAL": {
+        "executed": 392,
+        "top": 5405,
+        "rate": 0.0725254394079556
+      },
+      "HARMFUL": {
+        "executed": 12,
+        "top": 126,
+        "rate": 0.09523809523809523
+      }
+    },
+    "median": {
+      "BENEFICIAL": {
+        "executed": 1,
+        "top": 61,
+        "rate": 0.01639344262295082
+      },
+      "NEUTRAL": {
+        "executed": 16,
+        "top": 5416,
+        "rate": 0.0029542097488921715
+      },
+      "HARMFUL": {
+        "executed": 0,
+        "top": 123,
+        "rate": 0.0
+      }
+    }
+  },
+  "ranking_preservation": {
+    "median_best_B_minus_N": {
+      "count": 426,
+      "min": -0.8419813498782451,
+      "p10": -0.15110622552202824,
+      "p25": -0.09308859107064774,
+      "median": -0.047746588404987356,
+      "mean": -0.06476649866714418,
+      "p75": -0.0100674216896173,
+      "p90": 0.0009050535547370231,
+      "max": 0.08419025355696463
+    },
+    "gt0": 49,
+    "eq0_within_1e12": 18,
+    "lt0": 359,
+    "mean_median_best_B_minus_N": -0.0944695955058123,
+    "mean_negative_B_minus_N": "357/426",
+    "R_mean": 357,
+    "R_median": 365
+  },
+  "harmful_execution": {
+    "mean_count": 12,
+    "mean_loss_sum": -7.666666666666667,
+    "median_count": 0,
+    "median_loss_sum": 0,
+    "median_beneficial_gain_sum": 0.3333333333333333,
+    "median_neutral_execution_count": 16,
+    "median_net_gain_sum": 0.3333333333333333
+  },
+  "per_fold": {
+    "1": {
+      "mean_threshold": 0.8871766063648394,
+      "median_threshold": Infinity,
+      "mean": {
+        "top_B": 13,
+        "top_N": 1355,
+        "top_H": 32,
+        "executed_B": 3,
+        "executed_N": 163,
+        "executed_H": 1,
+        "S": 3,
+        "T": 10,
+        "R": 81,
+        "gain_sum": 1.3333333333333333,
+        "D_fold": 0.0009523809523809524
+      },
+      "median": {
+        "top_B": 12,
+        "top_N": 1357,
+        "top_H": 31,
+        "executed_B": 0,
+        "executed_N": 0,
+        "executed_H": 0,
+        "S": 0,
+        "T": 12,
+        "R": 82,
+        "gain_sum": 0,
+        "D_fold": 0.0
+      },
+      "gain_delta": -1.3333333333333333,
+      "D_delta": -0.0009523809523809524,
+      "median_best_B_minus_N": -0.06930493193533743,
+      "median_negative_B_minus_N_count": 80,
+      "top_action_change_count": 333
+    },
+    "2": {
+      "mean_threshold": 0.9158352964999534,
+      "median_threshold": Infinity,
+      "mean": {
+        "top_B": 28,
+        "top_N": 1342,
+        "top_H": 30,
+        "executed_B": 0,
+        "executed_N": 5,
+        "executed_H": 0,
+        "S": 0,
+        "T": 28,
+        "R": 79,
+        "gain_sum": 0.0,
+        "D_fold": 0.0
+      },
+      "median": {
+        "top_B": 22,
+        "top_N": 1347,
+        "top_H": 31,
+        "executed_B": 0,
+        "executed_N": 0,
+        "executed_H": 0,
+        "S": 0,
+        "T": 22,
+        "R": 85,
+        "gain_sum": 0,
+        "D_fold": 0.0
+      },
+      "gain_delta": 0.0,
+      "D_delta": 0.0,
+      "median_best_B_minus_N": -0.031706988774621414,
+      "median_negative_B_minus_N_count": 83,
+      "top_action_change_count": 320
+    },
+    "3": {
+      "mean_threshold": 0.8885338990548798,
+      "median_threshold": 0.9837219720799008,
+      "mean": {
+        "top_B": 14,
+        "top_N": 1358,
+        "top_H": 28,
+        "executed_B": 3,
+        "executed_N": 121,
+        "executed_H": 8,
+        "S": 3,
+        "T": 11,
+        "R": 96,
+        "gain_sum": -3.3333333333333335,
+        "D_fold": -0.002380952380952381
+      },
+      "median": {
+        "top_B": 13,
+        "top_N": 1362,
+        "top_H": 25,
+        "executed_B": 1,
+        "executed_N": 16,
+        "executed_H": 0,
+        "S": 1,
+        "T": 12,
+        "R": 97,
+        "gain_sum": 0.3333333333333333,
+        "D_fold": 0.0002380952380952381
+      },
+      "gain_delta": 3.666666666666667,
+      "D_delta": 0.0026190476190476194,
+      "median_best_B_minus_N": -0.039204340409229654,
+      "median_negative_B_minus_N_count": 96,
+      "top_action_change_count": 385
+    },
+    "4": {
+      "mean_threshold": 0.9072451320464932,
+      "median_threshold": Infinity,
+      "mean": {
+        "top_B": 14,
+        "top_N": 1350,
+        "top_H": 36,
+        "executed_B": 0,
+        "executed_N": 103,
+        "executed_H": 3,
+        "S": 0,
+        "T": 14,
+        "R": 101,
+        "gain_sum": -2.0,
+        "D_fold": -0.0014285714285714286
+      },
+      "median": {
+        "top_B": 14,
+        "top_N": 1350,
+        "top_H": 36,
+        "executed_B": 0,
+        "executed_N": 0,
+        "executed_H": 0,
+        "S": 0,
+        "T": 14,
+        "R": 101,
+        "gain_sum": 0,
+        "D_fold": 0.0
+      },
+      "gain_delta": 2.0,
+      "D_delta": 0.0014285714285714286,
+      "median_best_B_minus_N": -0.06145683770652666,
+      "median_negative_B_minus_N_count": 100,
+      "top_action_change_count": 280
+    }
+  },
+  "preserved_status": {
+    "threshold_scalar_branch": "CLOSED",
+    "absolute_score_selectivity": "DIRECTLY_MEASURED_WEAK",
+    "mean_aggregation_hypothesis": "STRONGLY_SUPPORTED_HYPOTHESIS",
+    "remaining_ranking_loss": "PRIMARY_REMAINING_BOTTLENECK",
+    "pair_family": "UNRESOLVED_NOT_ESTABLISHED",
+    "pair_reweighting": "NOT_AUTHORIZED",
+    "B_vs_N_only": "NOT_AUTHORIZED",
+    "HGB": "UNRESOLVED",
+    "feature_expansion": "NOT_JUSTIFIED",
+    "K77": "NOT_REJECTED",
+    "smaller_K": "DEFERRED",
+    "workflow_B": "NOT_ACTIVE"
+  },
+  "notes": [
+    "Only the final reducer changed from MEAN to MEDIAN; no model.fit or retraining was performed.",
+    "Median thresholds were selected exclusively from proper inner-OOF median scores; outer labels were not used for selection."
+  ]
+}

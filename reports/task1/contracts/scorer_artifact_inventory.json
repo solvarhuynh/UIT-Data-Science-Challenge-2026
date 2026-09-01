@@ -1,0 +1,127 @@
+{
+  "schema_version": "task1-scorer-artifact-inventory-v1",
+  "exact_active_coda_bench_artifact_found": false,
+  "search_scope": "entire local repository (path inventory only; no labels read)",
+  "provenance_filename_hits": [
+    ".dockerignore",
+    "artifacts/task1/evaluation/.pytest_tv2_task1/test_writer_and_validator_acce0/phase-questions.json",
+    "artifacts/task1/kaggle/task1_code_bundle.zip",
+    "docker",
+    "docker-compose.yml",
+    "docker/backend.Dockerfile",
+    "docs/project/12_docker_deployment.md",
+    "frontend/Dockerfile",
+    "frontend/giao dien/node_modules/@typescript-eslint/typescript-estree/dist/getImportClausePhaseModifier.d.ts",
+    "frontend/giao dien/node_modules/@typescript-eslint/typescript-estree/dist/getImportClausePhaseModifier.js",
+    "frontend/giao dien/node_modules/d3-shape/src/curve/bundle.js",
+    "frontend/giao dien/node_modules/eslint/node_modules/ajv/dist/ajv.bundle.js",
+    "frontend/giao dien/node_modules/eslint/node_modules/ajv/scripts/bundle.js",
+    "frontend/giao dien/node_modules/framer-motion/dist/cjs/feature-bundle-riC1cckV.js",
+    "frontend/giao dien/node_modules/framer-motion/dist/cjs/feature-bundle-riC1cckV.js.map",
+    "frontend/giao dien/node_modules/framer-motion/dist/es/render/components/motion/feature-bundle.mjs",
+    "frontend/giao dien/node_modules/framer-motion/dist/es/render/components/motion/feature-bundle.mjs.map",
+    "frontend/giao dien/node_modules/tailwind-merge/dist/bundle-cjs.js",
+    "frontend/giao dien/node_modules/tailwind-merge/dist/bundle-cjs.js.map",
+    "frontend/giao dien/node_modules/tailwind-merge/dist/bundle-mjs.mjs",
+    "frontend/giao dien/node_modules/tailwind-merge/dist/bundle-mjs.mjs.map",
+    "frontend/giao dien/node_modules/tailwind-merge/dist/es5/bundle-cjs.js",
+    "frontend/giao dien/node_modules/tailwind-merge/dist/es5/bundle-cjs.js.map",
+    "frontend/giao dien/node_modules/tailwind-merge/dist/es5/bundle-mjs.mjs",
+    "frontend/giao dien/node_modules/tailwind-merge/dist/es5/bundle-mjs.mjs.map",
+    "frontend/giao dien/node_modules/victory-vendor/lib-vendor/d3-shape/src/curve/bundle.js",
+    "scripts/package_codabench_legal_ir.py",
+    "scripts/submission/package_codabench_legal_ir.py"
+  ],
+  "candidates": [
+    {
+      "path": "docs/Scoring-Program-Task-LegalIR/scoring.py",
+      "exists": true,
+      "sha256": "84d7e4459469b9d7d183d577b30c9668a184a7d4a7382a5fd8a8ae7379d7083a",
+      "file_tree": [
+        "scoring.py"
+      ],
+      "confidence": "LIKELY_ORGANIZER_SCORER_BUT_VERSION_UNPROVEN",
+      "classification": "TOP5_SET_MACRO_RECALL; TOP5_SET_MACRO_PRECISION",
+      "metric_behavior": "1..5 only; empty or >5 is zero; unordered sets",
+      "docker_image": null,
+      "docker_digest": null,
+      "immutable_active_task_provenance": null,
+      "git_provenance": {
+        "last_committing_revision": "7e1d76263fb31fadefebc01f3fe43987a326e9b7",
+        "worktree_status": "clean_or_untracked"
+      }
+    },
+    {
+      "path": "src/udsc2026/evaluation/legal_ir.py",
+      "exists": true,
+      "sha256": "8facfac86a3e9ee7a7d8f16c0f37cbaf75bacd82659774e7a706f1b8b963a045",
+      "file_tree": [
+        "legal_ir.py"
+      ],
+      "confidence": "LOCAL_REPOSITORY_SCORER_ONLY",
+      "classification": "TOP5_SET_MACRO_RECALL; TOP5_SET_MACRO_PRECISION",
+      "metric_behavior": "1..5 only; empty or >5 is zero; unordered sets",
+      "docker_image": null,
+      "docker_digest": null,
+      "immutable_active_task_provenance": null,
+      "git_provenance": {
+        "last_committing_revision": "0b38595b4f98791bf7dca31231c7569f45d3ba3b",
+        "worktree_status": "clean_or_untracked"
+      }
+    },
+    {
+      "path": "src/udsc2026/evaluation/legal_ir_recovery.py",
+      "exists": true,
+      "sha256": "253d7524e0b5f0ebdd89b57d73f8c470ae38ed440b8f3c7c8c4531756cf0e21f",
+      "file_tree": [
+        "legal_ir_recovery.py"
+      ],
+      "confidence": "LOCAL_REPOSITORY_SCORER_ONLY",
+      "classification": "TOP5_SET_MACRO_RECALL; TOP5_SET_MACRO_PRECISION",
+      "metric_behavior": "uses predicted[:5] as an unordered set",
+      "docker_image": null,
+      "docker_digest": null,
+      "immutable_active_task_provenance": null,
+      "git_provenance": {
+        "last_committing_revision": "a76330540c06864dddf34ace2bf42a3e083c0ea2",
+        "worktree_status": "clean_or_untracked"
+      }
+    },
+    {
+      "path": "docs/competition/DSC2026_Task1_LegalIR_Data_Overview.docx",
+      "exists": true,
+      "sha256": "e250cb1b82ebfca2e43baa3194fb26a0f2c3bda84fb8b1192457c7e8e6d0b0e8",
+      "file_tree": [
+        "DSC2026_Task1_LegalIR_Data_Overview.docx"
+      ],
+      "confidence": "LOCAL_REPOSITORY_SCORER_ONLY",
+      "classification": "documentation",
+      "metric_behavior": "official competition overview; not executable",
+      "docker_image": null,
+      "docker_digest": null,
+      "immutable_active_task_provenance": null,
+      "git_provenance": {
+        "last_committing_revision": "765f41cc00ffb9b12980f5f38d5fdba460e94207",
+        "worktree_status": "clean_or_untracked"
+      }
+    },
+    {
+      "path": "docs/Scoring-Program-Task-LegalIR/metadata.yaml",
+      "exists": true,
+      "sha256": "7aa33a3c190a9cd687e40a0a1aa99aeefebf9c6c86bf7f083c05f6ea7254ad3a",
+      "file_tree": [
+        "metadata.yaml"
+      ],
+      "confidence": "LOCAL_REPOSITORY_SCORER_ONLY",
+      "classification": "metadata",
+      "metric_behavior": "command: python3 scoring.py; no task/package/image provenance",
+      "docker_image": null,
+      "docker_digest": null,
+      "immutable_active_task_provenance": null,
+      "git_provenance": {
+        "last_committing_revision": "7e1d76263fb31fadefebc01f3fe43987a326e9b7",
+        "worktree_status": "clean_or_untracked"
+      }
+    }
+  ]
+}

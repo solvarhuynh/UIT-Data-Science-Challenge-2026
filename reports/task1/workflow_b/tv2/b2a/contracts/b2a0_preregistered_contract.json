@@ -1,0 +1,12 @@
+{
+  "status": "BLOCKED_CONTEXT_LENGTH_P99_GT_32768",
+  "model": "Qwen/Qwen3-Reranker-0.6B",
+  "revision": "e61197ed45024b0ed8a2d74b80b4d909f1255473",
+  "mode": "ZERO_SHOT",
+  "training_labels": "NONE",
+  "K": 77,
+  "instruction": "Given a Vietnamese legal question, determine whether the Document contains legal provisions relevant to answering the Query.",
+  "max_length": null,
+  "context_audit": "CPU tokenizer audit completed; p99 exceeds 32768 and long-document handling requires professor review",
+  "gpu_smoke": "NOT_RUN_CONTEXT_GATE_BLOCKED"
+}

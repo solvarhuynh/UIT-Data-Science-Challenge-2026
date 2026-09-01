@@ -1,0 +1,39 @@
+{
+  "migration": "workflow_b_report_path_normalization",
+  "date": "2026-09-01",
+  "scope": "Path-only normalization; no experiment, inference, training, or evaluation executed.",
+  "canonical_root": "reports/task1/workflow_b/",
+  "moves": [
+    {
+      "old_path": "reports/task1/workflow_b/b2a/",
+      "new_path": "reports/task1/workflow_b/tv2/b2a/",
+      "owner": "TV2",
+      "method": "same-volume directory move",
+      "content_changed": false
+    },
+    {
+      "old_path": "reports/task1/workflow_b/b1/",
+      "new_path": "reports/task1/workflow_b/tv4/b1/",
+      "owner": "TV4",
+      "method": "same-volume directory move",
+      "content_changed": false
+    },
+    {
+      "old_path": "reports/task1/tv2/task_results.md",
+      "new_path": "reports/task1/workflow_b/tv2/task_results.md",
+      "owner": "TV2",
+      "method": "same-volume file move",
+      "content_changed": false
+    },
+    {
+      "old_path": "reports/task1/tv4/task_results.md",
+      "new_path": "reports/task1/workflow_b/tv4/task_results.md",
+      "owner": "TV4",
+      "method": "same-volume file move",
+      "content_changed": false
+    }
+  ],
+  "hash_verification": "Moves were performed without copying or rewriting file contents; hashes are therefore preserved.",
+  "progress_log_unchanged": "reports/task1/progress_log.md",
+  "review_required": []
+}

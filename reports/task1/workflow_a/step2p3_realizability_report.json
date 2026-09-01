@@ -1,0 +1,82 @@
+{
+  "status": "BLOCKED_SPEC_CONFLICT",
+  "experiment": "STEP 2-P3 — Margin-Augmented Pairwise B-vs-N Relative-Ordering Intervention",
+  "experiment_type": "CONTROLLED_SINGLE_VARIABLE_INTERVENTION_WITH_FULL_NESTED_OOF_RETRAINING",
+  "preflight": {
+    "canonical_model_class": "sklearn.ensemble.HistGradientBoostingClassifier",
+    "canonical_loss": "fixed sklearn binary log_loss via HistGradientBoostingClassifier(loss='log_loss')",
+    "train_time_score_semantics": "The canonical trainer builds only feature differences x(hi)-x(lo) and mirrored negatives, with binary labels 1/0. The model outputs P(ordered first action outranks second action) for a pair relation. No individual train-time action scalar s(a) or s(b) is defined or optimized.",
+    "professor_s_a_minus_s_b_mapping_verified": false,
+    "pair_family_conditional_margin_loss_exactly_supported": false,
+    "margin_scale_verified": false,
+    "compatibility_status": "BLOCKED_SPEC_CONFLICT",
+    "blocking_reason": "The frozen sklearn HistGradientBoostingClassifier exposes fixed binary log_loss during fit and accepts only ordinary sample_weight. It has no custom per-example loss/gradient API to implement softplus(m-y*z) only for mirrored BN rows while retaining m=0 for BH/NH. The canonical architecture learns a pairwise probability from x(a)-x(b), not an identifiable train-time scalar difference s(a)-s(b); its inference action score is a later MEAN of pairwise probabilities. Therefore the requested m=0.05 cannot be placed exactly on a verified equivalent train-time s(a)-s(b) scale."
+  },
+  "training_executed": false,
+  "new_scoring_executed": false,
+  "policy_oof_strict": true,
+  "end_to_end_selection_oof": false,
+  "k77_selected_exploratorily_on_folds_1_4": true,
+  "K": 77,
+  "features": 36,
+  "pair_weighting": "UNIFORM",
+  "pair_construction": "UNCHANGED_COMPLETE_CROSS_CLASS_MIRRORED",
+  "margin": {
+    "BN": 0.05,
+    "BH": 0.0,
+    "NH": 0.0
+  },
+  "models": {
+    "outer_expected": 4,
+    "inner_expected": 12,
+    "outer_trained": 0,
+    "inner_trained": 0
+  },
+  "baseline": {
+    "R": 357,
+    "D77_exact": -0.0007142857142857143,
+    "gain_sum": -4.0,
+    "S": 6,
+    "T": 63
+  },
+  "p3": {
+    "R": null,
+    "D77_exact": null,
+    "gain_sum": null,
+    "S": null,
+    "T": null
+  },
+  "delta": {
+    "R": null,
+    "D77_exact": null,
+    "gain_sum": null
+  },
+  "thresholds": {},
+  "per_fold": {},
+  "rank_gap_shift": {},
+  "rank4_7_secondary": {},
+  "top_class_transition_matrix": {},
+  "preregistered_criteria": {
+    "pooled_R_improves": null,
+    "D77_non_worsens": null,
+    "folds_non_worsened": null,
+    "fold_robustness_met": null,
+    "overall_preregistered_validation": null
+  },
+  "preserved_status": {
+    "pair_reweighting": "NOT_AUTHORIZED",
+    "B_vs_N_only": "NOT_AUTHORIZED",
+    "rank_feature_intervention": "NOT_JUSTIFIED",
+    "HGB": "UNRESOLVED",
+    "feature_expansion": "NOT_JUSTIFIED",
+    "K77": "NOT_REJECTED",
+    "smaller_K": "DEFERRED",
+    "raw_pairwise_dispersion": "DEFERRED",
+    "workflow_B": "NOT_ACTIVE"
+  },
+  "notes": [
+    "Pre-flight inspection only; no model was loaded for inference, fitted, or scored.",
+    "An exact implementation would require a custom pair-family-conditional gradient/loss interface or a different model framework, both forbidden by the frozen contract.",
+    "No approximation was used: no sample weighting, resampling, label/target/probability shift, post-hoc margin adjustment, or framework change. No models, action-score file, or threshold report were created."
+  ]
+}

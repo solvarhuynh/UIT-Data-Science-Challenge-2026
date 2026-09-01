@@ -1,0 +1,16 @@
+import hashlib,json,platform,subprocess,sys
+from datetime import datetime,timezone
+from pathlib import Path
+import lightgbm,numpy,pandas,sklearn
+from lightgbm import LGBMRanker
+R=Path(__file__).resolve().parents[2]/'reports/task1'
+old=R/'workflow_b_b1_environment_manifest.json'; freeze=subprocess.run([sys.executable,'-m','pip','freeze'],capture_output=True,text=True,check=True).stdout
+manifest={'python':platform.python_version(),'lightgbm':lightgbm.__version__,'scikit_learn':sklearn.__version__,'numpy':numpy.__version__,'pandas':pandas.__version__,'os':platform.platform(),'pip_freeze_sha256':hashlib.sha256(freeze.encode()).hexdigest(),'timestamp':datetime.now(timezone.utc).isoformat()}
+(R/'workflow_b_b1_environment_manifest_v2.json').write_text(json.dumps(manifest,indent=2)+'\n')
+amend={'status':'PASS','reason':'Professor-authorized LightGBM 4.5.0/sklearn validation API compatibility repair','professor_authorization':True,'old_sklearn_version':'1.9.0','new_sklearn_version':sklearn.__version__,'lightgbm_version':lightgbm.__version__,'python_version':platform.python_version(),'numpy_version':numpy.__version__,'pandas_version':pandas.__version__,'compatibility_shim_used':False,'scientific_contract_changed':False,'scientific_results_seen_before_amendment':False,'project_models_fit_before_amendment':0,'original_environment_manifest_sha256':hashlib.sha256(old.read_bytes()).hexdigest(),'new_environment_manifest_sha256':hashlib.sha256((R/'workflow_b_b1_environment_manifest_v2.json').read_bytes()).hexdigest(),'package_freeze_sha256':manifest['pip_freeze_sha256'],'runtime':platform.platform(),'timestamp':manifest['timestamp']}
+(R/'workflow_b_b1_environment_amendment.json').write_text(json.dumps(amend,indent=2)+'\n')
+X=numpy.arange(12*36,dtype=numpy.float64).reshape(12,36)/97;y=numpy.array([0,1,2,0,1,2,0,1,2,0,1,2]);g=[3,3,3,3];hp={'objective':'lambdarank','metric':'ndcg','eval_at':[1],'label_gain':[0,1,2],'learning_rate':.05,'n_estimators':200,'num_leaves':31,'max_depth':5,'min_child_samples':20,'reg_alpha':0.,'reg_lambda':1.,'feature_fraction':1.,'bagging_fraction':1.,'bagging_freq':0,'deterministic':True,'force_col_wise':True,'verbosity':-1,'random_state':20260827,'n_jobs':1}
+try:
+ m=LGBMRanker(**hp);m.fit(X,y,group=g);p=m.predict(X);smoke={'status':'PASS','synthetic_only':True,'project_labels_used':False,'Fold0_used':False,'public_data_used':False,'metric_computed':False,'model_comparison_performed':False,'LightGBM':lightgbm.__version__,'scikit_learn':sklearn.__version__,'fit_completed':True,'predict_completed':True,'predictions_finite':bool(numpy.isfinite(p).all()),'expected_prediction_length':12,'prediction_length':len(p),'force_all_finite_error_reproduced':False}
+except Exception as e: smoke={'status':'FAIL','synthetic_only':True,'project_labels_used':False,'Fold0_used':False,'public_data_used':False,'metric_computed':False,'model_comparison_performed':False,'LightGBM':lightgbm.__version__,'scikit_learn':sklearn.__version__,'fit_completed':False,'predict_completed':False,'predictions_finite':False,'force_all_finite_error_reproduced':'force_all_finite' in str(e),'error':repr(e)}
+(R/'workflow_b_b1_compatibility_smoke.json').write_text(json.dumps(smoke,indent=2)+'\n');print(json.dumps(smoke))

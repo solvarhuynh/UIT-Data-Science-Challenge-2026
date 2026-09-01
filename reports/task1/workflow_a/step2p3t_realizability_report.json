@@ -1,0 +1,87 @@
+{
+  "status": "BLOCKED_SPEC_LABEL_LEAK",
+  "experiment": "STEP 2-P3-T — BN Probability-Transformation Relative-Ranking Intervention",
+  "experiment_type": "CONTROLLED_SINGLE_VARIABLE_INTERVENTION",
+  "label_availability_preflight": {
+    "beneficial_definition": "An action is BENEFICIAL exactly when truth_recall_delta > 1e-12, where truth_recall_delta is recall(gold, baseline_top5 with the incoming document substituted at drop_rank) minus recall(gold, baseline_top5).",
+    "neutral_definition": "An action is NEUTRAL exactly when its gold-derived truth_recall_delta is neither positive nor negative under the canonical tolerance (delta = 0).",
+    "harmful_definition": "An action is HARMFUL exactly when truth_recall_delta < -1e-12, using the same gold-derived recall comparison.",
+    "required_fields_for_BNH": [
+      "held-out query gold answer / relevant-document set",
+      "baseline_top5 document IDs",
+      "incoming document ID",
+      "drop_rank",
+      "resulting substituted top-5 and its recall against gold"
+    ],
+    "BN_identity_available_label_free": false,
+    "outer_truth_required": true,
+    "public_gold_required_for_deployment": true,
+    "policy_executable_without_gold": false,
+    "canonical_P1_label_usage": "B/N/H labels are used to construct supervised cross-class training pairs. Canonical inference computes ordered-pair probabilities from label-free feature differences and averages them; labels are subsequently used for evaluation/diagnostics, not to choose inference probabilities.",
+    "status": "BLOCKED_SPEC_LABEL_LEAK",
+    "blocking_reason": "The requested +0.03/-0.03 transformation must know whether each ordered pair is BENEFICIAL->NEUTRAL or NEUTRAL->BENEFICIAL. Canonical action class is defined solely from the recall delta against the query gold answer. Thus selecting transformed probabilities for an outer held-out query would consume held-out truth inside the scoring function. Public/deployment queries likewise cannot be assigned these classes without public gold. The formulation is therefore oracle-only and non-deployable, not a policy_oof_strict executable policy."
+  },
+  "training_executed": false,
+  "new_scoring_executed": false,
+  "transformed_probabilities_computed": false,
+  "policy_oof_strict": true,
+  "end_to_end_selection_oof": false,
+  "k77_selected_exploratorily_on_folds_1_4": true,
+  "fold0_or_public_used": false,
+  "delta": 0.03,
+  "transformation": {
+    "BN": "clip(p+0.03,0,1)",
+    "NB": "clip(p-0.03,0,1)",
+    "other": "identity"
+  },
+  "models": {
+    "retrained": false,
+    "outer_reused": 0,
+    "inner_reused": 0
+  },
+  "baseline": {
+    "R": 357,
+    "D77_exact": -0.0007142857142857143,
+    "gain_sum": -4.0,
+    "S": 6,
+    "T": 63
+  },
+  "p3t": {
+    "R": null,
+    "D77_exact": null,
+    "gain_sum": null,
+    "S": null,
+    "T": null
+  },
+  "transformation_audit": {},
+  "per_fold": {},
+  "rank4_7": {},
+  "top_class_transitions": {},
+  "preregistered_criteria": {
+    "pooled_R_improves": null,
+    "D77_non_worsens": null,
+    "folds_non_worsened": null,
+    "fold_robustness_met": null,
+    "overall_preregistered_validation": null
+  },
+  "preserved_status": {
+    "relative_ordering_hypothesis": "SUPPORTED",
+    "pair_family": "STRONGLY_WEAKENED",
+    "pair_reweighting": "NOT_AUTHORIZED",
+    "B_vs_N_only": "NOT_AUTHORIZED",
+    "rank_feature_intervention": "NOT_JUSTIFIED",
+    "HGB": "UNRESOLVED",
+    "feature_expansion": "NOT_JUSTIFIED",
+    "K77": "NOT_REJECTED",
+    "smaller_K": "DEFERRED",
+    "raw_pairwise_dispersion": "DEFERRED",
+    "workflow_B": "NOT_ACTIVE"
+  },
+  "notes": [
+    "No transformation was applied, including to any single pair probability.",
+    "No transformed-score file or threshold report was created.",
+    "No proxy, predicted B/N class, rank heuristic, score threshold, feature-derived pseudo-label, or oracle diagnostic was substituted.",
+    "Original P3 and P3-R blocked results remain unchanged."
+  ],
+  "next_state": "STEP2_P3T_BLOCKED_PENDING_PROFESSOR_CLARIFICATION"
+}

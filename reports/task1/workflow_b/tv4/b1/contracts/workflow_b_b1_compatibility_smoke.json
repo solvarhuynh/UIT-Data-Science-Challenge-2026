@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "synthetic_only": true,
+  "project_labels_used": false,
+  "Fold0_used": false,
+  "public_data_used": false,
+  "metric_computed": false,
+  "model_comparison_performed": false,
+  "LightGBM": "4.5.0",
+  "scikit_learn": "1.7.2",
+  "fit_completed": true,
+  "predict_completed": true,
+  "predictions_finite": true,
+  "expected_prediction_length": 12,
+  "prediction_length": 12,
+  "force_all_finite_error_reproduced": false
+}

@@ -1,0 +1,151 @@
+{
+  "status": "PASS",
+  "experiment": "STEP 2-P4 \u2014 Label-Free Beneficial-Action Proxy Discriminability Diagnostic",
+  "experiment_type": "DIAGNOSTIC_ONLY_NO_BRANCH_GATE",
+  "training_executed": true,
+  "policy_modified": false,
+  "new_policy_scoring_executed": false,
+  "fold0_or_public_used": false,
+  "policy_oof_strict": true,
+  "end_to_end_selection_oof": false,
+  "k77_selected_exploratorily_on_folds_1_4": true,
+  "K": 77,
+  "features": 36,
+  "target": {
+    "positive": "BENEFICIAL_truth_recall_delta_gt_1e-12",
+    "negative": "NEUTRAL_OR_HARMFUL",
+    "positive_label": 1
+  },
+  "model": {
+    "class": "sklearn.ensemble.HistGradientBoostingClassifier",
+    "loss": "log_loss",
+    "hyperparameters": {
+      "loss": "log_loss",
+      "learning_rate": 0.05,
+      "max_iter": 200,
+      "max_depth": 5,
+      "max_leaf_nodes": 31,
+      "min_samples_leaf": 20,
+      "l2_regularization": 1.0,
+      "early_stopping": false,
+      "random_state": 20260827
+    },
+    "uniform_sample_influence": true,
+    "class_weight": null,
+    "sample_weight": null,
+    "outer_models_expected": 4,
+    "outer_models_trained": 4,
+    "inner_models_expected": 12,
+    "inner_models_trained": 12
+  },
+  "class_counts": {
+    "per_fold": {
+      "1": {
+        "total_actions": 201652,
+        "beneficial_actions": 205,
+        "non_beneficial_actions": 201447,
+        "beneficial_prevalence": 0.0010166028603733163
+      },
+      "2": {
+        "total_actions": 201660,
+        "beneficial_actions": 220,
+        "non_beneficial_actions": 201440,
+        "beneficial_prevalence": 0.0010909451552117426
+      },
+      "3": {
+        "total_actions": 201656,
+        "beneficial_actions": 236,
+        "non_beneficial_actions": 201420,
+        "beneficial_prevalence": 0.0011703098345697623
+      },
+      "4": {
+        "total_actions": 201676,
+        "beneficial_actions": 236,
+        "non_beneficial_actions": 201440,
+        "beneficial_prevalence": 0.0011701937761558142
+      }
+    },
+    "pooled": {
+      "total_actions": 806644,
+      "beneficial_actions": 897,
+      "non_beneficial_actions": 805747,
+      "beneficial_prevalence": 0.001112014717768929
+    }
+  },
+  "auc": {
+    "F1": 0.8142359298766111,
+    "F2": 0.8486435053975017,
+    "F3": 0.8421840104747816,
+    "F4": 0.8091343492111038,
+    "pooled_outer_oof": 0.8273434845649417,
+    "chance_reference": 0.5,
+    "orientation": "HIGHER_SCORE_MEANS_MORE_BENEFICIAL",
+    "directional_auc_reversal_used": false
+  },
+  "feature_importance": {
+    "status": "NOT_AVAILABLE_WITHOUT_NEW_UNPREREGISTERED_METHOD",
+    "method": null,
+    "ranking": [],
+    "limitation": "No canonical HGB feature-importance method was found, and HistGradientBoostingClassifier exposes no direct feature_importances_ attribute."
+  },
+  "p1_success_failure_proxy_distribution": {
+    "SUCCESS": {
+      "count": 866,
+      "min": 2.8444682608061476e-05,
+      "p10": 9.131562229862416e-05,
+      "p25": 0.00017295609623502168,
+      "median": 0.00035023271525521087,
+      "mean": 0.001123043319523893,
+      "p75": 0.0009814217010198233,
+      "p90": 0.0028008554454982274,
+      "max": 0.0190115217791882
+    },
+    "FAILURE": {
+      "count": 51442,
+      "min": 6.613727771240087e-06,
+      "p10": 8.556216776040564e-05,
+      "p25": 0.00016262259538820536,
+      "median": 0.0003718451373789825,
+      "mean": 0.001405976561119284,
+      "p75": 0.0009689418364887236,
+      "p90": 0.0029855927953343253,
+      "max": 0.19235548729690025
+    }
+  },
+  "prediction_outputs": {
+    "outer_held_out": "reports\\task1\\step2p4_proxy_predictions.jsonl",
+    "outer_rows": 806644,
+    "inner_held_out": "reports\\task1\\step2p4_proxy_inner_oof_predictions.jsonl",
+    "inner_rows": 2419932
+  },
+  "model_output_directory": "reports\\task1\\step2p4_proxy_models",
+  "standing_policy_comparator": {
+    "R": 357,
+    "D77_exact": -0.0007142857142857143,
+    "gain_sum": -4.0,
+    "S": 6,
+    "T": 63
+  },
+  "branch_gate": "NONE",
+  "preserved_status": {
+    "relative_ordering_hypothesis": "SUPPORTED",
+    "P3_sub_branch": "FORMALLY_CLOSED",
+    "deployable_BN_identification": "UNRESOLVED_PROXY_LEARNABILITY",
+    "pair_family": "STRONGLY_WEAKENED",
+    "pair_reweighting": "NOT_AUTHORIZED",
+    "B_vs_N_only": "NOT_AUTHORIZED",
+    "rank_feature_intervention": "NOT_JUSTIFIED",
+    "raw_pairwise_dispersion": "DEFERRED",
+    "HGB_predictive_capacity": "UNRESOLVED",
+    "HGB_API_objective_flexibility": "BLOCKED_BY_IMPLEMENTATION_FOR_PAIRWISE_MARGIN",
+    "feature_expansion": "NOT_JUSTIFIED",
+    "K77": "NOT_REJECTED",
+    "smaller_K": "DEFERRED",
+    "workflow_B": "NOT_ACTIVE"
+  },
+  "notes": [
+    "Gold-derived labels were used only to construct training targets and after held-out probabilities were frozen for AUC/descriptive reporting.",
+    "Pointwise diagnostic scores were not thresholded and did not modify P1 ranking, aggregation, thresholds, or policy metrics."
+  ],
+  "next_state": "STEP2_P4_COMPLETE_PENDING_PROFESSOR_REVIEW"
+}

@@ -1,0 +1,174 @@
+{
+  "status": "PASS",
+  "experiment": "STEP 2-P5 \u2014 P1-Proxy Percentile-Fusion Relative Reranking Intervention",
+  "experiment_type": "CONTROLLED_SINGLE_VARIABLE_INTERVENTION",
+  "training_executed": false,
+  "new_model_inference_executed": false,
+  "policy_modified": true,
+  "fold0_or_public_used": false,
+  "policy_oof_strict": true,
+  "end_to_end_selection_oof": false,
+  "k77_selected_exploratorily_on_folds_1_4": true,
+  "K": 77,
+  "beta": 0.05,
+  "artifacts": {
+    "outer_P1": "reports\\task1\\step2p1f_full_action_scores.jsonl",
+    "outer_P4": "reports\\task1\\step2p4_proxy_predictions.jsonl",
+    "inner_P1": "reports\\task1\\step2p5_p1_inner_full_action_scores.jsonl",
+    "inner_P4": "reports\\task1\\step2p4_proxy_inner_oof_predictions.jsonl",
+    "P5A_reproduction": "reports\\task1\\step2p5a_reproducibility_report.json"
+  },
+  "join_preflight": {
+    "inner": "PASS",
+    "outer": "PASS"
+  },
+  "fusion_contract": {
+    "P1_transform": "IDENTITY",
+    "proxy_transform": "WITHIN_QUERY_ZERO_BASED_AVERAGE_PERCENTILE",
+    "percentile_formula": "midrank0/(n-1)",
+    "beta": 0.05,
+    "formula": "P1_score + 0.05*proxy_percentile",
+    "proxy_ties": "AVERAGED",
+    "fused_score_ties": "CANONICAL_P1_TIE_BREAK"
+  },
+  "baseline": {
+    "R": 357,
+    "D77_exact": -0.0007142857142857143,
+    "gain_sum": -4.0,
+    "S": 6,
+    "T": 63
+  },
+  "P5": {
+    "R": 356,
+    "D77_exact": -0.0005654761904761906,
+    "gain_sum": -3.166666666666667,
+    "S": 6,
+    "T": 64
+  },
+  "delta": {
+    "R": -1,
+    "D77_exact": 0.00014880952380952371,
+    "gain_sum": 0.833333333333333
+  },
+  "per_fold": {
+    "1": {
+      "oracle_positive_query_count": 94,
+      "baseline_R": 81,
+      "P5_R": 81,
+      "delta_R": 0,
+      "D77_exact": 0.0009523809523809524,
+      "delta_D77_exact": 0.0,
+      "gain_sum": 1.3333333333333333
+    },
+    "2": {
+      "oracle_positive_query_count": 107,
+      "baseline_R": 79,
+      "P5_R": 79,
+      "delta_R": 0,
+      "D77_exact": 0.0,
+      "delta_D77_exact": 0.0,
+      "gain_sum": 0.0
+    },
+    "3": {
+      "oracle_positive_query_count": 110,
+      "baseline_R": 96,
+      "P5_R": 96,
+      "delta_R": 0,
+      "D77_exact": -0.0017857142857142857,
+      "delta_D77_exact": 0.0005952380952380955,
+      "gain_sum": -2.5
+    },
+    "4": {
+      "oracle_positive_query_count": 115,
+      "baseline_R": 101,
+      "P5_R": 100,
+      "delta_R": -1,
+      "D77_exact": -0.0014285714285714286,
+      "delta_D77_exact": 0.0,
+      "gain_sum": -2.0
+    }
+  },
+  "ranking_flips": {
+    "all_queries": {
+      "all_queries_total": 5600,
+      "top_action_unchanged": 5455,
+      "failure_to_failure": 356,
+      "top_action_changed": 145,
+      "success_to_success": 69,
+      "failure_to_success": 1
+    },
+    "oracle_positive": {
+      "failure_to_success": 1,
+      "success_to_failure": 0,
+      "failure_to_failure": 356,
+      "success_to_success": 69
+    },
+    "per_fold": {
+      "1": {
+        "failure_to_failure": 81,
+        "success_to_success": 13
+      },
+      "2": {
+        "success_to_success": 28,
+        "failure_to_failure": 79
+      },
+      "3": {
+        "failure_to_failure": 96,
+        "success_to_success": 14
+      },
+      "4": {
+        "failure_to_failure": 100,
+        "success_to_success": 14,
+        "failure_to_success": 1
+      }
+    }
+  },
+  "proxy_percentile_distribution": {
+    "FLIPPED": {
+      "count": 145,
+      "min": 0.6993006993006993,
+      "p25": 0.958041958041958,
+      "median": 0.986013986013986,
+      "p75": 1.0,
+      "max": 1.0
+    },
+    "UNFLIPPED": {
+      "count": 5455,
+      "min": 0.5379310344827586,
+      "p25": 0.965034965034965,
+      "median": 0.986013986013986,
+      "p75": 1.0,
+      "max": 1.0
+    },
+    "population_definition": "P5-selected top percentile for flipped queries; shared selected top percentile for unflipped queries"
+  },
+  "preregistered_criteria": {
+    "pooled_R_improves": true,
+    "D77_non_worsens": true,
+    "folds_non_worsened": 4,
+    "fold_robustness_met": true,
+    "overall_preregistered_validation": true
+  },
+  "branch_gate": "NONE",
+  "preserved_status": {
+    "P4_global_signal": "STRONG_DESCRIPTIVE_OOF_SIGNAL",
+    "P4Q_within_query_signal": "SUPPORTED_DESCRIPTIVELY",
+    "absolute_proxy_gate": "NOT_AUTHORIZED",
+    "proxy_only_ranking": "NOT_AUTHORIZED",
+    "P3": "CLOSED",
+    "pair_reweighting": "NOT_AUTHORIZED",
+    "B_vs_N_only": "NOT_AUTHORIZED",
+    "rank_feature_intervention": "NOT_JUSTIFIED",
+    "raw_pairwise_dispersion": "DEFERRED",
+    "feature_expansion": "NOT_JUSTIFIED",
+    "K77": "NOT_REJECTED",
+    "smaller_K": "DEFERRED",
+    "workflow_B": "NOT_ACTIVE"
+  },
+  "notes": [
+    "All fusion inputs were frozen artifacts; no model was loaded for prediction.",
+    "Inner truth was joined only after inner fused scores/ranks were frozen for canonical gain-sum threshold selection.",
+    "Outer truth was joined only after outer fusion/ranking were frozen."
+  ],
+  "next_state": "STEP2_P5_COMPLETE_PENDING_PROFESSOR_REVIEW"
+}

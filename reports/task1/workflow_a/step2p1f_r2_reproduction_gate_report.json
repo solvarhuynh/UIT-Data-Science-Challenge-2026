@@ -1,0 +1,66 @@
+{
+  "status": "PASS",
+  "experiment": "STEP 2-P1F-R2 \u2014 Canonical-Metric Resolution and Pairwise Failure Attribution",
+  "training_terminology": "DETERMINISTIC_FROZEN_MODEL_RECONSTRUCTION",
+  "phase": "DETERMINISTIC_FROZEN_MODEL_RECONSTRUCTION",
+  "scientific_new_training": false,
+  "mechanical_model_fit_executed": true,
+  "policy_oof_strict": true,
+  "end_to_end_selection_oof": false,
+  "k77_selected_exploratorily_on_folds_1_4": true,
+  "interpretation_scope": "PAIRWISE_POLICY_FAILURE_ATTRIBUTION_CONDITIONAL_ON_EXPLORATORY_FIXED_K77",
+  "primitive_gate": {
+    "thresholds_exact": true,
+    "top_scores_exact": true,
+    "executed_actions_exact": true,
+    "noop_exact": true,
+    "class_composition_exact": true
+  },
+  "decision_reproduction": {
+    "total": 5600,
+    "executed_match": 410,
+    "executed_expected": 410,
+    "noop_match": 5190,
+    "noop_expected": 5190
+  },
+  "class_counts": {
+    "NEUTRAL": 392,
+    "HARMFUL": 12,
+    "BENEFICIAL": 6
+  },
+  "canonical_gain_sum": -4.0,
+  "canonical_D77": -0.0007142857142857143,
+  "per_fold_gain_sum": {
+    "1": 1.3333333333333333,
+    "2": 0.0,
+    "3": -3.3333333333333335,
+    "4": -2.0
+  },
+  "per_fold_D77": {
+    "1": 0.0009523809523809524,
+    "2": 0.0,
+    "3": -0.002380952380952381,
+    "4": -0.0014285714285714286
+  },
+  "historical_float_crosscheck": {
+    "historical_D77": -0.0007142857142857784,
+    "canonical_D77": -0.0007142857142857143,
+    "absolute_difference": 6.407634839389331e-17
+  },
+  "top_score_reproduction": {
+    "score_rows_available": 5600,
+    "score_rows_matched": 5600,
+    "max_abs_error": 0.0,
+    "max_rel_error": 0.0
+  },
+  "models_persisted": [
+    "reports\\task1\\step2p1f_models\\outer_fold1.joblib",
+    "reports\\task1\\step2p1f_models\\outer_fold2.joblib",
+    "reports\\task1\\step2p1f_models\\outer_fold3.joblib",
+    "reports\\task1\\step2p1f_models\\outer_fold4.joblib"
+  ],
+  "reproduction_gate_pass": true,
+  "notes": [
+    "Authorized deterministic exact refit only; no new scientific training."
+  ]
+}

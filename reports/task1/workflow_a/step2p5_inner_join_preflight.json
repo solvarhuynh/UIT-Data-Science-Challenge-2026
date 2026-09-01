@@ -1,0 +1,26 @@
+{
+  "status": "PASS",
+  "P1_rows": 2419932,
+  "P4_rows": 2419932,
+  "joined_rows": 2419932,
+  "P1_duplicate_keys": 0,
+  "P4_duplicate_keys": 0,
+  "P1_unmatched_rows": 0,
+  "P4_unmatched_rows": 0,
+  "fold_mismatches": 0,
+  "one_to_one": true,
+  "fold0_or_public_used": false,
+  "pass": true,
+  "mismatch_examples": [],
+  "P1_inner_source": "reports/task1/step2p5_p1_inner_full_action_scores.jsonl",
+  "P4_inner_source": "reports/task1/step2p4_proxy_inner_oof_predictions.jsonl",
+  "join_keys": [
+    "outer_fold",
+    "inner_fold",
+    "query_id",
+    "incoming_doc_id",
+    "incoming_union_rank",
+    "drop_rank",
+    "dropped_doc_id"
+  ]
+}

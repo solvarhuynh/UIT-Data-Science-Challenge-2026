@@ -1,0 +1,207 @@
+{
+  "status": "PASS",
+  "step": "STEP 2-P5-A \u2014 P1 Inner Full-Action Score Artifact Completion",
+  "experiment_type": "ARTIFACT_COMPLETION_ONLY",
+  "scientific_intervention": false,
+  "P5_executed": false,
+  "policy_modified": false,
+  "fold0_or_public_used": false,
+  "policy_oof_strict": true,
+  "oof_violation": false,
+  "end_to_end_selection_oof": false,
+  "K": 77,
+  "model_recovery": {
+    "frozen_models_expected": 12,
+    "frozen_models_found": 12,
+    "frozen_model_primary_path_used": true,
+    "fallback_retraining_used": false,
+    "fallback_retraining_models": 0,
+    "canonical_model_directory": "reports/task1/step2p1c_models/inner_fold_models",
+    "models": [
+      {
+        "outer_fold": 1,
+        "inner_fold": 2,
+        "model_path": "reports/task1/step2p1c_models/inner_fold_models/outer_fold1/inner_valid_fold2.joblib",
+        "training_folds": [
+          3,
+          4
+        ],
+        "inner_held_out_fold": 2
+      },
+      {
+        "outer_fold": 1,
+        "inner_fold": 3,
+        "model_path": "reports/task1/step2p1c_models/inner_fold_models/outer_fold1/inner_valid_fold3.joblib",
+        "training_folds": [
+          2,
+          4
+        ],
+        "inner_held_out_fold": 3
+      },
+      {
+        "outer_fold": 1,
+        "inner_fold": 4,
+        "model_path": "reports/task1/step2p1c_models/inner_fold_models/outer_fold1/inner_valid_fold4.joblib",
+        "training_folds": [
+          2,
+          3
+        ],
+        "inner_held_out_fold": 4
+      },
+      {
+        "outer_fold": 2,
+        "inner_fold": 1,
+        "model_path": "reports/task1/step2p1c_models/inner_fold_models/outer_fold2/inner_valid_fold1.joblib",
+        "training_folds": [
+          3,
+          4
+        ],
+        "inner_held_out_fold": 1
+      },
+      {
+        "outer_fold": 2,
+        "inner_fold": 3,
+        "model_path": "reports/task1/step2p1c_models/inner_fold_models/outer_fold2/inner_valid_fold3.joblib",
+        "training_folds": [
+          1,
+          4
+        ],
+        "inner_held_out_fold": 3
+      },
+      {
+        "outer_fold": 2,
+        "inner_fold": 4,
+        "model_path": "reports/task1/step2p1c_models/inner_fold_models/outer_fold2/inner_valid_fold4.joblib",
+        "training_folds": [
+          1,
+          3
+        ],
+        "inner_held_out_fold": 4
+      },
+      {
+        "outer_fold": 3,
+        "inner_fold": 1,
+        "model_path": "reports/task1/step2p1c_models/inner_fold_models/outer_fold3/inner_valid_fold1.joblib",
+        "training_folds": [
+          2,
+          4
+        ],
+        "inner_held_out_fold": 1
+      },
+      {
+        "outer_fold": 3,
+        "inner_fold": 2,
+        "model_path": "reports/task1/step2p1c_models/inner_fold_models/outer_fold3/inner_valid_fold2.joblib",
+        "training_folds": [
+          1,
+          4
+        ],
+        "inner_held_out_fold": 2
+      },
+      {
+        "outer_fold": 3,
+        "inner_fold": 4,
+        "model_path": "reports/task1/step2p1c_models/inner_fold_models/outer_fold3/inner_valid_fold4.joblib",
+        "training_folds": [
+          1,
+          2
+        ],
+        "inner_held_out_fold": 4
+      },
+      {
+        "outer_fold": 4,
+        "inner_fold": 1,
+        "model_path": "reports/task1/step2p1c_models/inner_fold_models/outer_fold4/inner_valid_fold1.joblib",
+        "training_folds": [
+          2,
+          3
+        ],
+        "inner_held_out_fold": 1
+      },
+      {
+        "outer_fold": 4,
+        "inner_fold": 2,
+        "model_path": "reports/task1/step2p1c_models/inner_fold_models/outer_fold4/inner_valid_fold2.joblib",
+        "training_folds": [
+          1,
+          3
+        ],
+        "inner_held_out_fold": 2
+      },
+      {
+        "outer_fold": 4,
+        "inner_fold": 3,
+        "model_path": "reports/task1/step2p1c_models/inner_fold_models/outer_fold4/inner_valid_fold3.joblib",
+        "training_folds": [
+          1,
+          2
+        ],
+        "inner_held_out_fold": 3
+      }
+    ]
+  },
+  "score_contract": {
+    "features": 36,
+    "pair_input": "x(a)-x(b)",
+    "pair_probability": "P(a outranks b)",
+    "aggregation": "MEAN_PAIRWISE_WIN_PROBABILITY",
+    "tie_break": "CANONICAL_P1"
+  },
+  "reference_artifact": "reports/task1/step2p1c_inner_oof_top_scores.jsonl",
+  "reference_top_rows": 16800,
+  "output_artifact": "reports/task1/step2p5_p1_inner_full_action_scores.jsonl",
+  "reproduction_gate": {
+    "identity_tolerance": "EXACT",
+    "score_absolute_tolerance": 1e-09,
+    "queries_expected": 16800,
+    "queries_checked": 16800,
+    "identity_matches": 16800,
+    "identity_mismatches": 0,
+    "score_matches": 16800,
+    "score_mismatches": 0,
+    "max_abs_score_error": 0.0,
+    "all_queries_pass": true
+  },
+  "full_action_artifact": {
+    "rows": 2419932,
+    "queries": 16800,
+    "outer_folds": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "inner_models": 12,
+    "prediction_scope": "INNER_HELD_OUT",
+    "artifact_trusted": true
+  },
+  "P5_status": {
+    "fusion_hypothesis": "AUTHORIZED_BUT_NOT_RUN",
+    "artifact_realizability": "COMPLETED_AND_REPRODUCED",
+    "fusion_computed": false,
+    "threshold_selected": false,
+    "R_computed": false,
+    "D77_computed": false
+  },
+  "preserved_status": {
+    "P4_global_signal": "STRONG_DESCRIPTIVE_OOF_SIGNAL",
+    "P4Q_within_query_signal": "SUPPORTED_DESCRIPTIVELY",
+    "relative_proxy_reranking": "AUTHORIZED",
+    "absolute_proxy_gate": "NOT_AUTHORIZED",
+    "proxy_only_ranking": "NOT_AUTHORIZED",
+    "P3": "CLOSED",
+    "pair_reweighting": "NOT_AUTHORIZED",
+    "B_vs_N_only": "NOT_AUTHORIZED",
+    "rank_feature_intervention": "NOT_JUSTIFIED",
+    "raw_pairwise_dispersion": "DEFERRED",
+    "feature_expansion": "NOT_JUSTIFIED",
+    "K77": "NOT_REJECTED",
+    "smaller_K": "DEFERRED",
+    "workflow_B": "NOT_ACTIVE"
+  },
+  "mismatches": [],
+  "notes": [
+    "P5 fusion was not executed.",
+    "Frozen canonical P1C models were loaded for their own original inner-held-out splits only."
+  ]
+}

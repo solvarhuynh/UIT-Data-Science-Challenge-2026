@@ -1,0 +1,50 @@
+{
+  "status": "PASS",
+  "experiment": "STEP 2-P1F-R2 — Canonical-Metric Resolution and Pairwise Failure Attribution",
+  "phase": "METRIC_CONTRACT_RESOLUTION",
+  "historical_strict_gate": "RECONSTRUCTION_MISMATCH",
+  "mismatch_classification": "DERIVED_METRIC_FLOATING_POINT_CONTRACT_MISMATCH",
+  "true_model_reconstruction_mismatch": false,
+  "primitive_output_reproduction": {
+    "thresholds_exact": true,
+    "top_scores_exact_5600": true,
+    "max_abs_score_error": 0.0,
+    "max_rel_score_error": 0.0,
+    "executed_actions_exact_410": true,
+    "noop_exact_5190": true,
+    "class_composition_exact": true
+  },
+  "functional_model_equivalence": true,
+  "professor_resolution": "ACCEPTABLE_METRIC_CONTRACT_CORRECTION",
+  "canonical_metric": {
+    "definition": "SUM(per_query_recall_delta)/N",
+    "source_of_truth": "SERIALIZED_PER_QUERY_DECISIONS_AND_RECALL_DELTAS",
+    "macro_recall_subtraction_role": "NON_BINDING_DISPLAY_CROSSCHECK_ONLY"
+  },
+  "canonical_gain_sum": -4.0,
+  "canonical_D77_exact": -0.0007142857142857143,
+  "canonical_per_fold_gain_sum": {
+    "1": 1.3333333333333333,
+    "2": 0.0,
+    "3": -3.3333333333333335,
+    "4": -2.0
+  },
+  "canonical_per_fold_D": {
+    "1": 0.0009523809523809524,
+    "2": 0.0,
+    "3": -0.002380952380952381,
+    "4": -0.0014285714285714286
+  },
+  "historical_macro_subtraction_D": {
+    "pooled": -0.0007142857142857784,
+    "1": 0.0009523809523808158,
+    "2": 0.0,
+    "3": -0.0023809523809524835,
+    "4": -0.0014285714285713347
+  },
+  "rerun_scientifically_required": false,
+  "one_replay_for_persistence_authorized": true,
+  "notes": [
+    "Canonical D is computed from serialized per-query recall deltas; macro-recall subtraction is display-only and non-binding."
+  ]
+}

@@ -1,0 +1,204 @@
+{
+  "status": "PASS",
+  "task": "STEP 3-A — Confirmatory Holdout Data-Scope Audit",
+  "task_type": "READ_ONLY_AUDIT",
+  "models_run": false,
+  "training_executed": false,
+  "inference_executed": false,
+  "evaluation_executed": false,
+  "untouched_label_values_inspected": false,
+  "step2_status": "CLOSED",
+  "current_policy": "P5_PROVISIONAL_ONLY",
+  "step3_status_before_audit": "STEP3_REQUIRES_CONSTITUTION_DATA_SCOPE_AUDIT",
+  "research_constitution": {
+    "found": true,
+    "canonical_path": "docs/task1/workflow_A_new.md",
+    "document_title": "UDSC2026 Task1 LegalIR — Workflow A (Current)",
+    "relevant_sections": [
+      "Research constitution",
+      "STEP 2-P5 — P1-Proxy Percentile-Fusion Relative Reranking Intervention (2026-08-30)"
+    ],
+    "fold0_rule": "The standing rule says not to read, materialize, or use Fold0 labels/data, and not to run Fold0 evaluation, except where an approved prompt clearly requires it. It does not grant a general Step3 confirmatory authorization.",
+    "public_rule": "The standing rule says not to read or use public labels/gold; public inference is also prohibited unless an approved prompt clearly requires it. No general Step3 confirmatory authorization is stated.",
+    "research_folds_rule": "Only validation queries in folds [1, 2, 3, 4] may be used under the standing constitution.",
+    "training_rule": "Do not train, calibrate, or otherwise run an unapproved model workflow; the standing constitution is scoped to controlled research work on folds [1, 2, 3, 4].",
+    "confirmatory_rule": "No section explicitly authorizes any partition for independent confirmatory evaluation. A future approved prompt is a condition for exceptions, not present authorization in this audit.",
+    "ambiguities": [
+      "The Constitution does not define a reusable final-confirmatory role for Fold0 or public data. This audit therefore does not infer permanent prohibition or future permission; it records only that neither is presently explicitly authorized for Step3 execution."
+    ]
+  },
+  "partitions": [
+    {
+      "name": "LegalIR_train_parent",
+      "paths": ["data/raw/btc/LegalIR/train.json"],
+      "partition_type": "labeled Task1 source population; parent of strict CV folds 0-4",
+      "size": "7000 questions (aggregate metadata only)",
+      "labels_exist": true,
+      "usage_status": "USED_FOR_DEVELOPMENT",
+      "usage_evidence": [
+        "artifacts/task1/evaluation/strict_cv_v2/fold_stats.json: validation union equals all 7,000 train questions",
+        "docs/task1/workflow_A_new.md: Research constitution and all Step1/Step2 work use folds [1,2,3,4] from this source"
+      ],
+      "constitution_status": "NOT_AUTHORIZED_FOR_CONFIRMATORY_USE",
+      "constitution_evidence": [
+        "docs/task1/workflow_A_new.md, Research constitution: only validation queries folds [1,2,3,4] are permitted",
+        "The parent includes Fold0 as well as the development folds"
+      ],
+      "untouched": false,
+      "independent_confirmatory_eligible": false,
+      "reason": "It is the already-used source population containing every development fold and Fold0; it is not a disjoint holdout."
+    },
+    {
+      "name": "F1",
+      "paths": ["artifacts/task1/evaluation/strict_cv_v2/folds.json (fold=1 validation_ids)", "data/raw/btc/LegalIR/train.json"],
+      "partition_type": "strict-CV validation fold",
+      "size": "1400 validation questions (aggregate metadata only)",
+      "labels_exist": true,
+      "usage_status": "USED_FOR_DEVELOPMENT",
+      "usage_evidence": [
+        "reports/task1/progress_log.md: Step1/Step2/P4/P4-Q/P5 records repeatedly use F1-F4 for outer OOF, K77, proxy, beta, fusion, thresholds, and policy evaluation",
+        "docs/task1/workflow_A_new.md: Step2 and P5 results are based on F1-F4 exploratory OOF work"
+      ],
+      "constitution_status": "NOT_AUTHORIZED_FOR_CONFIRMATORY_USE",
+      "constitution_evidence": ["docs/task1/workflow_A_new.md, Research constitution: F1-F4 are the permitted research validation queries; no independent-confirmation authorization is stated"],
+      "untouched": false,
+      "independent_confirmatory_eligible": false,
+      "reason": "F1 was used in Step2 design and evaluation; the Step 3-A F1-F4 contract independently disqualifies it."
+    },
+    {
+      "name": "F2",
+      "paths": ["artifacts/task1/evaluation/strict_cv_v2/folds.json (fold=2 validation_ids)", "data/raw/btc/LegalIR/train.json"],
+      "partition_type": "strict-CV validation fold",
+      "size": "1400 validation questions (aggregate metadata only)",
+      "labels_exist": true,
+      "usage_status": "USED_FOR_DEVELOPMENT",
+      "usage_evidence": ["Same F1-F4 Step1/Step2/P4/P4-Q/P5 evidence in reports/task1/progress_log.md and docs/task1/workflow_A_new.md"],
+      "constitution_status": "NOT_AUTHORIZED_FOR_CONFIRMATORY_USE",
+      "constitution_evidence": ["docs/task1/workflow_A_new.md, Research constitution: no independent-confirmation authorization for a reused validation fold"],
+      "untouched": false,
+      "independent_confirmatory_eligible": false,
+      "reason": "F2 was used in Step2 development and is contractually non-independent."
+    },
+    {
+      "name": "F3",
+      "paths": ["artifacts/task1/evaluation/strict_cv_v2/folds.json (fold=3 validation_ids)", "data/raw/btc/LegalIR/train.json"],
+      "partition_type": "strict-CV validation fold",
+      "size": "1400 validation questions (aggregate metadata only)",
+      "labels_exist": true,
+      "usage_status": "USED_FOR_DEVELOPMENT",
+      "usage_evidence": ["Same F1-F4 Step1/Step2/P4/P4-Q/P5 evidence in reports/task1/progress_log.md and docs/task1/workflow_A_new.md"],
+      "constitution_status": "NOT_AUTHORIZED_FOR_CONFIRMATORY_USE",
+      "constitution_evidence": ["docs/task1/workflow_A_new.md, Research constitution: no independent-confirmation authorization for a reused validation fold"],
+      "untouched": false,
+      "independent_confirmatory_eligible": false,
+      "reason": "F3 was used in Step2 development and is contractually non-independent."
+    },
+    {
+      "name": "F4",
+      "paths": ["artifacts/task1/evaluation/strict_cv_v2/folds.json (fold=4 validation_ids)", "data/raw/btc/LegalIR/train.json"],
+      "partition_type": "strict-CV validation fold",
+      "size": "1400 validation questions (aggregate metadata only)",
+      "labels_exist": true,
+      "usage_status": "USED_FOR_DEVELOPMENT",
+      "usage_evidence": ["Same F1-F4 Step1/Step2/P4/P4-Q/P5 evidence in reports/task1/progress_log.md and docs/task1/workflow_A_new.md"],
+      "constitution_status": "NOT_AUTHORIZED_FOR_CONFIRMATORY_USE",
+      "constitution_evidence": ["docs/task1/workflow_A_new.md, Research constitution: no independent-confirmation authorization for a reused validation fold"],
+      "untouched": false,
+      "independent_confirmatory_eligible": false,
+      "reason": "F4 was used in Step2 development and is contractually non-independent."
+    },
+    {
+      "name": "Fold0",
+      "paths": ["artifacts/task1/evaluation/strict_cv_v2/folds.json (fold=0 validation_ids)", "data/raw/btc/LegalIR/train.json", "artifacts/task1/recovery_096/v3_residual/policy/fold0_evaluation.json", "artifacts/task1/recovery_096/v3_residual/policy/fold0_v3_policy_predictions.jsonl"],
+      "partition_type": "strict-CV validation fold originally reserved for historical independent evaluation",
+      "size": "1400 validation questions (aggregate metadata only)",
+      "labels_exist": true,
+      "usage_status": "USED_FOR_DEVELOPMENT",
+      "usage_evidence": [
+        "docs/task1/task1 lịch sử các thí nghiệm.md: Fold0 has historical V3A baseline/policy and oracle evaluation records",
+        "docs/task1/task1 lịch sử các thí nghiệm.md: Fold0 was held out from model selection but used for independent historical evaluation",
+        "reports/task1/progress_log.md: current Step1/Step2 work did not materialize Fold0, which does not erase prior use"
+      ],
+      "constitution_status": "CONDITIONALLY_AUTHORIZED",
+      "constitution_evidence": [
+        "docs/task1/workflow_A_new.md, Research constitution: Fold0 labels/data and Fold0 evaluation are forbidden unless an approved prompt clearly requires them",
+        "No general Step3 confirmatory permission appears in the Constitution"
+      ],
+      "untouched": false,
+      "independent_confirmatory_eligible": false,
+      "reason": "Fold0 exists and has labels, but historical independent/oracle evaluation already consumed it. A future exception would not restore independence."
+    },
+    {
+      "name": "public",
+      "paths": ["data/raw/btc/LegalIR/public-official.json", "artifacts/task1/recovery_096/final_public_v3/"],
+      "partition_type": "official Task1 public-test query population",
+      "size": "1000 queries (documented aggregate; no label file opened)",
+      "labels_exist": false,
+      "usage_status": "USED_ONLY_FOR_NON_DECISION_METADATA",
+      "usage_evidence": [
+        "docs/task1/task1 lịch sử các thí nghiệm.md: public final pipeline processed 1,000 queries without public labels",
+        "reports/task1/progress_log.md: Step1/Step2/P5 consistently record Fold0/public=false for label/data use",
+        "docs/task1/task1 cải thiện điểm.md: public results are leaderboard observations, not public-label evaluation"
+      ],
+      "constitution_status": "CONDITIONALLY_AUTHORIZED",
+      "constitution_evidence": [
+        "docs/task1/workflow_A_new.md, Research constitution: public labels/gold may not be read or used unless an approved prompt clearly requires it",
+        "No public-confirmatory exception is stated"
+      ],
+      "untouched": false,
+      "independent_confirmatory_eligible": false,
+      "reason": "Repository evidence identifies a label-free public query set that was used for final inference and leaderboard observation, not a labeled research holdout."
+    },
+    {
+      "name": "LegalIR_warmup",
+      "paths": ["data/task1/warmup.json"],
+      "partition_type": "Task1 warm-up/sample dataset",
+      "size": "SIZE_NOT_SAFELY_AUDITABLE_WITHOUT_LABEL_ACCESS",
+      "labels_exist": "unknown",
+      "usage_status": "UNKNOWN_USAGE_HISTORY",
+      "usage_evidence": ["Repository inventory finds the file; no authoritative Task1 Step1/Step2 record assigns it a research role."],
+      "constitution_status": "NOT_AUTHORIZED_FOR_CONFIRMATORY_USE",
+      "constitution_evidence": ["docs/task1/workflow_A_new.md, Research constitution: only validation queries folds [1,2,3,4] are permitted."],
+      "untouched": "unknown",
+      "independent_confirmatory_eligible": false,
+      "reason": "It is outside the expressly permitted F1-F4 research scope; no label contents or row count were accessed."
+    },
+    {
+      "name": "synthetic_qa_benchmark",
+      "paths": ["data/processed_v3/benchmarks/synthetic_qa.jsonl"],
+      "partition_type": "internal synthetic benchmark; not the official LegalIR test population",
+      "size": "100 questions (documented aggregate)",
+      "labels_exist": "unknown",
+      "usage_status": "USED_FOR_DEVELOPMENT",
+      "usage_evidence": ["README.md and data/README.md identify it as an internal synthetic benchmark for smoke/evaluation."],
+      "constitution_status": "NOT_AUTHORIZED_FOR_CONFIRMATORY_USE",
+      "constitution_evidence": ["docs/task1/workflow_A_new.md, Research constitution: only validation queries folds [1,2,3,4] are permitted for the standing Task1 research workflow."],
+      "untouched": false,
+      "independent_confirmatory_eligible": false,
+      "reason": "It is an internal development/smoke benchmark rather than an authorized official confirmatory population."
+    }
+  ],
+  "known_fold_assessment": {
+    "F1": {"exists": true, "labels_exist": true, "previously_used": true, "constitution_status": "NOT_AUTHORIZED_FOR_CONFIRMATORY_USE", "untouched": false, "step3_confirmatory_eligible": false},
+    "F2": {"exists": true, "labels_exist": true, "previously_used": true, "constitution_status": "NOT_AUTHORIZED_FOR_CONFIRMATORY_USE", "untouched": false, "step3_confirmatory_eligible": false},
+    "F3": {"exists": true, "labels_exist": true, "previously_used": true, "constitution_status": "NOT_AUTHORIZED_FOR_CONFIRMATORY_USE", "untouched": false, "step3_confirmatory_eligible": false},
+    "F4": {"exists": true, "labels_exist": true, "previously_used": true, "constitution_status": "NOT_AUTHORIZED_FOR_CONFIRMATORY_USE", "untouched": false, "step3_confirmatory_eligible": false},
+    "Fold0": {"exists": true, "labels_exist": true, "previously_used": true, "constitution_status": "CONDITIONALLY_AUTHORIZED", "untouched": false, "step3_confirmatory_eligible": false},
+    "public": {"exists": true, "labels_exist": false, "previously_used": true, "constitution_status": "CONDITIONALLY_AUTHORIZED", "untouched": false, "step3_confirmatory_eligible": false}
+  },
+  "f1_f4_reuse_confirmatory": false,
+  "posthoc_f1_f4_split_confirmatory": false,
+  "untouched_authorized_holdout_exists": "NO",
+  "eligible_holdouts": [],
+  "blocking_ambiguities": [
+    "The Constitution has no defined final-confirmatory role for Fold0/public; any future exception requires a fresh approved prompt and professor review.",
+    "LegalIR_warmup label availability and usage history were not safely established, but it is expressly outside the permitted F1-F4 scope."
+  ],
+  "step3_recommendation": "BLOCKED_NO_INDEPENDENT_AUTHORIZED_HOLDOUT",
+  "notes": [
+    "No model was loaded or run; no training, inference, scoring, threshold selection, or policy change occurred.",
+    "No Fold0, public, warm-up, synthetic, or other untouched-label values were opened. Only filenames, documented aggregate metadata, manifests, code/document references, and prior reports were audited.",
+    "F1-F4 remain non-confirmatory even though their folds were outer-held-out inside Step2: their reuse for K, proxy, beta, fusion, and policy decisions creates selection dependence.",
+    "A fresh professor review is required before any future Step3 action; this audit does not authorize Step3 execution."
+  ]
+}

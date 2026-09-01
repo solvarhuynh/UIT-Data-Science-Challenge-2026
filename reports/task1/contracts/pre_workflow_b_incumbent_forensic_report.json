@@ -1,0 +1,135 @@
+{
+  "status": "PASS",
+  "operation": "PRE_WORKFLOW_B_INCUMBENT_REGRESSION_FORENSIC_AUDIT",
+  "read_only": true,
+  "training_executed": false,
+  "workflow_b_started": false,
+  "public_labels_used": false,
+  "fold0_labels_loaded": false,
+  "incumbent": {
+    "public_score_external_fact": 0.9391,
+    "artifact": "artifacts/task1/submission.zip",
+    "zip_sha256": "4f860cb42a5ee681894cbd96b98a27bd2ad564100f8d90d058b23826fcee5a1a",
+    "submission_json_sha256": "d00d5612efa9ee354a9629a399f967b1319c4decdf121c090d03e8a90e396a56",
+    "zip_members": [
+      "submission.json"
+    ],
+    "semantic_match_to_public_v3a_predictions": true
+  },
+  "all_noop_baseline": {
+    "public_score_external_fact": 0.9309,
+    "artifact": "artifacts/task1/submission_p5_all_noop/submission.zip",
+    "zip_sha256": "b44f2d2683a6ba5bd0a8d9b211f80ba76ef3f08245c391544db030a1531bb09c",
+    "submission_json_sha256": "f1462cb1280ef942f0ceee1dcaf9e384bd90c8de976342ae41484a7b1b77c00f",
+    "zip_members": [
+      "submission.json"
+    ],
+    "baseline_anchor": "artifacts/task1/recovery_096/public_anchor_093/submission_093.zip"
+  },
+  "delta": {
+    "query_count": 1000,
+    "identical_queries": 672,
+    "different_queries": 328,
+    "one_swap_queries": 328,
+    "rank4_changes": 110,
+    "rank5_changes": 218,
+    "top1_top2_top3_changes": 0,
+    "delta_artifact": "reports/task1/pre_workflow_b_incumbent_delta.jsonl"
+  },
+  "swap_trace": {
+    "generator": "V3A public residual policy",
+    "exactly_traced": 328,
+    "traced_to_other_pipeline": 0,
+    "unresolved": 0,
+    "v3a_report_counts_match": true,
+    "policy_scores_persisted": false
+  },
+  "incumbent_lineage": {
+    "baseline_public_top5": "artifacts/task1/recovery_096/public_anchor_093/submission_093.zip",
+    "candidate_generation": {
+      "artifact": "artifacts/task1/recovery_096/final_public_v3/public_candidate_union.jsonl",
+      "candidate_contract": "four-source RRF union, cap 200; shortlist union_rank <=20 plus baseline top5, max 25 docs",
+      "shortlist_report": "artifacts/task1/recovery_096/final_public_v3/public_shortlist_report.json"
+    },
+    "features": {
+      "count": 58,
+      "schema_sha256": "45b0e1c86eb575dac305404b77bf627f48f66e16f28fd0f97388ec5ad053fc1f",
+      "artifact": "artifacts/task1/recovery_096/final_public_v3/public_frozen_features.jsonl"
+    },
+    "model_family": "HistGradientBoostingClassifier",
+    "model_sha256": "74633f3677df0ad04273f04ca816c2e64f89576f651b7892e4f9cff3c5324f1e",
+    "model_config_sha256": "13c54888d375e1417cee45343a8bdb3b2ae001f41d318eff143814c3dadb7c10",
+    "training_population": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "training_query_count": 7000,
+    "threshold": 0.0,
+    "harm_weight": 1.5,
+    "action_rule": "select utility >= threshold; replace exactly one baseline rank 4 or 5 document; ranks 1-3 protected",
+    "training_script": "scripts/beam/task1_v3_residual/train_residual_policy.py::final_fit_model",
+    "inference_script": "scripts/beam/task1_v3_residual/train_residual_policy.py::apply_public_model",
+    "prediction_artifact": "artifacts/task1/recovery_096/final_public_v3/public_v3a_predictions.json"
+  },
+  "training_provenance": {
+    "INCUMBENT_TRAINING_PROVENANCE": "F1_F4_PLUS_FOLD0",
+    "fold0_involved_historically": true,
+    "evidence": "v3a_final_fit_manifest.production_final_fit.training_folds is [0,1,2,3,4]",
+    "public_labels_used": false,
+    "public_label_evidence": "public_v3a_policy_report.no_public_labels_used=true; manifest.no_public_training=true"
+  },
+  "workflow_a_transition": {
+    "0_9309_intentionally_scientific_baseline_reference": true,
+    "0_9391_registered_as_deployment_incumbent": false,
+    "incumbent_preservation_gate_present": false,
+    "loss_point": "The all-NO_OP deployment contract reused the pre-V3A public_anchor_093 baseline because threshold=Infinity, while Workflow-A comparisons were scoped to the F1-F4 scientific baseline and did not require comparison to artifacts/task1/submission.zip.",
+    "transition_evidence": [
+      "reports/task1/public_p5_submission_preflight.json identifies historical public deployment as V3A rather than P5",
+      "artifacts/task1/submission_p5_all_noop/submission_manifest.json records public_anchor_093/submission_093.zip as the all-NO_OP baseline source",
+      "reports/task1/progress_log.md records the all-NO_OP submission without an incumbent hash/diff gate"
+    ],
+    "root_cause": [
+      "production-threshold collapse to all-NO_OP",
+      "wrong deployment incumbent reference",
+      "artifact/provenance separation between V3A and Workflow A"
+    ],
+    "all_noop_technically_correct_under_frozen_p5_contract": true,
+    "all_noop_operationally_correct_as_incumbent_replacement": false
+  },
+  "scoring_contract": {
+    "repository_scoring_program": "TOP5_SET_RECALL_COMPATIBLE",
+    "repository_local_evaluator": "TOP5_SET_RECALL_COMPATIBLE",
+    "historical_evaluator": "TOP5_SET_RECALL_COMPATIBLE",
+    "reported_external_MRR_Recall3_wording": "NOT_LOCALLY_PROVEN",
+    "leaderboard_delta": "compatible with top5-set recall and also with untruncated MRR; not compatible with Recall@3 alone",
+    "active_score_contract": "UNRESOLVED"
+  },
+  "scientific_reference": "Workflow-A F1-F4 frozen scientific baseline and its documented P5 OOF comparator; it is not a public deployment incumbent.",
+  "deployment_incumbent": {
+    "score_external_fact": 0.9391,
+    "artifact": "artifacts/task1/submission.zip",
+    "submission_json_sha256": "d00d5612efa9ee354a9629a399f967b1319c4decdf121c090d03e8a90e396a56"
+  },
+  "required_gates_before_workflow_b": [
+    "INCUMBENT_ARTIFACT_HASH_LOCK",
+    "INCUMBENT_PROVENANCE_LOCK",
+    "LOCAL_SCIENTIFIC_COMPARATOR",
+    "DEPLOYMENT_REGRESSION_GATE",
+    "SUBMISSION_DIFF_REPORT",
+    "SCORING_CONTRACT_GATE",
+    "NO_PUBLIC_TUNING_RULE"
+  ],
+  "evidence_sha256": {
+    "artifacts/task1/submission.zip": "4f860cb42a5ee681894cbd96b98a27bd2ad564100f8d90d058b23826fcee5a1a",
+    "artifacts/task1/submission_p5_all_noop/submission.zip": "b44f2d2683a6ba5bd0a8d9b211f80ba76ef3f08245c391544db030a1531bb09c",
+    "artifacts/task1/recovery_096/final_public_v3/public_v3a_predictions.json": "a6b2791c7c2e15ac1d6426f4422535638015f5169761aaa80e5198d4ef304097",
+    "artifacts/task1/recovery_096/final_public_v3/public_v3a_policy_report.json": "ca3f9c258bfb37048d5e23cb8c96ae08590e8d40fd898adb74234d5f9e887658",
+    "artifacts/task1/recovery_096/final_public_v3/public_frozen_features.jsonl": "cc6c0357a979172faf10135962e7e056fdc82256be361eb92304a2d54e52085e",
+    "artifacts/task1/recovery_096/final_public_v3/public_candidate_union.jsonl": "c23605b28d634cc4e0df6cc313eabcf4a6a9122a036e652691666570b54559ce",
+    "artifacts/task1/recovery_096/v3_residual/policy/v3a_final_fit_manifest.json": "13c54888d375e1417cee45343a8bdb3b2ae001f41d318eff143814c3dadb7c10",
+    "artifacts/task1/recovery_096/v3_residual/policy/v3a_final_fit.joblib": "74633f3677df0ad04273f04ca816c2e64f89576f651b7892e4f9cff3c5324f1e"
+  }
+}

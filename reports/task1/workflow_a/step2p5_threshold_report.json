@@ -1,0 +1,83 @@
+{
+  "status": "PASS",
+  "experiment": "STEP 2-P5 \u2014 P1-Proxy Percentile-Fusion Relative Reranking Intervention",
+  "all_thresholds_selected_from_inner_oof_only": true,
+  "folds": {
+    "1": {
+      "outer_fold": 1,
+      "inner_folds_used": [
+        2,
+        3,
+        4
+      ],
+      "number_inner_queries": 4200,
+      "number_inner_actions": 604992,
+      "P1_inner_source": "reports/task1/step2p5_p1_inner_full_action_scores.jsonl",
+      "P4_inner_source": "reports/task1/step2p4_proxy_inner_oof_predictions.jsonl",
+      "beta": 0.05,
+      "normalization": "WITHIN_QUERY_ZERO_BASED_AVERAGE_PERCENTILE",
+      "selected_threshold": 0.9328164657287834,
+      "gain_sum_at_selected_threshold": 0.3333333333333333,
+      "threshold_candidate_count": 4193,
+      "threshold_tie_rule": "max(gain_sum, precision_delta, threshold)",
+      "outer_truth_used": false
+    },
+    "2": {
+      "outer_fold": 2,
+      "inner_folds_used": [
+        1,
+        3,
+        4
+      ],
+      "number_inner_queries": 4200,
+      "number_inner_actions": 604984,
+      "P1_inner_source": "reports/task1/step2p5_p1_inner_full_action_scores.jsonl",
+      "P4_inner_source": "reports/task1/step2p4_proxy_inner_oof_predictions.jsonl",
+      "beta": 0.05,
+      "normalization": "WITHIN_QUERY_ZERO_BASED_AVERAGE_PERCENTILE",
+      "selected_threshold": 0.9642618699265268,
+      "gain_sum_at_selected_threshold": 0.3333333333333333,
+      "threshold_candidate_count": 4192,
+      "threshold_tie_rule": "max(gain_sum, precision_delta, threshold)",
+      "outer_truth_used": false
+    },
+    "3": {
+      "outer_fold": 3,
+      "inner_folds_used": [
+        1,
+        2,
+        4
+      ],
+      "number_inner_queries": 4200,
+      "number_inner_actions": 604988,
+      "P1_inner_source": "reports/task1/step2p5_p1_inner_full_action_scores.jsonl",
+      "P4_inner_source": "reports/task1/step2p4_proxy_inner_oof_predictions.jsonl",
+      "beta": 0.05,
+      "normalization": "WITHIN_QUERY_ZERO_BASED_AVERAGE_PERCENTILE",
+      "selected_threshold": 0.9526424545067849,
+      "gain_sum_at_selected_threshold": 0.8333333333333333,
+      "threshold_candidate_count": 4192,
+      "threshold_tie_rule": "max(gain_sum, precision_delta, threshold)",
+      "outer_truth_used": false
+    },
+    "4": {
+      "outer_fold": 4,
+      "inner_folds_used": [
+        1,
+        2,
+        3
+      ],
+      "number_inner_queries": 4200,
+      "number_inner_actions": 604968,
+      "P1_inner_source": "reports/task1/step2p5_p1_inner_full_action_scores.jsonl",
+      "P4_inner_source": "reports/task1/step2p4_proxy_inner_oof_predictions.jsonl",
+      "beta": 0.05,
+      "normalization": "WITHIN_QUERY_ZERO_BASED_AVERAGE_PERCENTILE",
+      "selected_threshold": 0.956119271783385,
+      "gain_sum_at_selected_threshold": 1.3333333333333333,
+      "threshold_candidate_count": 4192,
+      "threshold_tie_rule": "max(gain_sum, precision_delta, threshold)",
+      "outer_truth_used": false
+    }
+  }
+}

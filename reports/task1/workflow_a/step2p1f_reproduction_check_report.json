@@ -1,0 +1,72 @@
+{
+  "status": "BLOCKED_NO_PERSISTED_P1_MODELS_FOR_AUTHORIZED_FORWARD_SCORING",
+  "technical_status": "BLOCKED",
+  "scientific_status": "DIAGNOSTIC_ONLY_NO_BRANCH_GATE",
+  "experiment": "STEP 2-P1F — Pairwise Policy Failure Attribution and Full-Action Reconstruction",
+  "date": "2026-08-27",
+  "canonical_p1_preconditions": {
+    "verified": true,
+    "status": "PASS",
+    "scientific_status": "DIAGNOSTIC_ONLY",
+    "policy_oof_strict": true,
+    "end_to_end_selection_oof": false,
+    "fixed_K": 77,
+    "feature_count": 36,
+    "query_count": 5600,
+    "queries_execute": 410,
+    "queries_no_op": 5190,
+    "executed_beneficial": 6,
+    "executed_neutral": 392,
+    "executed_harmful": 12,
+    "D77_pairwise": -0.0007142857142857784,
+    "C77": 0.058785714285714274,
+    "pair_family_counts": {
+      "B_vs_N": 125576,
+      "B_vs_H": 1625,
+      "N_vs_H": 1539444,
+      "unordered_total": 1666645
+    }
+  },
+  "model_persistence_audit": {
+    "persisted_exact_P1_model_objects_found": false,
+    "checked_artifacts": [
+      "reports/task1/step2p1_model_contract.json",
+      "reports/task1/step2p1_realizability_report.json",
+      "reports/task1/step2p1_oof_policy_decisions.jsonl"
+    ],
+    "implementation": "scripts/analysis/step2p1_controlled_pairwise_policy.py",
+    "evidence": "The implementation constructs HistGradientBoostingClassifier objects inside fit(), uses them for the inner/outer scoring loop, then serializes decisions and reports only. It contains no joblib/pickle/model dump or persisted-model output path. Repository artifact discovery found only the P1 contract, report, decisions JSONL, and source implementation."
+  },
+  "authorization_decision": {
+    "exact_forward_scoring_possible_without_refit": false,
+    "deterministic_refit_permitted": false,
+    "reason": "The task explicitly prohibits silently refitting when frozen P1 model objects were not persisted. No existing direction or implementation persists or otherwise exposes the trained frozen model objects."
+  },
+  "reproduction_gate": {
+    "status": "NOT_RUN",
+    "pass": false,
+    "expected_decisions": 5600,
+    "expected_executed": 410,
+    "expected_no_op": 5190,
+    "expected_D77": -0.0007142857142857784,
+    "reason_not_run": "Authorized exact forward scoring cannot be performed without persisted frozen P1 models."
+  },
+  "outputs_not_created": [
+    "reports/task1/step2p1f_full_action_scores.jsonl",
+    "reports/task1/step2p1f_failure_attribution_report.json",
+    "reports/task1/step2p1f_pairfamily_correlation_report.json"
+  ],
+  "constraints_preserved": {
+    "model_refit": false,
+    "objective_changed": false,
+    "pair_construction_changed": false,
+    "pair_weighting_changed": false,
+    "features_changed": false,
+    "K_changed": false,
+    "threshold_retuned": false,
+    "fold0_touched": false,
+    "public_labels_used": false,
+    "workflow_B_activated": false
+  },
+  "next_state": "STEP2_P1F_BLOCKED_PENDING_PROFESSOR_REVIEW"
+}

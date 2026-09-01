@@ -1,0 +1,18 @@
+﻿{
+    "working_directory":  "D:\\udsc2026",
+    "executable":  "D:\\udsc2026\\.venv\\Scripts\\python.exe",
+    "arguments":  [
+                      "-u",
+                      "D:\\udsc2026\\scripts\\analysis\\workflow_b_b1_execute_recovered.py"
+                  ],
+    "command_line":  "\"D:\\udsc2026\\.venv\\Scripts\\python.exe\" -u \"D:\\udsc2026\\scripts\\analysis\\workflow_b_b1_execute_recovered.py\"",
+    "environment":  {
+                        "NUMEXPR_NUM_THREADS":  null,
+                        "MKL_NUM_THREADS":  null,
+                        "OPENBLAS_NUM_THREADS":  null,
+                        "OMP_NUM_THREADS":  null,
+                        "OMP_THREAD_LIMIT":  null
+                    },
+    "script_sha256":  "A2100E0F951261E269DC3B7EBE413071E3A9DD1EEB8F90E3D69F4AA612CFFD0B",
+    "wrapper_timeout":  "NONE"
+}

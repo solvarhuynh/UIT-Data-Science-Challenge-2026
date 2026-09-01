@@ -1,0 +1,37 @@
+{
+  "status": "PASS",
+  "operation": "DEPLOYMENT_OF_FROZEN_EXPLORATORY_POLICY",
+  "training_scope": ["F1", "F2", "F3", "F4"],
+  "fold0_used": false,
+  "public_labels_used": false,
+  "K": 77,
+  "canonical_contracts": {
+    "P1": {
+      "contract_source": "reports/task1/step2p1_model_contract.json",
+      "feature_contract_source": "reports/task1/step2_k77_model_contract_v2.json",
+      "implementation_source": "scripts/analysis/step2p1_controlled_pairwise_policy.py",
+      "feature_count": 36,
+      "estimator": "sklearn.ensemble.HistGradientBoostingClassifier",
+      "random_seed": 20260827,
+      "pair_construction": "all unordered cross-class action pairs within each query, deterministic (incoming_union_rank, incoming_doc_id, drop_rank) ordering, x(high)-x(low) with y=1 plus exact negated mirror with y=0, BENEFICIAL>NEUTRAL>HARMFUL, uniform weight 1.0",
+      "action_semantics": "K77 incoming candidate action space with drop ranks 4/5 and canonical frozen 36 features"
+    },
+    "P4": {
+      "contract_source": "reports/task1/step2p4_discriminability_report.json",
+      "feature_contract_source": "reports/task1/step2p1_model_contract.json",
+      "implementation_source": "scripts/analysis/step2p4_proxy_discriminability_diagnostic.py",
+      "feature_count": 36,
+      "estimator": "sklearn.ensemble.HistGradientBoostingClassifier",
+      "random_seed": 20260827,
+      "target": "BENEFICIAL_truth_recall_delta_gt_1e-12 vs NEUTRAL_OR_HARMFUL",
+      "class_weighting": "NONE",
+      "resampling": "NONE",
+      "action_semantics": "K77 incoming candidate action space with drop ranks 4/5 and canonical frozen 36 features"
+    }
+  },
+  "unresolved_fields": [],
+  "training_executed": false,
+  "public_inference_executed": false,
+  "threshold_selection_executed": false,
+  "submission_generated": false
+}

@@ -1,0 +1,14 @@
+﻿{
+    "status":  "PASS",
+    "child_pid":  27168,
+    "exit_code":  null,
+    "process_start":  "2026-08-31T22:29:41.1428070+07:00",
+    "process_end":  "2026-08-31T22:30:58.8179076+07:00",
+    "elapsed_seconds":  77.6751006,
+    "command":  "\"D:\\udsc2026\\.venv\\Scripts\\python.exe\" -u \"D:\\udsc2026\\scripts\\analysis\\workflow_b_b1_execute_recovered.py\"",
+    "known_orchestration_timeout_seconds":  "UNKNOWN",
+    "wrapper_timeout":  "NONE",
+    "stdout":  "D:\\udsc2026\\reports\\task1\\workflow_b_b1_runtime_diag\\stdout.log",
+    "stderr":  "D:\\udsc2026\\reports\\task1\\workflow_b_b1_runtime_diag\\stderr.log",
+    "telemetry":  "D:\\udsc2026\\reports\\task1\\workflow_b_b1_runtime_diag\\telemetry.csv"
+}

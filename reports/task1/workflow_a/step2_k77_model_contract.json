@@ -1,0 +1,307 @@
+{
+  "status": "FROZEN_PRE_TRAIN",
+  "model_family": "sklearn.ensemble.HistGradientBoostingClassifier",
+  "hyperparameters": {
+    "loss": "log_loss",
+    "learning_rate": 0.05,
+    "max_iter": 200,
+    "max_depth": 5,
+    "max_leaf_nodes": 31,
+    "min_samples_leaf": 20,
+    "l2_regularization": 1.0,
+    "early_stopping": false,
+    "random_state": 20260827
+  },
+  "random_seed": 20260827,
+  "fixed_K": 77,
+  "drop_ranks": [
+    4,
+    5
+  ],
+  "feature_resolution_rule": "Ordered intersection of historical V3A action features, K77 precomputed candidate/baseline/query metadata availability, and non-gold inference-safe features; unavailable neural/reranker features are excluded.",
+  "feature_columns": [
+    "incoming_union_rank",
+    "incoming_reciprocal_union_rank",
+    "incoming_source_support",
+    "incoming_min_source_rank",
+    "incoming_has_bge_support",
+    "incoming_bm25_rank",
+    "incoming_adaptive_k500_rank",
+    "incoming_knn_char_rank",
+    "incoming_knn_word_rank",
+    "incoming_bm25_missing",
+    "incoming_adaptive_k500_missing",
+    "incoming_knn_char_missing",
+    "incoming_knn_word_missing",
+    "incoming_question_token_length",
+    "incoming_question_char_length",
+    "incoming_baseline_rank",
+    "incoming_is_baseline_top5",
+    "dropped_union_rank",
+    "dropped_reciprocal_union_rank",
+    "dropped_source_support",
+    "dropped_min_source_rank",
+    "dropped_has_bge_support",
+    "dropped_bm25_rank",
+    "dropped_adaptive_k500_rank",
+    "dropped_knn_char_rank",
+    "dropped_knn_word_rank",
+    "dropped_bm25_missing",
+    "dropped_adaptive_k500_missing",
+    "dropped_knn_char_missing",
+    "dropped_knn_word_missing",
+    "dropped_question_token_length",
+    "dropped_question_char_length",
+    "dropped_baseline_rank",
+    "dropped_is_baseline_top5",
+    "diff_union_rank",
+    "diff_source_support",
+    "dropped_baseline_rank",
+    "incoming_is_baseline_top5"
+  ],
+  "feature_audit": [
+    {
+      "feature_name": "neural_max",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": false,
+      "gold_derived": false,
+      "allowed": false
+    },
+    {
+      "feature_name": "neural_second",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": false,
+      "gold_derived": false,
+      "allowed": false
+    },
+    {
+      "feature_name": "neural_mean",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": false,
+      "gold_derived": false,
+      "allowed": false
+    },
+    {
+      "feature_name": "neural_min",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": false,
+      "gold_derived": false,
+      "allowed": false
+    },
+    {
+      "feature_name": "neural_std",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": false,
+      "gold_derived": false,
+      "allowed": false
+    },
+    {
+      "feature_name": "neural_max_minus_mean",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": false,
+      "gold_derived": false,
+      "allowed": false
+    },
+    {
+      "feature_name": "neural_top2_mean",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": false,
+      "gold_derived": false,
+      "allowed": false
+    },
+    {
+      "feature_name": "bm25_max",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": false,
+      "gold_derived": false,
+      "allowed": false
+    },
+    {
+      "feature_name": "bm25_mean",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": false,
+      "gold_derived": false,
+      "allowed": false
+    },
+    {
+      "feature_name": "union_rank",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": true,
+      "gold_derived": false,
+      "allowed": true
+    },
+    {
+      "feature_name": "reciprocal_union_rank",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": true,
+      "gold_derived": false,
+      "allowed": true
+    },
+    {
+      "feature_name": "source_support",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": true,
+      "gold_derived": false,
+      "allowed": true
+    },
+    {
+      "feature_name": "min_source_rank",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": true,
+      "gold_derived": false,
+      "allowed": true
+    },
+    {
+      "feature_name": "has_bge_support",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": true,
+      "gold_derived": false,
+      "allowed": true
+    },
+    {
+      "feature_name": "bm25_rank",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": true,
+      "gold_derived": false,
+      "allowed": true
+    },
+    {
+      "feature_name": "adaptive_k500_rank",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": true,
+      "gold_derived": false,
+      "allowed": true
+    },
+    {
+      "feature_name": "knn_char_rank",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": true,
+      "gold_derived": false,
+      "allowed": true
+    },
+    {
+      "feature_name": "knn_word_rank",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": true,
+      "gold_derived": false,
+      "allowed": true
+    },
+    {
+      "feature_name": "bm25_missing",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": true,
+      "gold_derived": false,
+      "allowed": true
+    },
+    {
+      "feature_name": "adaptive_k500_missing",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": true,
+      "gold_derived": false,
+      "allowed": true
+    },
+    {
+      "feature_name": "knn_char_missing",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": true,
+      "gold_derived": false,
+      "allowed": true
+    },
+    {
+      "feature_name": "knn_word_missing",
+      "source": "candidate_refs_full/source_ranks",
+      "dtype": "float32",
+      "inference_available": true,
+      "gold_derived": false,
+      "allowed": true
+    },
+    {
+      "feature_name": "question_token_length",
+      "source": "target train question/baseline metadata",
+      "dtype": "float32",
+      "inference_available": true,
+      "gold_derived": false,
+      "allowed": true
+    },
+    {
+      "feature_name": "question_char_length",
+      "source": "target train question/baseline metadata",
+      "dtype": "float32",
+      "inference_available": true,
+      "gold_derived": false,
+      "allowed": true
+    },
+    {
+      "feature_name": "baseline_rank",
+      "source": "target train question/baseline metadata",
+      "dtype": "float32",
+      "inference_available": true,
+      "gold_derived": false,
+      "allowed": true
+    },
+    {
+      "feature_name": "is_baseline_top5",
+      "source": "target train question/baseline metadata",
+      "dtype": "float32",
+      "inference_available": true,
+      "gold_derived": false,
+      "allowed": true
+    }
+  ],
+  "label_classes": [
+    "BENEFICIAL",
+    "NEUTRAL",
+    "HARMFUL"
+  ],
+  "sample_weight_formula": "N/(3*n_class)",
+  "policy_score": "P(BENEFICIAL)-P(HARMFUL)",
+  "tie_break": "drop_rank5_then_lower_union_rank_then_lexicographic_doc_id",
+  "outer_oof_protocol": {
+    "held_out_folds": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "train_is_complement": true
+  },
+  "inner_threshold_protocol": {
+    "rotations": 3,
+    "candidates": "+infinity plus all unique finite inner-OOF best-action policy scores",
+    "objective": "macro_recall_gain",
+    "tie_break": [
+      "larger_macro_precision",
+      "larger_tau",
+      "deterministic_numeric_order"
+    ]
+  },
+  "primary_metric": "macro_recall",
+  "scientific_gate": {
+    "pooled_D_gt_0": true,
+    "each_fold_D_ge_0": true
+  },
+  "precision_guardrail": "precision_delta >= -0.5 * D77",
+  "fold0_allowed": false,
+  "public_labels_allowed": false
+}

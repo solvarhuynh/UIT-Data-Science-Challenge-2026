@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "model_id": "Qwen/Qwen3-Reranker-0.6B",
+  "model_revision_sha": "e61197ed45024b0ed8a2d74b80b4d909f1255473",
+  "license": "Apache-2.0",
+  "model_type": "text reranking / Qwen3ForCausalLM",
+  "parameter_count": "0.6B",
+  "declared_languages": "100+",
+  "declared_max_context_length": 32768,
+  "transformers_requirement": ">=4.51.0",
+  "inference_implementation": "Transformers or vLLM; yes/no token logit scoring",
+  "local_snapshot": "models/reranker",
+  "local_snapshot_files_hashed": true,
+  "training_data_overlap_classification": "NO_KNOWN_DIRECT_OVERLAP_TRAINING_CORPUS_NOT_FULLY_DISCLOSED",
+  "direct_task1_overlap_evidence": false,
+  "rules_status": "repository contract permits pretrained external model; no direct overlap evidence found",
+  "source_notes": [
+    "Local README/model card states 100+ languages, 0.6B, 32K context, Apache-2.0.",
+    "Training/evaluation corpus is not fully disclosed; absence of direct Task1 overlap cannot be proven."
+  ]
+}

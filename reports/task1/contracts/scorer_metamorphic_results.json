@@ -1,0 +1,526 @@
+{
+  "schema_version": "task1-scorer-metamorphic-v1",
+  "synthetic_only": true,
+  "variants": {
+    "A_rank4_changed_only": {
+      "gold": [
+        "R"
+      ],
+      "control_ranking": [
+        "A",
+        "B",
+        "C",
+        "R",
+        "E"
+      ],
+      "candidate_ranking": [
+        "A",
+        "B",
+        "C",
+        "X",
+        "E"
+      ],
+      "control": {
+        "analytic": {
+          "mrr": 0.25,
+          "recall_at_3": 0.0,
+          "top5_set_recall": 1.0
+        },
+        "docs_scoring_py": {
+          "precision": 0.2,
+          "recall": 1.0
+        },
+        "legal_ir_py": {
+          "recall": 1.0,
+          "precision": 0.2
+        },
+        "historical_recovery": {
+          "recall": 1.0,
+          "precision": 0.2
+        }
+      },
+      "candidate": {
+        "analytic": {
+          "mrr": 0.0,
+          "recall_at_3": 0.0,
+          "top5_set_recall": 0.0
+        },
+        "docs_scoring_py": {
+          "precision": 0.0,
+          "recall": 0.0
+        },
+        "legal_ir_py": {
+          "recall": 0.0,
+          "precision": 0.0
+        },
+        "historical_recovery": {
+          "recall": 0.0,
+          "precision": 0.0
+        }
+      }
+    },
+    "B_rank5_changed_only": {
+      "gold": [
+        "R"
+      ],
+      "control_ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "R"
+      ],
+      "candidate_ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "X"
+      ],
+      "control": {
+        "analytic": {
+          "mrr": 0.2,
+          "recall_at_3": 0.0,
+          "top5_set_recall": 1.0
+        },
+        "docs_scoring_py": {
+          "precision": 0.2,
+          "recall": 1.0
+        },
+        "legal_ir_py": {
+          "recall": 1.0,
+          "precision": 0.2
+        },
+        "historical_recovery": {
+          "recall": 1.0,
+          "precision": 0.2
+        }
+      },
+      "candidate": {
+        "analytic": {
+          "mrr": 0.0,
+          "recall_at_3": 0.0,
+          "top5_set_recall": 0.0
+        },
+        "docs_scoring_py": {
+          "precision": 0.0,
+          "recall": 0.0
+        },
+        "legal_ir_py": {
+          "recall": 0.0,
+          "precision": 0.0
+        },
+        "historical_recovery": {
+          "recall": 0.0,
+          "precision": 0.0
+        }
+      }
+    },
+    "C_rank1_changed": {
+      "gold": [
+        "R"
+      ],
+      "control_ranking": [
+        "R",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "candidate_ranking": [
+        "X",
+        "B",
+        "C",
+        "D",
+        "E"
+      ],
+      "control": {
+        "analytic": {
+          "mrr": 1.0,
+          "recall_at_3": 1.0,
+          "top5_set_recall": 1.0
+        },
+        "docs_scoring_py": {
+          "precision": 0.2,
+          "recall": 1.0
+        },
+        "legal_ir_py": {
+          "recall": 1.0,
+          "precision": 0.2
+        },
+        "historical_recovery": {
+          "recall": 1.0,
+          "precision": 0.2
+        }
+      },
+      "candidate": {
+        "analytic": {
+          "mrr": 0.0,
+          "recall_at_3": 0.0,
+          "top5_set_recall": 0.0
+        },
+        "docs_scoring_py": {
+          "precision": 0.0,
+          "recall": 0.0
+        },
+        "legal_ir_py": {
+          "recall": 0.0,
+          "precision": 0.0
+        },
+        "historical_recovery": {
+          "recall": 0.0,
+          "precision": 0.0
+        }
+      }
+    },
+    "D_rank2_changed": {
+      "gold": [
+        "R"
+      ],
+      "control_ranking": [
+        "A",
+        "R",
+        "C",
+        "D",
+        "E"
+      ],
+      "candidate_ranking": [
+        "A",
+        "X",
+        "C",
+        "D",
+        "E"
+      ],
+      "control": {
+        "analytic": {
+          "mrr": 0.5,
+          "recall_at_3": 1.0,
+          "top5_set_recall": 1.0
+        },
+        "docs_scoring_py": {
+          "precision": 0.2,
+          "recall": 1.0
+        },
+        "legal_ir_py": {
+          "recall": 1.0,
+          "precision": 0.2
+        },
+        "historical_recovery": {
+          "recall": 1.0,
+          "precision": 0.2
+        }
+      },
+      "candidate": {
+        "analytic": {
+          "mrr": 0.0,
+          "recall_at_3": 0.0,
+          "top5_set_recall": 0.0
+        },
+        "docs_scoring_py": {
+          "precision": 0.0,
+          "recall": 0.0
+        },
+        "legal_ir_py": {
+          "recall": 0.0,
+          "precision": 0.0
+        },
+        "historical_recovery": {
+          "recall": 0.0,
+          "precision": 0.0
+        }
+      }
+    },
+    "E_rank3_changed": {
+      "gold": [
+        "R"
+      ],
+      "control_ranking": [
+        "A",
+        "B",
+        "R",
+        "D",
+        "E"
+      ],
+      "candidate_ranking": [
+        "A",
+        "B",
+        "X",
+        "D",
+        "E"
+      ],
+      "control": {
+        "analytic": {
+          "mrr": 0.3333333333333333,
+          "recall_at_3": 1.0,
+          "top5_set_recall": 1.0
+        },
+        "docs_scoring_py": {
+          "precision": 0.2,
+          "recall": 1.0
+        },
+        "legal_ir_py": {
+          "recall": 1.0,
+          "precision": 0.2
+        },
+        "historical_recovery": {
+          "recall": 1.0,
+          "precision": 0.2
+        }
+      },
+      "candidate": {
+        "analytic": {
+          "mrr": 0.0,
+          "recall_at_3": 0.0,
+          "top5_set_recall": 0.0
+        },
+        "docs_scoring_py": {
+          "precision": 0.0,
+          "recall": 0.0
+        },
+        "legal_ir_py": {
+          "recall": 0.0,
+          "precision": 0.0
+        },
+        "historical_recovery": {
+          "recall": 0.0,
+          "precision": 0.0
+        }
+      }
+    },
+    "F_relevant_rank3_to_rank4": {
+      "gold": [
+        "R"
+      ],
+      "control_ranking": [
+        "A",
+        "B",
+        "R",
+        "C",
+        "D"
+      ],
+      "candidate_ranking": [
+        "A",
+        "B",
+        "C",
+        "R",
+        "D"
+      ],
+      "control": {
+        "analytic": {
+          "mrr": 0.3333333333333333,
+          "recall_at_3": 1.0,
+          "top5_set_recall": 1.0
+        },
+        "docs_scoring_py": {
+          "precision": 0.2,
+          "recall": 1.0
+        },
+        "legal_ir_py": {
+          "recall": 1.0,
+          "precision": 0.2
+        },
+        "historical_recovery": {
+          "recall": 1.0,
+          "precision": 0.2
+        }
+      },
+      "candidate": {
+        "analytic": {
+          "mrr": 0.25,
+          "recall_at_3": 0.0,
+          "top5_set_recall": 1.0
+        },
+        "docs_scoring_py": {
+          "precision": 0.2,
+          "recall": 1.0
+        },
+        "legal_ir_py": {
+          "recall": 1.0,
+          "precision": 0.2
+        },
+        "historical_recovery": {
+          "recall": 1.0,
+          "precision": 0.2
+        }
+      }
+    },
+    "G_relevant_rank4_to_rank5": {
+      "gold": [
+        "R"
+      ],
+      "control_ranking": [
+        "A",
+        "B",
+        "C",
+        "R",
+        "D"
+      ],
+      "candidate_ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "R"
+      ],
+      "control": {
+        "analytic": {
+          "mrr": 0.25,
+          "recall_at_3": 0.0,
+          "top5_set_recall": 1.0
+        },
+        "docs_scoring_py": {
+          "precision": 0.2,
+          "recall": 1.0
+        },
+        "legal_ir_py": {
+          "recall": 1.0,
+          "precision": 0.2
+        },
+        "historical_recovery": {
+          "recall": 1.0,
+          "precision": 0.2
+        }
+      },
+      "candidate": {
+        "analytic": {
+          "mrr": 0.2,
+          "recall_at_3": 0.0,
+          "top5_set_recall": 1.0
+        },
+        "docs_scoring_py": {
+          "precision": 0.2,
+          "recall": 1.0
+        },
+        "legal_ir_py": {
+          "recall": 1.0,
+          "precision": 0.2
+        },
+        "historical_recovery": {
+          "recall": 1.0,
+          "precision": 0.2
+        }
+      }
+    },
+    "H_same_top5_reordered": {
+      "gold": [
+        "R"
+      ],
+      "control_ranking": [
+        "R",
+        "A",
+        "B",
+        "C",
+        "D"
+      ],
+      "candidate_ranking": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "R"
+      ],
+      "control": {
+        "analytic": {
+          "mrr": 1.0,
+          "recall_at_3": 1.0,
+          "top5_set_recall": 1.0
+        },
+        "docs_scoring_py": {
+          "precision": 0.2,
+          "recall": 1.0
+        },
+        "legal_ir_py": {
+          "recall": 1.0,
+          "precision": 0.2
+        },
+        "historical_recovery": {
+          "recall": 1.0,
+          "precision": 0.2
+        }
+      },
+      "candidate": {
+        "analytic": {
+          "mrr": 0.2,
+          "recall_at_3": 0.0,
+          "top5_set_recall": 1.0
+        },
+        "docs_scoring_py": {
+          "precision": 0.2,
+          "recall": 1.0
+        },
+        "legal_ir_py": {
+          "recall": 1.0,
+          "precision": 0.2
+        },
+        "historical_recovery": {
+          "recall": 1.0,
+          "precision": 0.2
+        }
+      }
+    },
+    "I_different_top5_same_top3": {
+      "gold": [
+        "R"
+      ],
+      "control_ranking": [
+        "A",
+        "B",
+        "C",
+        "R",
+        "E"
+      ],
+      "candidate_ranking": [
+        "A",
+        "B",
+        "C",
+        "X",
+        "E"
+      ],
+      "control": {
+        "analytic": {
+          "mrr": 0.25,
+          "recall_at_3": 0.0,
+          "top5_set_recall": 1.0
+        },
+        "docs_scoring_py": {
+          "precision": 0.2,
+          "recall": 1.0
+        },
+        "legal_ir_py": {
+          "recall": 1.0,
+          "precision": 0.2
+        },
+        "historical_recovery": {
+          "recall": 1.0,
+          "precision": 0.2
+        }
+      },
+      "candidate": {
+        "analytic": {
+          "mrr": 0.0,
+          "recall_at_3": 0.0,
+          "top5_set_recall": 0.0
+        },
+        "docs_scoring_py": {
+          "precision": 0.0,
+          "recall": 0.0
+        },
+        "legal_ir_py": {
+          "recall": 0.0,
+          "precision": 0.0
+        },
+        "historical_recovery": {
+          "recall": 0.0,
+          "precision": 0.0
+        }
+      }
+    }
+  },
+  "observations": {
+    "all_local_scorers_agree": true,
+    "rank4_and_rank5_set_changes_can_affect_local_score": true,
+    "same_top5_set_reordered_changes_local_score": false,
+    "rank_position_only_changes_change_local_set_score": false,
+    "mrr_and_recall_at_3_are_analytic_comparators_not_active_local_scorers": true
+  }
+}
