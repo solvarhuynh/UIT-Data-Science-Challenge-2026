@@ -1424,3 +1424,31 @@ Long-document handling change authorized: false
 Scientific B2a result produced: false
 Next: PROFESSOR LONG-DOCUMENT REVIEW
 === PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2a-0 Passage Provenance and Long-Document Corruption Map
+Owner: TV2
+Type: READ_ONLY_DATA_PROVENANCE
+Technical status: BLOCKED
+Passage producer identified: false
+GT32768 document count reconciled: 668
+EQ32768 document count: 0
+Audit boundary mismatch found: true
+Long documents classified: 668
+Confirmed pipeline corruption: 0
+Confirmed upstream corruption: 0
+Likely genuine long documents: 588
+Mixed/ambiguous: 80
+Unresolved provenance: 0
+Safe deterministic repair candidates: 0
+Projected pairs >32768 after safe repair: 125568
+Data modified: false
+GPU used: false
+Model inference: false
+Labels used: false
+Fold0 used: false
+Public labels used: false
+Chunking introduced: false
+Scientific B2a result produced: false
+Next: NEEDS_MORE_PROVENANCE
+=== PROGRESS_LOG_ENTRY END ===
