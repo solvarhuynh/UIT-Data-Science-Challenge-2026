@@ -1452,3 +1452,15 @@ Chunking introduced: false
 Scientific B2a result produced: false
 Next: NEEDS_MORE_PROVENANCE
 === PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+2026-09-02 — B1 — Resolve Environment Block & Smoke Test
+Mục tiêu: Kiểm tra môi trường Python 3.12 với LightGBM 4.5.0 và sklearn 1.7.2 để gỡ block.
+Đã làm: Chạy B1 compatibility smoke test bằng môi trường ~/venv_b1_py312.
+Kết quả chính: Lỗi force_all_finite đã được giải quyết, smoke test chạy thành công.
+Trạng thái: PASS
+Điều rút ra: Môi trường đã tương thích hoàn toàn với hợp đồng đóng băng của B1.
+Chưa được kết luận: Điểm Recall/Precision cuối cùng (vì chưa chạy mô hình thực tế).
+Artifact chính: reports/task1/workflow_b/tv4/b1/contracts/workflow_b_b1_compatibility_smoke.json
+Bước tiếp theo: Chạy full pipeline B1 (Runtime recovery & OOF scoring).
+=== PROGRESS_LOG_ENTRY END ===
