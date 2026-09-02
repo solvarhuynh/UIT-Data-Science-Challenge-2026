@@ -98,6 +98,20 @@ Professor review cần thiết khi semantics khoa học thay đổi, mở nhánh
 
 Dùng git mv cho tracked-file rename. Không xóa historical scientific evidence chỉ vì workflow đã đóng; hãy đánh dấu rõ đó là tài liệu lịch sử. Không giữ nhiều bản sao hiện hành mâu thuẫn của cùng một contract. Khi di chuyển artifact quan trọng, ghi old path, new path và hash trước/sau khi phù hợp.
 
+## Khi tạo file mới, phải kiểm tra và quản lý vòng đời file như thế nào?
+
+Trước khi tạo file hoặc artifact, phải thực hiện **BEFORE-CREATE duplicate check** để tìm file cùng mục đích hoặc tương đương. Mặc định tái sử dụng hoặc cập nhật file canonical; không overwrite mù. Chọn và ghi rõ một quyết định: `UPDATE_IN_PLACE`, `REPLACE_CANONICAL`, `VERSIONED_NEW_FILE`, hoặc `DO_NOT_CREATE`. Bản mới có version chỉ được tạo khi có lý do và lineage rõ ràng.
+
+File tạm, one-shot artifact và output trung gian phải được đánh dấu khi tạo và xóa sau khi hoàn tất nếu không phải evidence cần giữ. Chỉ báo cáo trùng `.md`/`.json` khi cả hai có consumer độc lập; nếu không, giữ một biểu diễn canonical.
+
+Script phải được phân loại: `KEEP_ACTIVE`, `KEEP_REPRODUCIBILITY`, `TEMPORARY_DELETE`, hoặc `SUPERSEDED_DELETE`. **No Python import không có nghĩa là unused**: script có thể được gọi qua shell, scheduler, Modal, subprocess, notebook hoặc tài liệu. Sau mỗi task bắt buộc có **post-task file review** nhỏ để kiểm tra file mới/sửa/xóa, consumer, canonical path và hash artifact.
+
+Không cleanup toàn repository trong task đơn lẻ. Các vùng rủi ro cao (results/labels, Fold0/public-label contracts, active jobs, deployment/submission, shared contracts, model manifests, historical evidence) chỉ được xóa khi có justification và approval. Không tự động tạo `archive/`, `old/`, `legacy/`, `backup/` hoặc `deprecated/`; archive cần mục đích, manifest và retention rõ ràng.
+
+Canonical path: TV2 tại `reports/task1/workflow_b/tv2/`, TV4 tại `reports/task1/workflow_b/tv4/`, shared Workflow-B tại `reports/task1/workflow_b/shared/`, và Task1 contracts tại `reports/task1/contracts/`. Ví dụ `build_qwen_worklist_v2.py` nếu còn được workflow gọi thì giữ `KEEP_ACTIVE`/`KEEP_REPRODUCIBILITY`; chỉ xóa `build_qwen_worklist.py` khi chứng minh không còn consumer và phân loại `SUPERSEDED_DELETE`.
+
+Mỗi task phải kết thúc bằng terminal summary heading **FILE LIFECYCLE REVIEW**, nêu quyết định lifecycle, canonical file, file mới/sửa/xóa, lý do, consumer/reference đã kiểm tra và block còn lại. Các quy tắc này không cho phép thay đổi scientific semantics, labels, Fold0/public-label, metric contracts hoặc active jobs.
+
 ## Checklist tối thiểu trước mỗi run là gì?
 
 Trước khi chạy, trả lời ngắn các câu sau: experiment nào, ai owner, vì sao chạy bây giờ, phần nào frozen, phần nào được đổi, dùng data nào, có Fold0/public labels không (phải là NO nếu chưa có phép rõ ràng), CPU hay Modal GPU, output path là gì, success rule và STOP rule ra sao, có prediction freeze không, và professor authorization đã đủ chưa. Nếu một câu chưa trả lời được, chưa bắt đầu run.
