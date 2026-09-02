@@ -103,6 +103,19 @@ Dùng git mv cho tracked-file rename. Không xóa historical scientific evidence
 Trước khi tạo file hoặc artifact, phải thực hiện **BEFORE-CREATE duplicate check** để tìm file cùng mục đích hoặc tương đương. Mặc định tái sử dụng hoặc cập nhật file canonical; không overwrite mù. Chọn và ghi rõ một quyết định: `UPDATE_IN_PLACE`, `REPLACE_CANONICAL`, `VERSIONED_NEW_FILE`, hoặc `DO_NOT_CREATE`. Bản mới có version chỉ được tạo khi có lý do và lineage rõ ràng.
 
 File tạm, one-shot artifact và output trung gian phải được đánh dấu khi tạo và xóa sau khi hoàn tất nếu không phải evidence cần giữ. Chỉ báo cáo trùng `.md`/`.json` khi cả hai có consumer độc lập; nếu không, giữ một biểu diễn canonical.
+## Không để AI tự đoán – Quy tắc dữ liệu và file lifecycle
+
+- **Không được** để AI tự đưa ra suy đoán khi không có bằng chứng chắc chắn về source dữ liệu, công thức, hoặc phương pháp. Mọi quyết định phải dựa trên **source đã được xác nhận** (ví dụ: dataset đã công bố, model revision cố định, công thức đã được kiểm chứng).
+
+- Khi sử dụng dữ liệu hoặc file hiện có, luôn **kế thừa** chúng thay vì tạo lại từ đầu. Ví dụ, khi thay đổi model `rerank` không được tái tạo lại các chunks đã tạo; chỉ thay đổi cấu hình hoặc tham số của model mà không làm mất lineage của dữ liệu.
+
+- Trước khi **tạo file mới**, thực hiện **kiểm tra trùng lặp** với các file hiện có có chức năng tương tự. Nếu có file cũ cùng chức năng, ưu tiên **cập nhật** (update in place) hoặc **đổi tên** (rename) để giữ lịch sử, tránh sinh ra file thừa.
+
+- Khi một file **không còn được sử dụng** hoặc đã bị thay thế, thực hiện **xóa** (hoặc di chuyển vào thư mục archive có metadata rõ ràng) và ghi lại trong `FILE LIFECYCLE REVIEW` để đảm bảo không để lại “orphan” artifacts.
+
+- Mọi tạo, sửa, xóa file phải được ghi lại trong **post‑task file review** với các thông tin: canonical path, lý do thay đổi, consumer impact, và hash trước‑sau nếu có.
+
+- Các quyết định này giúp duy trì **repo hygiene**, tránh việc tạo file vô ích và đảm bảo reproducibility của toàn workflow.
 
 Script phải được phân loại: `KEEP_ACTIVE`, `KEEP_REPRODUCIBILITY`, `TEMPORARY_DELETE`, hoặc `SUPERSEDED_DELETE`. **No Python import không có nghĩa là unused**: script có thể được gọi qua shell, scheduler, Modal, subprocess, notebook hoặc tài liệu. Sau mỗi task bắt buộc có **post-task file review** nhỏ để kiểm tra file mới/sửa/xóa, consumer, canonical path và hash artifact.
 
@@ -115,3 +128,28 @@ Mỗi task phải kết thúc bằng terminal summary heading **FILE LIFECYCLE R
 ## Checklist tối thiểu trước mỗi run là gì?
 
 Trước khi chạy, trả lời ngắn các câu sau: experiment nào, ai owner, vì sao chạy bây giờ, phần nào frozen, phần nào được đổi, dùng data nào, có Fold0/public labels không (phải là NO nếu chưa có phép rõ ràng), CPU hay Modal GPU, output path là gì, success rule và STOP rule ra sao, có prediction freeze không, và professor authorization đã đủ chưa. Nếu một câu chưa trả lời được, chưa bắt đầu run.
+
+### Các cân nhắc bổ sung cho quy trình làm việc do AI dẫn dắt
+
+- **Không thực thi dựa trên suy đoán**: AI chỉ được chạy lệnh khi **đầu vào, nguồn dữ liệu và kết quả mong đợi** được mô tả rõ ràng. Nếu bất kỳ thành phần nào không chắc chắn (ví dụ: nguồn dữ liệu, công thức, phiên bản mô hình), AI phải dừng lại và yêu cầu làm rõ.
+
+- **Ghi lại nguồn gốc trước khi thực thi**: Mỗi bộ dữ liệu, checkpoint mô hình hoặc script phải có một định danh bất biến (hash, tag revision, số phiên bản). Quy trình cần ghi lại provenance này trước lần chạy đầu tiên và tái sử dụng các định danh này trong các bước tiếp theo.
+
+- **Chính sách tái sử dụng chunk**: Khi thay đổi mô hình (ví dụ: thay `rerank` bằng phiên bản mới), **không tạo lại các chunk dữ liệu** trừ khi logic chunking thay đổi. Việc tái sử dụng các file chunk đã có giúp bảo toàn tính truy nguyên và tiết kiệm tài nguyên tính toán.
+
+- **Kỷ luật tạo file**:
+  - Thực hiện **kiểm tra trùng lặp** đối với các file canonical hiện có (cùng mục đích, tên tương tự). Ưu tiên `UPDATE_IN_PLACE` hoặc `RENAME_WITH_VERSION` hơn việc tạo file mới hoàn toàn.
+  - Nếu một file bị thay thế, di chuyển nó vào thư mục `archive/` **kèm metadata chi tiết** (đường dẫn gốc, lý do loại bỏ, hash) và ghi lại hành động này trong `FILE LIFECYCLE REVIEW`.
+  - Không để lại file “orphan”; mọi artifact mới phải có consumer hoặc được đánh dấu rõ ràng là tạm thời.
+
+- **Điểm kiểm tra cuối cùng**: Sau bất kỳ thao tác nào với file (tạo, sửa, xóa), cần thực hiện **post‑task review** ghi lại:
+  - Đường dẫn canonical trước và sau khi thay đổi
+  - Lý do thực hiện
+  - Tác động tới các consumer downstream
+  - Hash trước‑sau (nếu có)
+
+- **Con người trong vòng lặp cho hợp đồng khoa học**: Mọi thay đổi liên quan tới ngữ nghĩa khoa học (label, định nghĩa metric, contract dữ liệu) phải được giáo sư hoặc chuyên gia domain phê duyệt trước khi AI tiếp tục.
+
+- **Biện pháp bảo vệ tự động hoá**: Các script tự động thực hiện các hành động lặp lại phải khai báo mục đích (`KEEP_ACTIVE`, `TEMPORARY_DELETE`, …) và được xem xét vào cuối mỗi task để đảm bảo chúng không tạo hoặc sửa đổi file một cách không có ghi chép.
+
+Các hướng dẫn này bổ sung cho các quy tắc hiện có và đảm bảo công việc hỗ trợ bởi AI luôn có tính tái tạo, truy nguyên và an toàn.
