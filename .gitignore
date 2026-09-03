@@ -214,5 +214,8 @@ data/
 artifacts/task1/large_outputs/
 task1_large_outputs.zip
 
+# Canonical True-S2 worklist is retained locally; GitHub rejects files >100 MB.
+reports/task1/workflow_b/tv2/b2a/manifests/b2a_qwen_true_s2_top3_worklist.jsonl
+
 
 .cline_pytest_tmp/
