@@ -76,7 +76,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--model",
-        default="models/reranker",
+        default="models/qwen3-vl-reranker-2b",
         help="Local model directory or Hugging Face model ID.",
     )
     parser.add_argument(
@@ -119,7 +119,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("artifacts/tv5/bge-reranker-v2-m3"),
+        default=Path("artifacts/tv5/qwen3-vl-reranker-2b"),
     )
     parser.add_argument("--before-name", default="before_rerank")
     parser.add_argument("--after-name", default="after_rerank")

@@ -139,6 +139,31 @@ Notes: Fold0=false; public=false; K_sweep=false; reranker_inference=false; GPU=f
 === PROGRESS_LOG_ENTRY END ===
 
 === PROGRESS_LOG_ENTRY START ===
+Task: Workflow B B2a — Qwen true S2 top-3 worklist build (superseded by integrity correction)
+Date: 2026-09-02
+Technical status: BLOCKED_INCOMPLETE_WORKLIST
+Worklist build status: INCOMPLETE
+Model: Qwen/Qwen3-Reranker-0.6B
+Mode: ZERO_SHOT
+Checkpoint pairs: 420000
+Current unique pairs: 423835
+Canonical expected pairs: 431200
+Missing canonical pairs: 7365
+Missing mappings: 0
+Wrong document mappings: 0
+Worklist artifact: reports/task1/workflow_b/tv2/b2a/manifests/b2a_qwen_true_s2_top3_worklist.jsonl
+Checkpoint: reports/task1/workflow_b/tv2/b2a/runtime/b2a_qwen_true_s2_top3_worklist_checkpoint.json
+Inference status: NOT_RUN
+GPU smoke: NOT_RUN
+Whole-document context gate: SUPERSEDED_FOR_TRUE_S2
+Scientific metrics computed: false
+Fold0 used: false
+Public labels used: false
+Conclusion: 420000 was an intermediate checkpoint, not K75 truncation. The exact frozen v2 builder is absent, so the missing canonical pairs cannot be safely appended.
+Detailed report: reports/task1/workflow_b/tv2/b2a/reports/b2a_qwen_true_s2_top3_worklist_report.md
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
 Task: Workflow B B2a-0 Zero-Shot Semantic Reranker
 Technical status: BLOCKED
 Scientific status: NOT_YET_EVALUATED
@@ -1451,4 +1476,60 @@ Public labels used: false
 Chunking introduced: false
 Scientific B2a result produced: false
 Next: NEEDS_MORE_PROVENANCE
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+2026-09-02 — B1 — Resolve Environment Block & Smoke Test
+Mục tiêu: Kiểm tra môi trường Python 3.12 với LightGBM 4.5.0 và sklearn 1.7.2 để gỡ block.
+Đã làm: Chạy B1 compatibility smoke test bằng môi trường ~/venv_b1_py312.
+Kết quả chính: Lỗi force_all_finite đã được giải quyết, smoke test chạy thành công.
+Trạng thái: PASS
+Điều rút ra: Môi trường đã tương thích hoàn toàn với hợp đồng đóng băng của B1.
+Chưa được kết luận: Điểm Recall/Precision cuối cùng (vì chưa chạy mô hình thực tế).
+Artifact chính: reports/task1/workflow_b/tv4/b1/contracts/workflow_b_b1_compatibility_smoke.json
+Bước tiếp theo: Chạy full pipeline B1 (Runtime recovery & OOF scoring).
+
+=== B2A TRUE-S2 CANONICAL PROMOTION ===
+Status: COMPLETE_CANONICAL_TRUE_S2_WORKLIST
+Canonical worklist: reports/task1/workflow_b/tv2/b2a/manifests/b2a_qwen_true_s2_top3_worklist.jsonl
+Canonical queries: 5600
+Canonical query-document pairs: 431200
+Docs per query: 77/77/77
+Duplicate query-document pairs: 0
+Missing canonical pairs: 0
+Wrong-doc mappings: 0
+Missing pairs processed: 7365
+Historical semantics validation: 100/100 pairs, 300/300 stored BM25 scores
+Post-completion reproduction: 100/100
+Canonical SHA256: a935e356cf8fe62a000e56c3817fd31dfc5ebbc079c4eef849803a7552c3c25a
+Qwen: NOT_RUN
+GPU: NOT_RUN
+=== B2A TRUE-S2 CANONICAL PROMOTION END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Experiment: B2A-0 — Frozen Qwen3-Reranker-0.6B F1-F4 Scientific Evaluation
+Date: 2026-09-03
+Technical status: PASS
+Scientific status: FAIL — REJECT_B2A_QWEN_06B
+Prediction SHA256 verified: 9f73f9424de78a0824c1e7153d080890cfe599104c103a4e2e81b5763b03fcd9
+Prediction queries: 5600
+Evaluation folds: 1,2,3,4
+Qwen Recall: 0.1593363095238095
+Scientific reference Recall: 0.9259285714285714
+Recall delta: -0.7665922619047619
+Qwen Precision: 0.03410714285714286
+Scientific reference Precision: 0.19739285714285715
+Precision delta: -0.16328571428571428
+Per-fold Recall delta: F1=-0.7854166666666668,F2=-0.7729761904761905,F3=-0.7611309523809524,F4=-0.7468452380952381
+Nonnegative Recall folds: 0/4
+Top-5 set differences vs scientific reference: 5573
+Recall query comparison better/same/worse: 25/1165/4410
+Fold0 used: false
+Public labels used: false
+Predictions modified: false
+Canonical scorer: src/udsc2026/evaluation/legal_ir.py::evaluate_legal_ir
+Canonical F1-F4 source: artifacts/task1/evaluation/strict_cv_v2/folds.json + data/raw/btc/LegalIR/train.json
+Reference artifact: reports/task1/workflow_a/step2p1_oof_policy_decisions.jsonl
+Persistent B2a evaluation report: REPORT_PERSISTENCE_NEEDS_USER_DECISION
+Next: PROFESSOR B2A RESULT REVIEW
 === PROGRESS_LOG_ENTRY END ===

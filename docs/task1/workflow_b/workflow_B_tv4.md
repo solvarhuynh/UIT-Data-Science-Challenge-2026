@@ -3,24 +3,37 @@
 ## Mục tiêu
 Giải thích hiện trạng nghiên cứu TV4, câu hỏi khoa học, các cổng (gates) thực thi, các nhánh tương lai và logic quyết định.
 
+## Trạng thái vận hành hiện tại
+
+**[CONTINUE] TV4 không bị ảnh hưởng bởi việc đổi reranker của TV2.** B1 là
+nhánh khoa học độc lập và không restart từ đầu.
+
 ---
-### GIAI ĐOẠN TV4-0 — HIỆN TẠI
+### GIAI ĐOẠN TV4-0 — CONTINUE POINT
 **B1 DIRECT LEARNING‑TO‑RANK**
 
-**TRẠNG THÁI:** ACTIVE / NOT_YET_EVALUATED
+**TRẠNG THÁI:** [CONTINUE] ACTIVE / NOT_YET_EVALUATED
 
 - **Mô hình:** (đã frozen theo hợp đồng B1)
 - **Candidate pool:** K77 (không thay đổi)
 - **Câu hỏi khoa học:** Với canonical K77 và bộ thông tin handcrafted đã frozen, liệu Direct Learning‑to‑Rank cải thiện top‑5 cuối cùng không?
 
-**Pipeline yêu cầu:**
-1. Runtime recovery
-2. Detached execution
-3. Full B1 model run
-4. OOF scoring
-5. Top‑5 generation
-6. Recall/Precision evaluation
-7. Per‑fold report
+**TV4 CONTINUE POINT: B1 FULL PIPELINE**
+1. Runtime recovery.
+2. Direct LTR training/scoring under the frozen B1 contract.
+3. OOF predictions.
+4. F1-F4 Recall/Precision evaluation.
+5. Frozen prediction artifact and SHA256.
+6. Per-fold deltas.
+7. Scientific status.
+
+**[REUSE]** B0, K77, canonical folds, existing data contracts and valid
+compatibility artifacts remain unchanged. TV4 does not rerun B0. The B1
+compatibility smoke is `PASS`; rerun it only if the environment changes or
+the existing smoke artifact becomes invalid.
+
+**[WAIT]** Không được phát sinh hoặc điền Recall/Precision B1 khi full OOF
+pipeline chưa hoàn tất.
 
 **Ghi chú:** Đây là thí nghiệm chính hiện tại của TV4 và **không** cần chạy mọi thí nghiệm tương lai đồng thời.
 
@@ -67,6 +80,16 @@ Khi Recall bắt đầu bão hòa, đánh giá phần query còn recoverable tro
 Chỉ thuộc TV4 nếu có bằng chứng cho một nhánh GPU‑heavy độc lập và TV2 đã sở hữu nhánh cao hơn.
 
 ---
+## Ranh giới TV2 / TV4
+
+TV2 B2a và TV4 B1 chạy độc lập; chưa được fuse. Chỉ bắt đầu fusion/comparison
+sau khi cả hai nhánh đều có frozen prediction artifact, SHA256, F1-F4 Recall,
+F1-F4 Precision, per-fold results và scientific status. Cho đến lúc đó, TV2
+tiếp tục B2a 2B còn TV4 tiếp tục B1.
+
+Việc TV2 đổi `Qwen/Qwen3-Reranker-0.6B` sang `Qwen/Qwen3-VL-Reranker-2B`
+không reset, không sửa và không làm TV4 rerun B1.
+
 ## Quy tắc phân GPU
 
 Nếu chỉ có **MỘT** nhánh GPU quan trọng → **TV2** sở hữu.
@@ -84,4 +107,4 @@ TV4 chỉ cung cấp evidence (hard‑negative, error analysis, ranking diagnost
 - `reports/task1/workflow_b/tv2/` ← artifact Workflow-B của TV2
 - `reports/task1/workflow_b/tv4/` ← artifact Workflow-B của TV4
 - `reports/task1/workflow_b/shared/` ← định nghĩa Workflow-B dùng chung
-- `reports/task1/progress_log_4.md` ← tiến độ
+- `reports/task1/tv4/progress_log_4.md` ← tiến độ

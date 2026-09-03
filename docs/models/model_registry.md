@@ -31,7 +31,7 @@ Ghi chú:
 
 | Checkpoint | Version | Params | Local path | Input format | Output format | Trạng thái |
 |---|---|---|---|---|---|---|
-| [`BAAI/bge-reranker-v2-m3`](https://huggingface.co/BAAI/bge-reranker-v2-m3) | HuggingFace (resolved SHA được ghi khi tải) | ~0.6B | `./models/reranker/` | `list[tuple[str, str]]` — cặp (query, chunk_text) | `list[float]` — relevance logit | **PROMOTED** — Task1 reranker bắt buộc |
+| [`Qwen/Qwen3-VL-Reranker-2B`](https://huggingface.co/Qwen/Qwen3-VL-Reranker-2B) | HuggingFace (resolved SHA được ghi khi tải) | ~2B | `./models/qwen3-vl-reranker-2b/` | Query + chunk text (có thể mở rộng sang ảnh) | `list[float]` — raw relevance score | **PROMOTED** — Task1 reranker bắt buộc |
 
 ## Generator
 
@@ -74,4 +74,5 @@ không nằm trong Task1 production và không được tải bởi profile mặ
 
 - Log thí nghiệm dùng các model này: xem `docs/project/06_experiment_tracking.md`.
 - Kiến trúc và luồng dữ liệu: xem `docs/project/10_system_design.md`.
+- Hướng dẫn Qwen3-VL-Reranker-2B: xem `docs/models/qwen3_vl_reranker_2b.md`.
 - Chi tiết LoRA/QLoRA cho Qwen3: xem `docs/models/llm_optimization.md`.

@@ -32,7 +32,12 @@ Quy tắc này không tự động cấp GPU cho một ý tưởng chưa có con
 
 Với external pretrained model, phải ghi model ID, immutable revision, license, model card, tokenizer revision, dependency versions, dtype/backend, context contract và provenance assessment. **Provenance** là nguồn gốc và danh tính có thể kiểm chứng của model; nếu revision trôi dạt, hai lần chạy có thể không còn là cùng experiment.
 
-Không được dùng một revision mới chỉ vì nó đang có sẵn trong cache. Ví dụ model B2a hiện được khóa là **Qwen/Qwen3-Reranker-0.6B**, revision e61197ed45024b0ed8a2d74b80b4d909f1255473. Đây chỉ là ví dụ về cách ghi model provenance, không phải authorization cho experiment khác.
+Reranker B2a hiện dùng **Qwen/Qwen3-VL-Reranker-2B**. Revision thực tế phải lấy từ `models/download_manifest.json` sau khi tải.
+
+Model change boundary: thay reranker không làm thay đổi B0, canonical folds,
+K77, True-S2 worklist, raw chunks, candidate provenance hay metric contract.
+TV2 dùng lại các artifact đó và chỉ restart tại B2a model execution. Qwen
+0.6B scores, SQLite checkpoint và frozen predictions không được dùng cho 2B.
 
 ## Dữ liệu nào tuyệt đối không được dùng sai?
 
@@ -50,7 +55,7 @@ Trước freeze không được xem truth để sửa top-5, threshold hay tie-b
 
 BLOCKED không đồng nghĩa với experiment thất bại. Nó nói rằng một cổng đã chặn việc diễn giải hoặc chạy tiếp. Ví dụ gồm GPU unavailable, context infeasible, provenance uncertain, data contract ambiguous, model revision drift, missing candidate pairs hoặc unexpected truncation.
 
-Khi preregistered gate nói STOP thì phải STOP, không tự phát minh workaround chỉ để có log “chạy thành công”. Trước tiên phân loại technical block, scientific block, data block hay contract block; sau đó review hành động kế tiếp. B2a là ví dụ: context audit đã chạy thành công nhưng feasibility bị chặn bởi tài liệu dài, nên Qwen chưa hề thất bại khoa học và chưa có Recall result.
+Khi preregistered gate nói STOP thì phải STOP, không tự phát minh workaround chỉ để có log “chạy thành công”. Trước tiên phân loại technical block, scientific block, data block hay contract block; sau đó review hành động kế tiếp. B2a 0.6B là historical evidence với kết luận `TRUE_QWEN_06B_MODEL_FAILURE`; không được thay đổi kết luận đó hoặc dùng artifact 0.6B cho 2B. B2a 2B phải đi qua compatibility smoke, GPU benchmark, full inference, prediction freeze và F1-F4 evaluation theo tài liệu TV2.
 
 ## Tên experiment và artifact đặt như thế nào?
 
@@ -65,6 +70,14 @@ reports/task1/ là root dùng chung của toàn Task1. Riêng toàn bộ artifac
 reports/task1/progress_log.md vẫn là một file append-only duy nhất cho lịch sử toàn Task1 và không được di chuyển. Các contract toàn Task1 đã có sẵn dưới reports/task1/contracts/ cũng giữ nguyên, trừ khi được xác định rõ là contract riêng của Workflow-B. Artifact của experiment TV2 đặt dưới root TV2; artifact của experiment TV4 đặt dưới root TV4. Các định nghĩa dùng chung và immutable của Workflow-B đặt dưới shared/.
 
 Ownership đi theo experiment, không đi theo người thực thi. B2a thuộc TV2 và có canonical path reports/task1/workflow_b/tv2/b2a/; B1 thuộc TV4 và có canonical path reports/task1/workflow_b/tv4/b1/. Nếu TV4 chạy B2a trên Modal, output vẫn thuộc TV2. Nếu TV2 giúp chạy B1, output vẫn thuộc TV4. Khi liên kết artifact giữa hai nhánh, ghi rõ nguồn và hash thay vì sao chép thành các bản “current” mâu thuẫn nhau.
+
+## Ranh giới khoa học giữa B2a và B1
+
+TV2 B2a và TV4 B1 là hai nhánh độc lập, không fuse trong giai đoạn hiện tại.
+Fusion/comparison chỉ được mở khi cả hai nhánh đã có frozen prediction
+artifact, SHA256, F1-F4 Recall, F1-F4 Precision, per-fold results và scientific
+status. Trước mốc đó, TV2 tiếp tục B2a Qwen3-VL-Reranker-2B; TV4 tiếp tục
+B1 full runtime recovery và OOF scoring.
 
 ## Một experiment nên có những loại artifact nào?
 

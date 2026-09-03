@@ -20,7 +20,9 @@ llm = [
     "transformers==5.0.0",
 ]
 rerank = [
-    "sentence-transformers==5.4.1",
+    "accelerate>=1.1,<2.0",
+    "torch>=2.7,<3.0",
+    "transformers==5.0.0",
 ]
 retrieval = [
     "faiss-cpu>=1.8,<2.0",
