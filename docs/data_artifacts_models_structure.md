@@ -112,16 +112,16 @@ Trước khi thực hiện dọn dẹp hoặc di chuyển đường dẫn, hãy 
 models/
 ├── dek21-v2/
 ├── qwen3-legal/
-└── reranker/
+└── qwen3-vl-reranker-2b/
 ```
 
 Mỗi thư mục mô hình thông thường chứa các tệp cấu hình/tokenizer của Hugging Face và một hoặc nhiều tệp `model.safetensors`. Các thư mục `.cache/` là trạng thái tải xuống/bộ nhớ đệm cục bộ và bản thân chúng không phải là nguồn gốc mô hình.
 
 - `models/dek21-v2/`: mô hình dense embedding được sử dụng bởi luồng truy xuất dạng DEK21/FAISS. Kiểm tra `config.json`, siêu dữ liệu sentence-transformers, các tệp tokenizer và `model.safetensors`.
 - `models/qwen3-legal/`: tài nguyên mô hình ngôn ngữ pháp lý Qwen, bao gồm cấu hình sinh (generation config), mẫu chat (chat template), tokenizer và trọng số mô hình.
-- `models/reranker/`: mô hình reranker cục bộ chuẩn được sử dụng bởi bộ chấm điểm đặc trưng đóng băng (frozen-feature scorer) của V3. Hash của mô hình và ngữ nghĩa suy luận được ghi lại trong báo cáo frozen-feature; không tùy tiện thay thế hoặc chỉnh sửa mô hình này.
+- `models/qwen3-vl-reranker-2b/`: Qwen3-VL-Reranker-2B dùng cho reranking query–document của Workflow B/TV2. Revision được resolve trong `models/download_manifest.json`; không tùy tiện thay thế hoặc chỉnh sửa mô hình này.
 
-Thư mục `artifacts/task1/models/` riêng biệt là nơi lưu trữ minh chứng/checkpoints của Task 1 và khác biệt với các thư mục mô hình runtime cục bộ này. Một script khởi chạy có thể sử dụng `models/reranker/` trong khi một báo cáo lịch sử lại tham chiếu đến checkpoint nằm trong `artifacts/task1/recovery_096/models/`.
+Thư mục `artifacts/task1/models/` riêng biệt là nơi lưu trữ minh chứng/checkpoints của Task 1 và khác biệt với các thư mục mô hình runtime cục bộ này. Các checkpoint lịch sử trong `artifacts/task1/recovery_096/models/` không phải runtime model hiện tại và không được dùng thay cho `models/qwen3-vl-reranker-2b/`.
 
 ## 4. Luồng dữ liệu xuyên suốt các thư mục (Cross-directory data flow)
 
@@ -133,7 +133,7 @@ data/raw + data/processed_v3
         │                         └── Artifacts ứng viên Task 1
         │                              artifacts/task1/recovery_096/final_public_v3/
         │
-        └── đầu vào mô hình: models/dek21-v2 hoặc models/reranker
+        └── đầu vào mô hình: models/dek21-v2 hoặc models/qwen3-vl-reranker-2b
                                       │
                                       └── đặc trưng đóng băng (frozen features) → Chính sách V3A
                                           → public_v3a_predictions.json
@@ -159,5 +159,5 @@ find artifacts/task1 -maxdepth 3 -type d | sort
 find models -maxdepth 2 -type d | sort
 
 # Tìm kiếm các nơi sử dụng trước khi thay đổi đường dẫn
-rg -n "artifacts/task1|data/vector_store|models/reranker|models/dek21-v2|models/qwen3-legal" scripts src configs docs Makefile pyproject.toml
+rg -n "artifacts/task1|data/vector_store|models/qwen3-vl-reranker-2b|models/dek21-v2|models/qwen3-legal" scripts src configs docs Makefile pyproject.toml
 ```
