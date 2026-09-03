@@ -25,8 +25,8 @@ MODELS = (
     ),
     ModelSpec(
         "reranker",
-        "Qwen/Qwen3-Reranker-0.6B",
-        Path("models/reranker"),
+        "Qwen/Qwen3-VL-Reranker-2B",
+        Path("models/qwen3-vl-reranker-2b"),
     ),
     ModelSpec(
         "llm",
@@ -54,7 +54,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--profile",
         choices=("task1", "task1-baseline", "task1-top1", "all"),
         default="all",
-        help="Download profile (task1 profiles contain only HCMUTE + BGE).",
+        help="Download profile (task1 profiles contain only HCMUTE + Qwen3-VL reranker).",
     )
     parser.add_argument(
         "--only",

@@ -147,6 +147,14 @@ class CrossEncoderClient:
             self._model = self._load_model()
 
     def _load_model(self) -> Any:
+        if "qwen3-vl-reranker" in self.model_name_or_path.casefold():
+            return _load_qwen3_vl_reranker(
+                self.model_name_or_path,
+                device=self.device,
+                max_length=self.max_length,
+                local_files_only=self.local_files_only,
+                use_fp16=self.use_fp16,
+            )
         try:
             sentence_transformers = import_module("sentence_transformers")
         except ImportError as exc:
@@ -188,6 +196,107 @@ class CrossEncoderClient:
                 f"'{self.model_name_or_path}'. Verify the local path or Hugging "
                 "Face model ID, model files, cache/network access, and device."
             ) from exc
+
+
+class _Qwen3VLReranker:
+    """Small adapter exposing the same ``predict`` API as CrossEncoder.
+
+    Qwen3-VL reranking is generative: the model scores the final yes/no
+    decision token instead of returning a sequence-classification logit.
+    Keeping this adapter private lets the rest of the retrieval contract stay
+    unchanged.
+    """
+
+    def __init__(
+        self, model: Any, processor: Any, device: str | None, max_length: int
+    ) -> None:
+        self.model = model
+        self.processor = processor
+        self.device = device
+        self.max_length = max_length
+
+    def predict(
+        self,
+        pairs: Sequence[tuple[str, str]],
+        *,
+        batch_size: int,
+        show_progress_bar: bool,
+        convert_to_numpy: bool,
+    ) -> list[float]:
+        del show_progress_bar, convert_to_numpy
+        import torch
+
+        scores: list[float] = []
+        for start in range(0, len(pairs), batch_size):
+            batch = pairs[start : start + batch_size]
+            prompts = [
+                self.processor.apply_chat_template(
+                    [{"role": "user", "content": [{"type": "text", "text": (
+                        "Given a query and a document, determine whether the "
+                        "document is relevant to answering the query.\n"
+                        f"Query: {query}\nDocument: {document}\n"
+                        "Answer only yes or no."
+                    )}]}],
+                    tokenize=False,
+                    add_generation_prompt=True,
+                )
+                for query, document in batch
+            ]
+            inputs = self.processor(
+                text=prompts,
+                padding=True,
+                truncation=True,
+                max_length=self.max_length,
+                return_tensors="pt",
+            )
+            inputs = {key: value.to(self.model.device) for key, value in inputs.items()}
+            with torch.inference_mode():
+                output = self.model(**inputs)
+            logits = output.logits[:, -1, :]
+            yes_ids = self.processor.tokenizer.encode(" yes", add_special_tokens=False)
+            no_ids = self.processor.tokenizer.encode(" no", add_special_tokens=False)
+            if not yes_ids or not no_ids:
+                raise RerankerScoringError("Qwen3-VL tokenizer has no yes/no token")
+            scores.extend((logits[:, yes_ids[-1]] - logits[:, no_ids[-1]]).float().tolist())
+        return scores
+
+
+def _load_qwen3_vl_reranker(
+    model_name_or_path: str,
+    *,
+    device: str | None,
+    max_length: int,
+    local_files_only: bool,
+    use_fp16: bool,
+) -> _Qwen3VLReranker:
+    """Load Qwen3-VL with Transformers, without importing it at module import."""
+
+    try:
+        import torch
+        from transformers import AutoProcessor, Qwen3VLForConditionalGeneration
+    except ImportError as exc:
+        raise RerankerDependencyError(
+            "Qwen3-VL reranking requires torch and transformers."
+        ) from exc
+    try:
+        target_device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        dtype = torch.float16 if use_fp16 else "auto"
+        model = Qwen3VLForConditionalGeneration.from_pretrained(
+            model_name_or_path,
+            torch_dtype=dtype,
+            local_files_only=local_files_only,
+        ).to(target_device)
+        processor = AutoProcessor.from_pretrained(
+            model_name_or_path,
+            local_files_only=local_files_only,
+        )
+        processor.tokenizer.model_max_length = max_length
+        model.eval()
+        return _Qwen3VLReranker(model, processor, target_device, max_length)
+    except Exception as exc:
+        raise RerankerModelLoadError(
+            f"Could not load Qwen3-VL reranker from '{model_name_or_path}'."
+        ) from exc
 
 
 def _validate_positive_integer(value: int, field_name: str) -> None:

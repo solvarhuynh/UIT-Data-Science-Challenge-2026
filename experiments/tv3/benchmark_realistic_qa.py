@@ -49,7 +49,7 @@ logger = logging.getLogger("benchmark_realistic_qa")
 
 DEFAULT_EMBEDDING_MODEL = "huyydangg/DEk21_hcmute_embedding_v2"
 DEFAULT_LLM_MODEL = "thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2"
-DEFAULT_RERANKER_MODEL = "BAAI/bge-reranker-v2-m3"
+DEFAULT_RERANKER_MODEL = "models/qwen3-vl-reranker-2b"
 
 # Enable PyTorch VRAM memory optimization
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
@@ -363,7 +363,7 @@ async def main() -> None:
     reranker_model_path = _resolve_local_model(
         args.reranker_model,
         DEFAULT_RERANKER_MODEL,
-        BASE_DIR / "models/reranker",
+        BASE_DIR / "models/qwen3-vl-reranker-2b",
     )
     if args.use_reranker:
         try:

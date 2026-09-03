@@ -38,7 +38,7 @@ class RerankerSettings(BaseModel):
 
     enabled: bool = True
     model_name_or_path: str = Field(
-        default="./models/reranker",
+        default="./models/qwen3-vl-reranker-2b",
         min_length=1,
     )
     device: str | None = "cpu"

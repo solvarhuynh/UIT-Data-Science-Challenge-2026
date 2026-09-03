@@ -18,13 +18,13 @@ Lý do là TV2 muốn cô lập câu hỏi đang kiểm tra: liệu mô hình c�
 
 ## B2a-0 **Zero-shot** thực sự đang kiểm tra điều gì?
 
-**Zero-shot** nghĩa là dùng năng lực đã có sẵn của mô hình trước khi huấn luyện thêm trên ví dụ riêng của Task1. Với B2a-0, mô hình **Qwen/Qwen3-Reranker-0.6B** đọc từng cặp **Query** + **Document** trong K77, cho ra 77 điểm liên quan semantic, rồi giữ lại 5 điểm cao nhất. Nói đơn giản, 77 người được đọc hồ sơ lần lượt, sau đó chỉ 5 người có vẻ phù hợp nhất được đưa vào danh sách cuối. Năm tài liệu đó chính là **top-5** dự đoán của query.
+**Zero-shot** nghĩa là dùng năng lực đã có sẵn của mô hình trước khi huấn luyện thêm trên ví dụ riêng của Task1. Với B2a-0, mô hình **Qwen/Qwen3-VL-Reranker-2B** đọc từng cặp **Query** + **Document** trong K77, cho ra 77 điểm liên quan semantic, rồi giữ lại 5 điểm cao nhất. Nói đơn giản, 77 người được đọc hồ sơ lần lượt, sau đó chỉ 5 người có vẻ phù hợp nhất được đưa vào danh sách cuối. Năm tài liệu đó chính là **top-5** dự đoán của query.
 
 Cách thử này khớp trực tiếp với mục tiêu set-based của Task1: ta không chỉ hỏi mô hình có chấm một tài liệu cao hay thấp, mà hỏi 5 tài liệu nó chọn có trùng với các tài liệu đúng hay không. Vì vậy B2a-0 là một phép kiểm tra rõ ràng về giá trị của tín hiệu semantic khi retrieval đầu vào được giữ cố định. Nó chưa phải bằng chứng rằng Qwen sẽ giải quyết toàn bộ bài toán, và cũng chưa phải bước **Fine-tuning**.
 
 ## Tại sao chúng ta chưa chạy Qwen full ngay?
 
-Trước hết, nguồn gốc mô hình đã được kiểm tra và đạt. Checkpoint được đóng băng là **Qwen/Qwen3-Reranker-0.6B**, tại revision `e61197ed45024b0ed8a2d74b80b4d909f1255473`. “Đóng băng” ở đây có nghĩa là ta xác định chính xác phiên bản sẽ được đánh giá, để kết quả không âm thầm thay đổi vì dùng một bản khác.
+Trước hết, nguồn gốc mô hình phải được kiểm tra và ghi trong manifest. Checkpoint được dùng là **Qwen/Qwen3-VL-Reranker-2B**; revision được resolve khi tải. “Đóng băng” ở đây có nghĩa là ta xác định chính xác phiên bản sẽ được đánh giá, để kết quả không âm thầm thay đổi vì dùng một bản khác.
 
 Sau đó, context audit – cuộc kiểm tra xem mô hình có đủ “chỗ đọc” hay không – đã xem toàn bộ 431.200 cặp query–document. Các con số độ dài không phải là vài trường hợp lẻ: p50 = 18.455 nghĩa là một nửa số cặp có độ dài không quá khoảng 18 nghìn token; p90 = 64.539 nghĩa là 10% cặp còn dài hơn khoảng 64 nghìn token; p95 = 95.289 nghĩa là 5% cặp vượt khoảng 95 nghìn token; p99 = 158.503 nghĩa là 1% cặp vượt khoảng 158 nghìn token. Token là những mảnh văn bản mà mô hình dùng để đọc và tính toán, không hoàn toàn trùng với số từ.
 

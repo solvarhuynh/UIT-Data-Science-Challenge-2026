@@ -26,14 +26,14 @@ sinh câu trả lời bằng LLM local, đánh giá và đóng gói submission.
 | Vai trò | Checkpoint | Local path | Công dụng |
 | --- | --- | --- | --- |
 | Embedding | [`huyydangg/DEk21_hcmute_embedding_v2`](https://huggingface.co/huyydangg/DEk21_hcmute_embedding_v2) | `models/dek21-v2` | Vector hóa query và chunk |
-| Reranker | [`Qwen/Qwen3-Reranker-0.6B`](https://huggingface.co/Qwen/Qwen3-Reranker-0.6B) | `models/reranker` | Chấm điểm mức liên quan của cặp query–document |
+| Reranker | [`Qwen/Qwen3-VL-Reranker-2B`](https://huggingface.co/Qwen/Qwen3-VL-Reranker-2B) | `models/qwen3-vl-reranker-2b` | Chấm điểm mức liên quan query–document bằng Qwen3-VL |
 | LLM | [`thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2`](https://huggingface.co/thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2) | `models/qwen3-legal` | Sinh câu trả lời pháp luật có citation |
 
-Task1 hiện dùng HCMUTE embedding và Qwen3 Reranker theo manifest local. Revision
+Task1 hiện dùng HCMUTE embedding và Qwen3-VL-Reranker-2B theo manifest local. Revision
 đã resolve của từng model được ghi trong `models/download_manifest.json`; không
 nên thay model chỉ dựa trên tên thư mục. Xem thêm [Model Registry](docs/models/model_registry.md).
 
-Tải đúng model production Task1:
+Tải đúng model production Task1 (Qwen3-VL-Reranker-2B):
 
 ```powershell
 python download_models.py --profile task1
@@ -51,7 +51,7 @@ flowchart LR
     CHILD --> BM25[BM25]
     DENSE --> HYBRID[Hybrid fusion]
     BM25 --> HYBRID
-    HYBRID --> RERANK[Qwen3 Reranker]
+    HYBRID --> RERANK[Qwen3-VL-Reranker-2B]
     RERANK --> EXPAND[Bounded parent expansion]
     PARENT --> EXPAND
     EXPAND --> LLM[Qwen3 legal]
@@ -151,7 +151,7 @@ python scripts/evaluation/generate_dense_candidates.py `
 python scripts/evaluation/benchmark_reranker.py `
   --benchmark data/processed_v3/benchmarks/synthetic_qa.jsonl `
   --candidates artifacts/tv2/dense_predictions.jsonl `
-  --model models/reranker `
+  --model models/qwen3-vl-reranker-2b `
   --device cpu `
   --batch-size 8 `
   --max-length 1024 `
@@ -215,41 +215,49 @@ versioning, parent expansion, reranker, metric LegalIR/LegalQA, API và submissi
 ├── data/                            Raw/processed/index local; file lớn không commit
 │   └── processed_v3/                Corpus chính thức đã audit
 ├── docs/
+│   ├── algorithms/                  Ghi chú thuật toán
+│   ├── architecture/                Kiến trúc hệ thống
+│   ├── competition/                 Tài liệu và quy định cuộc thi
 │   ├── members/                     Kế hoạch, setup và runbook của TV1–TV5
 │   ├── models/                      Registry và ghi chú model
-│   └── project/                     Thiết kế hệ thống, API, data pipeline, Git workflow
+│   ├── project/                     Thiết kế hệ thống, API, data pipeline, Git workflow
+│   ├── task1/                       Tài liệu Workflow A/B và kết quả Task1
+│   │   ├── 0.939/                   Tài liệu deployment/reference 0.939
+│   │   ├── workflow_a/              Workflow A đã đóng
+│   │   └── workflow_b/              Workflow B của TV2 và TV4
+│   └── Scoring-Program-Task-*/      Scoring program LegalIR/LegalQA
 ├── experiments/                     Thử nghiệm tách theo thành viên
 ├── frontend/                        Web UI demo
 ├── models/                          Model local; không commit weight lớn
 ├── outputs/                         Log chạy local/GPU
 ├── prompts/                         System prompt và RAG template có version
+├── reports/task1/                   Manifest, ledger và kết quả audit/evaluation
+│   └── workflow_b/
+│       ├── tv2/                     Artifact B2a và reranker của TV2
+│       └── tv4/                     Artifact B1 và LTR của TV4
 ├── scripts/
+│   ├── analysis/                    Phân tích/audit dữ liệu và workflow
 │   ├── beam/                        Runner và thí nghiệm Task1 trên Beam
-│   │   ├── task1_v2/                Module V2 score-first reranker
-│   │   ├── task1_v3_residual/       Module V3 residual policy/ranking
-│   │   │   ├── common.py            Helper chung và đường dẫn artifact V3
-│   │   │   ├── train_residual_policy.py
-│   │   │   ├── train_residual_policy_v3b.py
-│   │   │   ├── forensic_benefit_neutral_signal.py
-│   │   │   └── train_delta_recall_residual.py
-│   │   ├── beam_task1_v1a_real.py
-│   │   ├── beam_task1_v1a_eval_only.py
-│   │   ├── beam_task1_v2_prepare_cpu.py
-│   │   ├── beam_task1_v2_fold0.py
-│   │   ├── beam_task1_v3_prepare_cpu.py
-│   │   ├── beam_task1_v3_policy_cpu.py
-│   │   ├── beam_task1_v3b_policy_cpu.py
-│   │   ├── beam_task1_v3b_fold0_eval_cpu.py
-│   │   └── beam_task1_delta_recall_residual_cpu.py
+│   │   ├── task1_v2/                Module V2
+│   │   └── task1_v3_residual/       Module V3 residual policy/ranking
 │   ├── ci_cd/                       Script CI/CD
 │   ├── data_prep/                   Ingestion và indexing
 │   ├── evaluation/                  Candidate generation, metric và reranker benchmark
-│   ├── gpu/                         Preflight và pipeline RTX
+│   ├── gpu/                         Preflight và pipeline GPU
+│   ├── maintenance/                 Script bảo trì repository
+│   ├── misc/                        Tiện ích không thuộc workflow chính
+│   ├── modal/                       Job và helper chạy trên Modal
+│   ├── packaging/                   Đóng gói artifact/submission
 │   ├── submission/                  Writer/validator submission LegalIR và LegalQA
-│   ├── task1/                       Script Task1 tiện ích/đóng gói
-│   └── training/                    Fine-tune/training script
+│   ├── task1/                       Script Task1 tiện ích
+│   ├── training/                    Fine-tune/training script
+│   ├── utils/                       Helper dùng chung
+│   ├── validation/                  Validator dữ liệu và submission
+│   └── warmup/                      Script warmup/preflight
 ├── src/udsc2026/                    Mã nguồn production
-└── tests/                           Unit và integration tests
+├── tests/                           Unit, integration và contract tests
+├── download_models.py               Tải model về thư mục models/
+└── pyproject.toml                   Dependency và cấu hình tooling
 ```
 
 ## Phân công
@@ -292,7 +300,7 @@ B2a-0 (context, GPU gate và long-document root cause); artifact Workflow A/B;
 progress log; cùng tooling đóng gói submission. Các kết quả vẫn giữ nguyên
 điều kiện không dùng Fold0/public labels cho các audit tương ứng.
 
-### Phục hồi các output lớn ngoài Git
+### Phục hồi các output lớn ngoài Git - [link](https://drive.google.com/file/d/1WA_FQNOgkIXVWZig_ocZcogF2aTyyx4A/view?usp=drive_link)
 
 GitHub giới hạn file 100 MB, vì vậy các output lớn được gom vào
 `task1_large_outputs.zip` ở thư mục gốc và thư mục giải nén cục bộ

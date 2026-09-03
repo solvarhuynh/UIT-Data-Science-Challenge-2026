@@ -75,7 +75,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--parents-dir", type=Path, required=True)
     parser.add_argument(
         "--reranker-model",
-        default="BAAI/bge-reranker-v2-m3",
+        default="models/qwen3-vl-reranker-2b",
         help="Local path or Hugging Face model id for the second-stage parent reranker.",
     )
     parser.add_argument(

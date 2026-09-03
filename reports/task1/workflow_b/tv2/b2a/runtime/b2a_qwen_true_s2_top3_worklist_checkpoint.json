@@ -1,0 +1,13 @@
+{
+  "last_deterministic_pair_key": [
+    "164428",
+    42,
+    "127858"
+  ],
+  "missing_mappings": 0,
+  "processed_pair_count": 420000,
+  "rows_written": 1259607,
+  "worklist_size_bytes": 666928711,
+  "worklist_tail_sha256": "c56ec5ae350a99a61f1826b95f026afcac9b7781ed18f4771d746d878bceaed4",
+  "wrong_doc_mappings": 0
+}

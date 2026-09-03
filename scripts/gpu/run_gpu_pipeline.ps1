@@ -78,14 +78,14 @@ Invoke-CheckedPython -PythonArgs @(
     "scripts/evaluation/benchmark_reranker.py",
     "--benchmark", "artifacts/tv2/research/smoke/smoke_benchmark.jsonl",
     "--candidates", "artifacts/tv2/research/smoke/smoke_dense_predictions.jsonl",
-    "--model", "models/reranker",
+    "--model", "models/qwen3-vl-reranker-2b",
     "--device", "cuda",
     "--batch-size", "8",
     "--max-length", "1024",
     "--candidate-k", "50",
     "--top-n", "5",
     "--fp16",
-    "--output-dir", "artifacts/tv5/smoke-bge-reranker-v2-m3"
+    "--output-dir", "artifacts/tv5/smoke-qwen3-vl-reranker-2b"
 )
 
 # Full dense index and the 100-question internal benchmark.
@@ -109,14 +109,14 @@ Invoke-CheckedPython -PythonArgs @(
     "scripts/evaluation/benchmark_reranker.py",
     "--benchmark", (Join-Path $ProcessedRoot "benchmarks/synthetic_qa.jsonl"),
     "--candidates", "artifacts/tv2/production/dense_predictions.jsonl",
-    "--model", "models/reranker",
+    "--model", "models/qwen3-vl-reranker-2b",
     "--device", "cuda",
     "--batch-size", "8",
     "--max-length", "1024",
     "--candidate-k", "50",
     "--top-n", "5",
     "--fp16",
-    "--output-dir", "artifacts/tv5/bge-reranker-v2-m3"
+    "--output-dir", "artifacts/tv5/qwen3-vl-reranker-2b"
 )
 
-Write-Host "GPU pipeline completed. Review artifacts/tv5/bge-reranker-v2-m3/evaluation/comparison.md"
+Write-Host "GPU pipeline completed. Review artifacts/tv5/qwen3-vl-reranker-2b/evaluation/comparison.md"
