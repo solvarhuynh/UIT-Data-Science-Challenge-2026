@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -271,3 +272,137 @@ def test_explicit_cuda_requires_available_cuda() -> None:
         pytest.skip("CUDA is available in this environment")
     with pytest.raises(RuntimeError, match="CUDA is required"):
         MODULE._resolve_device("cuda", dry_run=False)
+
+
+def test_parser_accepts_deeper_candidate_pool_for_high_recall_oof() -> None:
+    args = MODULE.build_parser().parse_args(
+        ["--candidate-depth", "300", "--inference-batch-size", "24"]
+    )
+    assert args.candidate_depth == 300
+    assert args.inference_batch_size == 24
+
+
+def test_training_pair_cap_is_query_balanced_and_deterministic() -> None:
+    records = [
+        {
+            "query_id": query_id,
+            "positive_doc": f"gold-{query_id}",
+            "negative_doc": f"wrong-{query_id}-{index}",
+            "negative_type": "semantic_confuser",
+            "_copy_index": 0,
+        }
+        for query_id in ("q1", "q2", "q3")
+        for index in range(3)
+    ]
+
+    first = MODULE._balanced_training_subset(records, limit=3, fold=2)
+    second = MODULE._balanced_training_subset(records, limit=3, fold=2)
+
+    assert first == second
+    assert {row["query_id"] for row in first} == {"q1", "q2", "q3"}
+
+
+def test_resume_rejects_changed_fold_dataset_before_overwrite(tmp_path: Path) -> None:
+    train, folds, candidates, negatives = _write_fixture_inputs(tmp_path)
+    output = tmp_path / "resume-output"
+    args = MODULE.build_parser().parse_args(
+        [
+            "--train",
+            str(train),
+            "--folds",
+            str(folds),
+            "--candidates",
+            str(candidates),
+            "--negatives-dir",
+            str(negatives),
+            "--output-dir",
+            str(output),
+        ]
+    )
+    MODULE.run(args, backend_factory=_fake_factory)
+    fold_zero = negatives / "fold_0.jsonl"
+    changed = fold_zero.read_text(encoding="utf-8").replace(
+        '"negative_doc": "wrong-1"', '"negative_doc": "changed-1"', 1
+    )
+    fold_zero.write_text(changed, encoding="utf-8")
+    args.resume = True
+
+    with pytest.raises(ValueError, match="dataset changed"):
+        MODULE.run(args, backend_factory=_fake_factory)
+
+
+def test_resume_retrains_fold_when_checkpoint_is_missing(tmp_path: Path) -> None:
+    train, folds, candidates, negatives = _write_fixture_inputs(tmp_path)
+    output = tmp_path / "resume-missing-checkpoint"
+    args = MODULE.build_parser().parse_args(
+        [
+            "--train",
+            str(train),
+            "--folds",
+            str(folds),
+            "--candidates",
+            str(candidates),
+            "--negatives-dir",
+            str(negatives),
+            "--output-dir",
+            str(output),
+        ]
+    )
+    MODULE.run(args, backend_factory=_fake_factory)
+    checkpoint = output / "fold_0" / "checkpoint" / "mock_checkpoint.json"
+    checkpoint.unlink()
+    args.resume = True
+
+    MODULE.run(args, backend_factory=_fake_factory)
+
+    assert checkpoint.is_file()
+
+
+def test_completed_resume_preserves_base_model_revision(tmp_path: Path) -> None:
+    train, folds, candidates, negatives = _write_fixture_inputs(tmp_path)
+    output = tmp_path / "completed-resume"
+    args = MODULE.build_parser().parse_args(
+        [
+            "--train",
+            str(train),
+            "--folds",
+            str(folds),
+            "--candidates",
+            str(candidates),
+            "--negatives-dir",
+            str(negatives),
+            "--output-dir",
+            str(output),
+        ]
+    )
+    MODULE.run(args, backend_factory=_fake_factory)
+    args.resume = True
+
+    MODULE.run(args, backend_factory=_fake_factory)
+
+    manifest = json.loads(
+        (output / "training_manifest.json").read_text(encoding="utf-8")
+    )
+    assert manifest["base_model"]["revision"] == "fake-bge-revision"
+
+
+def test_gpu_backend_close_releases_training_state() -> None:
+    empty_cache_calls: list[bool] = []
+    backend = object.__new__(MODULE.TorchBGERerankerBackend)
+    backend._optimizer = object()
+    backend._scheduler = object()
+    backend._scaler = object()
+    backend._model = object()
+    backend._tokenizer = object()
+    backend._torch = types.SimpleNamespace(
+        cuda=types.SimpleNamespace(empty_cache=lambda: empty_cache_calls.append(True))
+    )
+
+    backend.close()
+
+    assert backend._optimizer is None
+    assert backend._scheduler is None
+    assert backend._scaler is None
+    assert not hasattr(backend, "_model")
+    assert not hasattr(backend, "_tokenizer")
+    assert empty_cache_calls == [True]

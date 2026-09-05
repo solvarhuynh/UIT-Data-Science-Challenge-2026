@@ -85,6 +85,18 @@ def test_question_manifest_loader_supports_phase_shapes_and_rejects_ambiguity(
     )
     assert load_legal_ir_question_ids(mapping) == ["001", "002"]
 
+    unlabeled_phase = tmp_path / "unlabeled-phase.json"
+    _write_json(
+        unlabeled_phase,
+        {
+            "phase-001": {
+                "question": "Question without released labels?",
+                "answer": None,
+            }
+        },
+    )
+    assert load_legal_ir_question_ids(unlabeled_phase) == ["phase-001"]
+
     string_ids = tmp_path / "ids.json"
     _write_json(string_ids, ["002", "001"])
     assert load_legal_ir_question_ids(string_ids) == ["002", "001"]
@@ -345,7 +357,7 @@ def _official_scorer_reference(
 
     scorer_path = (
         Path(__file__).resolve().parents[3]
-        / "docs/Scoring-Program-Task-LegalIR/scoring.py"
+        / "docs/task1/Scoring-Program-Task-LegalIR/scoring.py"
     )
     spec = importlib.util.spec_from_file_location(
         "official_legal_ir_scorer", scorer_path

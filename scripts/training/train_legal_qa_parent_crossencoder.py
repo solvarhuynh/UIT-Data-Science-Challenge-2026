@@ -15,6 +15,7 @@ import math
 import os
 import random
 import re
+import shutil
 import sys
 import tempfile
 import unicodedata
@@ -36,7 +37,10 @@ from udsc2026.retrieval.parent_context import (  # noqa: E402
 SCHEMA_VERSION = 1
 LABEL_PROFILE = "legalqa-parent-reference-overlap-v1"
 MAX_MODEL_LENGTH = 256
+TRAINING_CONTRACT_VERSION = "legalqa-parent-crossencoder-resume-v1"
+TRAINING_STATE_SCHEMA_VERSION = 1
 _WORD_RE = re.compile(r"\w+", flags=re.UNICODE)
+_SHA256_RE = re.compile(r"[0-9a-f]{64}", flags=re.IGNORECASE)
 
 
 def _positive_int(value: str) -> int:
@@ -65,6 +69,13 @@ def _positive_float(value: str) -> float:
     if not math.isfinite(parsed) or parsed <= 0:
         raise argparse.ArgumentTypeError("must be a finite positive number")
     return parsed
+
+
+def _sha256_hex(value: str) -> str:
+    normalized = value.strip().lower()
+    if _SHA256_RE.fullmatch(normalized) is None:
+        raise argparse.ArgumentTypeError("must be exactly 64 hexadecimal characters")
+    return normalized
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -155,6 +166,26 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument("--train-data", type=Path, action="append", required=True)
     train.add_argument("--eval-data", type=Path, action="append", default=[])
     train.add_argument(
+        "--preverified-input-archive-sha256",
+        type=_sha256_hex,
+        help=(
+            "SHA-256 of an enclosing archive already verified by the caller. "
+            "Required when preverified member hashes are supplied."
+        ),
+    )
+    train.add_argument(
+        "--preverified-train-data-sha256",
+        type=_sha256_hex,
+        action="append",
+        default=[],
+    )
+    train.add_argument(
+        "--preverified-eval-data-sha256",
+        type=_sha256_hex,
+        action="append",
+        default=[],
+    )
+    train.add_argument(
         "--fit-all",
         action="store_true",
         help="Train without eval; exact organizer overlays remain out of scope.",
@@ -179,6 +210,24 @@ def build_parser() -> argparse.ArgumentParser:
     train.add_argument("--warmup-ratio", type=_unit_float, default=0.1)
     train.add_argument("--gradient-accumulation", type=_positive_int, default=1)
     train.add_argument("--max-grad-norm", type=_positive_float, default=1.0)
+    train.add_argument(
+        "--objective",
+        choices=("bce", "listwise"),
+        default="bce",
+        help=(
+            "Training objective. 'listwise' compares every candidate belonging "
+            "to the same question and is recommended for parent ranking."
+        ),
+    )
+    train.add_argument(
+        "--target-temperature",
+        type=_positive_float,
+        default=0.1,
+        help=(
+            "Softmax temperature applied to reference-overlap targets for the "
+            "listwise objective."
+        ),
+    )
     train.add_argument("--freeze-layers", type=_non_negative_int, default=6)
     train.add_argument(
         "--freeze-embeddings",
@@ -192,6 +241,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     train.add_argument("--num-workers", type=_non_negative_int, default=0)
     train.add_argument("--seed", type=int, default=2026)
+    train.add_argument(
+        "--resume",
+        action="store_true",
+        help=(
+            "Resume from output-dir/checkpoint-latest, or return immediately "
+            "when a matching completed manifest already exists."
+        ),
+    )
 
     score = commands.add_parser(
         "score",
@@ -255,6 +312,136 @@ def _write_json(path: Path, payload: object) -> None:
         path,
         json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n",
     )
+
+
+def _atomic_torch_save(torch: Any, path: Path, payload: object) -> None:
+    """Persist a Torch payload with the state file acting as a commit marker."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        dir=str(path.parent),
+    )
+    try:
+        with os.fdopen(descriptor, "wb") as stream:
+            descriptor = -1
+            torch.save(payload, stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary_name, path)
+    except BaseException:
+        if descriptor >= 0:
+            os.close(descriptor)
+        try:
+            os.unlink(temporary_name)
+        except OSError:
+            pass
+        raise
+
+
+def _model_fingerprint(model_dir: Path) -> str:
+    """Hash the local model snapshot without coupling it to its absolute path."""
+
+    if not model_dir.is_dir():
+        raise FileNotFoundError(f"model directory does not exist: {model_dir}")
+    files = sorted(
+        path
+        for path in model_dir.rglob("*")
+        if path.is_file()
+        and path.name not in {"training_state.pt"}
+        and not path.name.endswith(".tmp")
+    )
+    if not files:
+        raise FileNotFoundError(
+            f"model directory has no fingerprintable files: {model_dir}"
+        )
+    digest = hashlib.sha256()
+    for path in files:
+        digest.update(path.relative_to(model_dir).as_posix().encode("utf-8"))
+        digest.update(str(path.stat().st_size).encode("ascii"))
+        digest.update(_sha256(path).encode("ascii"))
+    return digest.hexdigest()
+
+
+def _training_contract(args: argparse.Namespace) -> dict[str, Any]:
+    """Return the semantic contract that must match an epoch resume exactly."""
+
+    supplied_train = list(args.preverified_train_data_sha256)
+    supplied_eval = list(args.preverified_eval_data_sha256)
+    supplied_any = bool(supplied_train or supplied_eval)
+    if supplied_any and not args.preverified_input_archive_sha256:
+        raise ValueError(
+            "preverified member hashes require --preverified-input-archive-sha256"
+        )
+    if supplied_train and len(supplied_train) != len(args.train_data):
+        raise ValueError(
+            "preverified train-data hash count does not match --train-data count"
+        )
+    if supplied_eval and len(supplied_eval) != len(args.eval_data):
+        raise ValueError(
+            "preverified eval-data hash count does not match --eval-data count"
+        )
+    training_hashes = supplied_train or [_sha256(path) for path in args.train_data]
+    evaluation_hashes = supplied_eval or [_sha256(path) for path in args.eval_data]
+
+    return {
+        "schema_version": TRAINING_CONTRACT_VERSION,
+        "training_data_sha256": training_hashes,
+        "evaluation_data_sha256": evaluation_hashes,
+        "preverified_input_archive_sha256": args.preverified_input_archive_sha256,
+        "base_model_fingerprint": _model_fingerprint(args.model_dir),
+        "fit_all": args.fit_all,
+        "epochs": args.epochs,
+        # Beam changes the physical microbatch by GPU tier while preserving
+        # the same optimizer-level batch. This keeps those retries resumable.
+        "effective_batch_size": args.batch_size * args.gradient_accumulation,
+        "learning_rate": args.learning_rate,
+        "weight_decay": args.weight_decay,
+        "warmup_ratio": args.warmup_ratio,
+        "max_grad_norm": args.max_grad_norm,
+        "max_length": args.max_length,
+        "objective": args.objective,
+        "target_temperature": args.target_temperature,
+        "freeze_layers": args.freeze_layers,
+        "freeze_embeddings": args.freeze_embeddings,
+        "amp": args.amp,
+        "seed": args.seed,
+        "label_profile": LABEL_PROFILE,
+    }
+
+
+def _read_json_object_strict(path: Path, label: str) -> dict[str, Any]:
+    try:
+        payload = _read_json(path)
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"{label} is corrupt: {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"{label} must be a JSON object: {path}")
+    return payload
+
+
+def _checkpoint_is_complete(directory: Path) -> bool:
+    if not directory.is_dir():
+        return False
+    weights = any(directory.glob("*.safetensors")) or any(
+        directory.glob("pytorch_model*.bin")
+    )
+    return (
+        weights
+        and (directory / "config.json").is_file()
+        and (directory / "tokenizer_config.json").is_file()
+        and (directory / "training_metrics.json").is_file()
+        and (directory / "training_state.pt").is_file()
+    )
+
+
+def _recover_checkpoint_backup(directory: Path) -> None:
+    """Restore the previous committed checkpoint after an interrupted swap."""
+
+    backup = directory.with_name(f".{directory.name}.backup")
+    if not directory.exists() and backup.exists():
+        os.replace(backup, directory)
 
 
 def _write_jsonl(path: Path, rows: Iterable[dict[str, Any]]) -> None:
@@ -351,9 +538,7 @@ def reference_overlap(reference: str, parent_text: str) -> float:
     parent_tokens = _tokens(parent_text)
     if not reference_tokens or not parent_tokens:
         return 0.0
-    matches = sum(
-        (Counter(reference_tokens) & Counter(parent_tokens)).values()
-    )
+    matches = sum((Counter(reference_tokens) & Counter(parent_tokens)).values())
     if not matches:
         return 0.0
     precision = matches / len(parent_tokens)
@@ -460,9 +645,7 @@ def _percentiles(values: Sequence[float]) -> dict[str, float | None]:
         upper = int(math.ceil(position))
         if lower == upper:
             return ordered[lower]
-        return ordered[lower] + (ordered[upper] - ordered[lower]) * (
-            position - lower
-        )
+        return ordered[lower] + (ordered[upper] - ordered[lower]) * (position - lower)
 
     return {
         "min": ordered[0],
@@ -545,8 +728,7 @@ def _derive_split_rows(
             parent
             for parent in parent_candidates
             if (parent["doc_id"], parent["parent_id"]) not in positive_keys
-            and float(parent["reference_overlap"])
-            <= weakest_positive - negative_gap
+            and float(parent["reference_overlap"]) <= weakest_positive - negative_gap
         ]
         negatives.sort(
             key=lambda parent: (
@@ -628,9 +810,7 @@ def run_split_ids(args: argparse.Namespace) -> list[Path]:
             "question_count": len(ordered_ids),
             "eval_count": len(eval_ids),
             "train_count": len(train_ids),
-            "train_normalized_exact_eval_duplicates": len(
-                exact_duplicate_train_ids
-            ),
+            "train_normalized_exact_eval_duplicates": len(exact_duplicate_train_ids),
             "duplicate_train_ids": exact_duplicate_train_ids,
             "note": (
                 "prepare removes these normalized-exact train duplicates before "
@@ -732,8 +912,7 @@ def run_prepare(args: argparse.Namespace) -> list[Path]:
                 "sha256": _sha256(args.questions),
             },
             "candidates": [
-                {"path": str(path), "sha256": _sha256(path)}
-                for path in args.candidates
+                {"path": str(path), "sha256": _sha256(path)} for path in args.candidates
             ],
             "train_ids": {
                 "path": str(args.train_ids),
@@ -832,12 +1011,10 @@ def audit_training_rows(
                     f"{label} question {question_id!r} needs positive and negative rows"
                 )
         overlaps = [
-            float(group[0].get("best_parent_overlap", 0.0))
-            for group in groups.values()
+            float(group[0].get("best_parent_overlap", 0.0)) for group in groups.values()
         ]
         margins = [
-            float(group[0].get("overlap_margin", 0.0))
-            for group in groups.values()
+            float(group[0].get("overlap_margin", 0.0)) for group in groups.values()
         ]
         return {
             "rows": len(rows),
@@ -865,8 +1042,7 @@ def audit_training_rows(
     normalized_overlap = train_keys & eval_keys
     if normalized_overlap:
         raise ValueError(
-            "train/eval normalized questions overlap: "
-            f"{sorted(normalized_overlap)[:3]}"
+            f"train/eval normalized questions overlap: {sorted(normalized_overlap)[:3]}"
         )
     train.pop("question_text")
     evaluation.pop("question_text")
@@ -898,14 +1074,11 @@ def audit_fit_all_rows(rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
             raise ValueError(f"fit-all changes question text for {question_id}")
         groups[question_id].add(row["label"])
     invalid = [
-        question_id
-        for question_id, labels in groups.items()
-        if labels != {0, 1}
+        question_id for question_id, labels in groups.items() if labels != {0, 1}
     ]
     if invalid:
         raise ValueError(
-            "fit-all questions need positive and negative rows: "
-            f"{sorted(invalid)[:5]}"
+            f"fit-all questions need positive and negative rows: {sorted(invalid)[:5]}"
         )
     return {
         "fit_all": True,
@@ -953,9 +1126,23 @@ def _load_model_stack(model_dir: Path, device_name: str) -> tuple[Any, Any, Any]
     from transformers import PhobertTokenizer, RobertaForSequenceClassification
 
     resolved = _require_local_model(model_dir)
+    print(
+        json.dumps(
+            {"event": "model_load_progress", "phase": "tokenizer_start"},
+            sort_keys=True,
+        ),
+        flush=True,
+    )
     tokenizer = PhobertTokenizer.from_pretrained(
         str(resolved),
         local_files_only=True,
+    )
+    print(
+        json.dumps(
+            {"event": "model_load_progress", "phase": "model_cpu_start"},
+            sort_keys=True,
+        ),
+        flush=True,
     )
     model = RobertaForSequenceClassification.from_pretrained(
         str(resolved),
@@ -963,10 +1150,31 @@ def _load_model_stack(model_dir: Path, device_name: str) -> tuple[Any, Any, Any]
         num_labels=1,
         ignore_mismatched_sizes=True,
     )
+    print(
+        json.dumps(
+            {"event": "model_load_progress", "phase": "model_cpu_ready"},
+            sort_keys=True,
+        ),
+        flush=True,
+    )
     device = torch.device(device_name)
     if device.type == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA was requested but torch.cuda.is_available() is false")
+    print(
+        json.dumps(
+            {"event": "model_load_progress", "phase": "model_device_start"},
+            sort_keys=True,
+        ),
+        flush=True,
+    )
     model.to(device)
+    print(
+        json.dumps(
+            {"event": "model_load_progress", "phase": "model_device_ready"},
+            sort_keys=True,
+        ),
+        flush=True,
+    )
     return torch, tokenizer, model
 
 
@@ -1026,9 +1234,11 @@ def _make_loader(
             [row["question"] for row in batch],
             [row["parent_text"] for row in batch],
             padding=True,
-            truncation=True,
+            truncation="only_second",
             max_length=max_length,
+            return_overflowing_tokens=False,
             return_tensors="pt",
+            verbose=False,
         )
         encoded["labels"] = torch.tensor(
             [float(row["label"]) for row in batch],
@@ -1050,13 +1260,118 @@ def _make_loader(
     )
 
 
+def group_training_rows(
+    rows: Sequence[dict[str, Any]],
+) -> list[list[dict[str, Any]]]:
+    """Group candidate pairs by question while preserving input order."""
+
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        question_id = row["question_id"]
+        grouped.setdefault(question_id, []).append(row)
+    for question_id, candidates in grouped.items():
+        labels = [int(row["label"]) for row in candidates]
+        if not any(labels) or all(labels):
+            raise ValueError(
+                f"listwise question {question_id!r} needs positive and negative rows"
+            )
+    return list(grouped.values())
+
+
+def _make_group_loader(
+    torch: Any,
+    tokenizer: Any,
+    rows: Sequence[dict[str, Any]],
+    *,
+    batch_size: int,
+    max_length: int,
+    shuffle: bool,
+    num_workers: int,
+    seed: int,
+) -> Any:
+    """Build batches of complete question groups for a listwise objective."""
+
+    class GroupDataset(torch.utils.data.Dataset):
+        def __init__(self, values: Sequence[Sequence[dict[str, Any]]]) -> None:
+            self.values = values
+
+        def __len__(self) -> int:
+            return len(self.values)
+
+        def __getitem__(self, index: int) -> Sequence[dict[str, Any]]:
+            return self.values[index]
+
+    def collate(
+        groups: Sequence[Sequence[dict[str, Any]]],
+    ) -> dict[str, Any]:
+        flattened = [row for group in groups for row in group]
+        encoded = tokenizer(
+            [row["question"] for row in flattened],
+            [row["parent_text"] for row in flattened],
+            padding=True,
+            truncation="only_second",
+            max_length=max_length,
+            return_overflowing_tokens=False,
+            return_tensors="pt",
+            verbose=False,
+        )
+        encoded["labels"] = torch.tensor(
+            [float(row["label"]) for row in flattened],
+            dtype=torch.float32,
+        )
+        encoded["target_scores"] = torch.tensor(
+            [float(row.get("reference_overlap", row["label"])) for row in flattened],
+            dtype=torch.float32,
+        )
+        encoded["question_ids"] = [row["question_id"] for row in flattened]
+        encoded["group_sizes"] = [len(group) for group in groups]
+        return encoded
+
+    generator = torch.Generator()
+    generator.manual_seed(seed)
+    return torch.utils.data.DataLoader(
+        GroupDataset(group_training_rows(rows)),
+        batch_size=batch_size,
+        shuffle=shuffle,
+        num_workers=num_workers,
+        collate_fn=collate,
+        generator=generator,
+        pin_memory=torch.cuda.is_available(),
+    )
+
+
 def _move_batch(torch: Any, batch: dict[str, Any], device: Any) -> dict[str, Any]:
     return {
         key: value.to(device, non_blocking=True)
         for key, value in batch.items()
-        if key not in {"labels", "question_ids"}
+        if key not in {"labels", "target_scores", "question_ids", "group_sizes"}
         and isinstance(value, torch.Tensor)
     }
+
+
+def _listwise_loss(
+    torch: Any,
+    logits: Any,
+    target_scores: Any,
+    group_sizes: Sequence[int],
+    *,
+    temperature: float,
+) -> Any:
+    """Cross-entropy between predicted and graded target group distributions."""
+
+    losses: list[Any] = []
+    offset = 0
+    for size in group_sizes:
+        group_logits = logits[offset : offset + size]
+        group_targets = target_scores[offset : offset + size]
+        target_distribution = torch.softmax(group_targets / temperature, dim=0)
+        losses.append(
+            -(target_distribution * torch.log_softmax(group_logits, dim=0)).sum()
+        )
+        offset += size
+    if offset != logits.shape[0] or not losses:
+        raise ValueError("invalid listwise group sizes")
+    return torch.stack(losses).mean()
 
 
 def _evaluate_model(
@@ -1067,6 +1382,8 @@ def _evaluate_model(
     device: Any,
     amp_enabled: bool,
     positive_weight: Any,
+    objective: str,
+    target_temperature: float,
 ) -> dict[str, float]:
     model.eval()
     criterion = torch.nn.BCEWithLogitsLoss(pos_weight=positive_weight)
@@ -1075,7 +1392,9 @@ def _evaluate_model(
     correct = 0
     count = 0
     with torch.no_grad():
-        for batch in loader:
+        total_eval_batches = len(loader)
+        eval_progress_interval = max(1, total_eval_batches // 20)
+        for eval_step, batch in enumerate(loader, 1):
             labels = batch["labels"].to(device)
             inputs = _move_batch(torch, batch, device)
             with torch.autocast(
@@ -1084,7 +1403,17 @@ def _evaluate_model(
                 enabled=amp_enabled,
             ):
                 logits = model(**inputs).logits.squeeze(-1)
-                loss = criterion(logits, labels)
+                if objective == "listwise":
+                    target_scores = batch["target_scores"].to(device)
+                    loss = _listwise_loss(
+                        torch,
+                        logits,
+                        target_scores,
+                        batch["group_sizes"],
+                        temperature=target_temperature,
+                    )
+                else:
+                    loss = criterion(logits, labels)
             losses.append(float(loss.detach().cpu()))
             predictions = (logits >= 0).long().cpu().tolist()
             label_values = labels.long().cpu().tolist()
@@ -1095,6 +1424,23 @@ def _evaluate_model(
                 batch["question_ids"], scores, label_values
             ):
                 grouped[question_id].append((float(score), int(label)))
+            if (
+                eval_step == 1
+                or eval_step % eval_progress_interval == 0
+                or eval_step == total_eval_batches
+            ):
+                print(
+                    json.dumps(
+                        {
+                            "event": "evaluation_progress",
+                            "batch": eval_step,
+                            "batches": total_eval_batches,
+                            "percent": round(100 * eval_step / total_eval_batches, 1),
+                        },
+                        sort_keys=True,
+                    ),
+                    flush=True,
+                )
     ranking_hits = 0
     pairwise_total = 0
     pairwise_correct = 0
@@ -1119,23 +1465,252 @@ def _save_checkpoint(
     torch: Any,
     model: Any,
     tokenizer: Any,
-    optimizer: Any,
-    scheduler: Any,
     directory: Path,
     state: dict[str, Any],
 ) -> None:
-    directory.mkdir(parents=True, exist_ok=True)
-    model.save_pretrained(directory, safe_serialization=True)
-    tokenizer.save_pretrained(directory)
-    torch.save(
-        {
-            "optimizer": optimizer.state_dict(),
-            "scheduler": scheduler.state_dict(),
-            **state,
-        },
-        directory / "training_state.pt",
+    """Write a complete checkpoint in staging, then atomically swap it in."""
+
+    directory.parent.mkdir(parents=True, exist_ok=True)
+    backup = directory.with_name(f".{directory.name}.backup")
+    if backup.exists():
+        if directory.exists():
+            shutil.rmtree(backup)
+        else:
+            os.replace(backup, directory)
+    staging = Path(
+        tempfile.mkdtemp(
+            prefix=f".{directory.name}.",
+            suffix=".tmp",
+            dir=str(directory.parent),
+        )
     )
-    _write_json(directory / "training_metrics.json", state)
+    try:
+        model.save_pretrained(staging, safe_serialization=True)
+        tokenizer.save_pretrained(staging)
+        serializable_state = {
+            key: value
+            for key, value in state.items()
+            if key
+            not in {
+                "optimizer",
+                "scheduler",
+                "scaler",
+                "python_rng_state",
+                "torch_rng_state",
+                "cuda_rng_states",
+                "loader_generator_state",
+            }
+        }
+        _write_json(staging / "training_metrics.json", serializable_state)
+        _atomic_torch_save(torch, staging / "training_state.pt", state)
+        if not _checkpoint_is_complete(staging):
+            raise RuntimeError(f"staged checkpoint is incomplete: {staging}")
+        # Do not guard the rename with Path.exists(). Beam Volume metadata can
+        # briefly report a false negative even though the non-empty checkpoint
+        # directory is still visible to rename(2). That TOCTOU race made the
+        # following staging commit fail with ENOTEMPTY. Attempt the atomic move
+        # directly and treat only FileNotFoundError as "no previous commit".
+        previous_committed = False
+        try:
+            os.replace(directory, backup)
+            previous_committed = True
+        except FileNotFoundError:
+            pass
+        try:
+            os.replace(staging, directory)
+        except BaseException:
+            if previous_committed:
+                try:
+                    os.replace(backup, directory)
+                except OSError as rollback_error:
+                    raise RuntimeError(
+                        "checkpoint commit failed and rollback could not restore "
+                        f"{directory}: {rollback_error}"
+                    ) from rollback_error
+            raise
+        if previous_committed and backup.exists():
+            shutil.rmtree(backup)
+    finally:
+        if staging.exists():
+            shutil.rmtree(staging)
+
+
+def _load_training_state(
+    torch: Any,
+    checkpoint: Path,
+    contract: dict[str, Any],
+    *,
+    total_epochs: int,
+) -> dict[str, Any]:
+    """Load and fail closed on an incomplete, corrupt, or stale checkpoint."""
+
+    if not _checkpoint_is_complete(checkpoint):
+        raise ValueError(f"resume checkpoint is incomplete: {checkpoint}")
+    state_path = checkpoint / "training_state.pt"
+    try:
+        state = torch.load(state_path, map_location="cpu", weights_only=True)
+    except Exception as exc:
+        raise ValueError(
+            f"resume checkpoint state is corrupt: {state_path}: {exc}"
+        ) from exc
+    if not isinstance(state, dict):
+        raise ValueError(f"resume checkpoint state must be a mapping: {state_path}")
+    if state.get("schema_version") != TRAINING_STATE_SCHEMA_VERSION:
+        raise ValueError(
+            "resume checkpoint state schema is unsupported: "
+            f"{state.get('schema_version')!r}"
+        )
+    if state.get("training_contract") != contract:
+        raise ValueError(
+            "resume checkpoint contract differs from the requested training run"
+        )
+    try:
+        epoch = int(state["epoch"])
+        global_updates = int(state["global_updates"])
+        updates_per_epoch = int(state["updates_per_epoch"])
+        best_epoch = int(state["best_epoch"])
+        best_metric = float(state["best_metric"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("resume checkpoint epoch metadata is corrupt") from exc
+    if not 1 <= epoch <= total_epochs:
+        raise ValueError(
+            "resume checkpoint epoch "
+            f"{epoch} is outside requested epochs={total_epochs}"
+        )
+    history = state.get("history")
+    if not isinstance(history, list) or [
+        item.get("epoch") if isinstance(item, dict) else None for item in history
+    ] != list(range(1, epoch + 1)):
+        raise ValueError(
+            "resume checkpoint history must contain contiguous epochs 1..saved_epoch"
+        )
+    if not 1 <= best_epoch <= epoch or not math.isfinite(best_metric):
+        raise ValueError("resume checkpoint best-epoch metadata is corrupt")
+    if updates_per_epoch <= 0 or global_updates != epoch * updates_per_epoch:
+        raise ValueError(
+            "resume checkpoint global update count does not match its epoch"
+        )
+    required = {
+        "optimizer",
+        "scheduler",
+        "scaler",
+        "python_rng_state",
+        "torch_rng_state",
+        "cuda_rng_states",
+        "loader_generator_state",
+    }
+    missing = sorted(required - set(state))
+    if missing:
+        raise ValueError(f"resume checkpoint state is missing fields: {missing}")
+    for field in ("optimizer", "scheduler", "scaler"):
+        if not isinstance(state[field], dict):
+            raise ValueError(f"resume checkpoint {field} state must be a mapping")
+    scheduler_step = state["scheduler"].get("last_epoch")
+    if scheduler_step is not None and scheduler_step != global_updates:
+        raise ValueError(
+            "resume checkpoint scheduler position does not match global updates"
+        )
+    return state
+
+
+def _resume_position(
+    state: dict[str, Any],
+    *,
+    updates_per_epoch: int,
+) -> tuple[int, int]:
+    """Validate the current loader shape and return next epoch/update count."""
+
+    saved_epoch = int(state["epoch"])
+    if int(state["updates_per_epoch"]) != updates_per_epoch:
+        raise ValueError(
+            "resume checkpoint updates-per-epoch differs from the current loader"
+        )
+    expected_updates = saved_epoch * updates_per_epoch
+    if int(state["global_updates"]) != expected_updates:
+        raise ValueError(
+            "resume checkpoint global update count does not match its epoch"
+        )
+    return saved_epoch + 1, expected_updates
+
+
+def _direct_checkpoint(output_dir: Path, raw_name: object, label: str) -> Path:
+    if not isinstance(raw_name, str) or not raw_name:
+        raise ValueError(f"completed training manifest has no {label} path")
+    checkpoint = output_dir / raw_name
+    if checkpoint.resolve().parent != output_dir.resolve():
+        raise ValueError(f"completed training manifest {label} escapes output-dir")
+    if not _checkpoint_is_complete(checkpoint):
+        raise ValueError(
+            f"completed training {label} is missing or incomplete: {checkpoint}"
+        )
+    return checkpoint
+
+
+def _validate_completed_run(
+    torch: Any,
+    manifest: dict[str, Any],
+    *,
+    output_dir: Path,
+    contract: dict[str, Any],
+    total_epochs: int,
+) -> Path:
+    """Validate both final and latest checkpoints before accepting a no-op."""
+
+    if manifest.get("status") != "COMPLETE":
+        raise ValueError("completed training manifest has no COMPLETE status")
+    if manifest.get("training_contract") != contract:
+        raise ValueError(
+            "completed output contract differs from the requested training run"
+        )
+    history = manifest.get("history")
+    if not isinstance(history, list) or [
+        item.get("epoch") if isinstance(item, dict) else None for item in history
+    ] != list(range(1, total_epochs + 1)):
+        raise ValueError("completed training manifest history is incomplete or corrupt")
+    checkpoint = _direct_checkpoint(
+        output_dir,
+        manifest.get("checkpoint"),
+        "best checkpoint",
+    )
+    latest = _direct_checkpoint(
+        output_dir,
+        manifest.get("latest_checkpoint"),
+        "latest checkpoint",
+    )
+    best_state = _load_training_state(
+        torch,
+        checkpoint,
+        contract,
+        total_epochs=total_epochs,
+    )
+    latest_state = _load_training_state(
+        torch,
+        latest,
+        contract,
+        total_epochs=total_epochs,
+    )
+    try:
+        manifest_best_epoch = int(manifest["best_epoch"])
+        manifest_best_metric = float(manifest["best_metric"])
+        manifest_updates = int(manifest["global_updates"])
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError(
+            "completed training manifest metric metadata is corrupt"
+        ) from exc
+    if (
+        int(latest_state["epoch"]) != total_epochs
+        or latest_state["history"] != history
+        or int(latest_state["global_updates"]) != manifest_updates
+        or int(latest_state["best_epoch"]) != manifest_best_epoch
+        or float(latest_state["best_metric"]) != manifest_best_metric
+    ):
+        raise ValueError("completed training manifest and checkpoint-latest disagree")
+    if (
+        int(best_state["epoch"]) != manifest_best_epoch
+        or float(best_state["best_metric"]) != manifest_best_metric
+    ):
+        raise ValueError("completed training manifest and best checkpoint disagree")
+    return checkpoint
 
 
 def run_train(args: argparse.Namespace) -> list[Path]:
@@ -1148,20 +1723,138 @@ def run_train(args: argparse.Namespace) -> list[Path]:
         raise ValueError("--eval-data is required unless --fit-all is used")
     if args.output_dir.resolve() == args.model_dir.resolve():
         raise ValueError("output-dir must be separate from the base model")
-    if args.output_dir.exists() and any(args.output_dir.iterdir()):
+    print(
+        json.dumps(
+            {
+                "event": "training_preprocess_progress",
+                "phase": "contract_hash_start",
+                "train_bytes": sum(path.stat().st_size for path in args.train_data),
+                "eval_bytes": sum(path.stat().st_size for path in args.eval_data),
+            },
+            sort_keys=True,
+        ),
+        flush=True,
+    )
+    contract = _training_contract(args)
+    print(
+        json.dumps(
+            {
+                "event": "training_preprocess_progress",
+                "phase": "contract_hash_complete",
+            },
+            sort_keys=True,
+        ),
+        flush=True,
+    )
+    manifest_path = args.output_dir / "training_manifest.json"
+    best_path = (
+        args.output_dir / "checkpoint-final"
+        if args.fit_all
+        else args.output_dir / "checkpoint-best"
+    )
+    latest_path = args.output_dir / "checkpoint-latest"
+    for checkpoint_path in (best_path, latest_path):
+        _recover_checkpoint_backup(checkpoint_path)
+
+    if manifest_path.is_file():
+        if not args.resume:
+            raise ValueError(
+                f"completed output already exists; use --resume: {args.output_dir}"
+            )
+        completed = _read_json_object_strict(
+            manifest_path,
+            "completed training manifest",
+        )
+        import torch as torch_module
+
+        checkpoint = _validate_completed_run(
+            torch_module,
+            completed,
+            output_dir=args.output_dir,
+            contract=contract,
+            total_epochs=args.epochs,
+        )
+        print(f"PARENT_TRAIN_ALREADY_COMPLETE {manifest_path}", flush=True)
+        return [checkpoint, manifest_path]
+
+    output_has_files = args.output_dir.is_dir() and any(args.output_dir.iterdir())
+    if output_has_files and not args.resume:
         raise ValueError(f"output directory is not empty: {args.output_dir}")
+    resume_checkpoint = latest_path if output_has_files and args.resume else None
+    if resume_checkpoint is not None and not _checkpoint_is_complete(resume_checkpoint):
+        raise ValueError(
+            "output directory is incomplete and has no complete "
+            f"checkpoint-latest: {args.output_dir}"
+        )
+
+    print(
+        json.dumps(
+            {
+                "event": "training_preprocess_progress",
+                "phase": "jsonl_load_start",
+            },
+            sort_keys=True,
+        ),
+        flush=True,
+    )
     train_rows = _load_training_rows(args.train_data)
     eval_rows = _load_training_rows(args.eval_data) if args.eval_data else []
+    print(
+        json.dumps(
+            {
+                "event": "training_preprocess_progress",
+                "phase": "jsonl_load_complete",
+                "train_rows": len(train_rows),
+                "eval_rows": len(eval_rows),
+            },
+            sort_keys=True,
+        ),
+        flush=True,
+    )
+    print(
+        json.dumps(
+            {
+                "event": "training_preprocess_progress",
+                "phase": "audit_start",
+            },
+            sort_keys=True,
+        ),
+        flush=True,
+    )
     audit = (
         audit_training_rows(train_rows, eval_rows)
         if eval_rows
         else audit_fit_all_rows(train_rows)
     )
+    print(
+        json.dumps(
+            {
+                "event": "training_preprocess_progress",
+                "phase": "audit_complete",
+            },
+            sort_keys=True,
+        ),
+        flush=True,
+    )
+
+    import torch as torch_module
+
     random.seed(args.seed)
-    torch, tokenizer, model = _load_model_stack(args.model_dir, args.device)
-    torch.manual_seed(args.seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(args.seed)
+    torch_module.manual_seed(args.seed)
+    if torch_module.cuda.is_available():
+        torch_module.cuda.manual_seed_all(args.seed)
+    resume_state = (
+        _load_training_state(
+            torch_module,
+            resume_checkpoint,
+            contract,
+            total_epochs=args.epochs,
+        )
+        if resume_checkpoint is not None
+        else None
+    )
+    model_source = resume_checkpoint or args.model_dir
+    torch, tokenizer, model = _load_model_stack(model_source, args.device)
     device = next(model.parameters()).device
     amp_enabled = bool(args.amp and device.type == "cuda")
     if args.amp and device.type != "cuda":
@@ -1171,7 +1864,10 @@ def run_train(args: argparse.Namespace) -> list[Path]:
         freeze_layers=args.freeze_layers,
         freeze_embeddings=args.freeze_embeddings,
     )
-    train_loader = _make_loader(
+    loader_factory = (
+        _make_group_loader if args.objective == "listwise" else _make_loader
+    )
+    train_loader = loader_factory(
         torch,
         tokenizer,
         train_rows,
@@ -1182,7 +1878,7 @@ def run_train(args: argparse.Namespace) -> list[Path]:
         seed=args.seed,
     )
     eval_loader = (
-        _make_loader(
+        loader_factory(
             torch,
             tokenizer,
             eval_rows,
@@ -1211,9 +1907,7 @@ def run_train(args: argparse.Namespace) -> list[Path]:
         lr=args.learning_rate,
         weight_decay=args.weight_decay,
     )
-    updates_per_epoch = math.ceil(
-        len(train_loader) / args.gradient_accumulation
-    )
+    updates_per_epoch = math.ceil(len(train_loader) / args.gradient_accumulation)
     total_updates = updates_per_epoch * args.epochs
     warmup_steps = int(total_updates * args.warmup_ratio)
     from transformers import get_linear_schedule_with_warmup
@@ -1225,13 +1919,80 @@ def run_train(args: argparse.Namespace) -> list[Path]:
     )
     scaler = torch.amp.GradScaler("cuda", enabled=amp_enabled)
     args.output_dir.mkdir(parents=True, exist_ok=True)
+    print(
+        json.dumps(
+            {
+                "event": "training_setup_ready",
+                "train_batches": len(train_loader),
+                "eval_batches": len(eval_loader) if eval_loader is not None else 0,
+            },
+            sort_keys=True,
+        ),
+        flush=True,
+    )
     history: list[dict[str, Any]] = []
     best_metric = -math.inf
-    best_path = args.output_dir / "checkpoint-best"
+    best_epoch = 0
+    global_updates = 0
+    start_epoch = 1
+    if resume_state is not None:
+        saved_epoch = int(resume_state["epoch"])
+        start_epoch, expected_updates = _resume_position(
+            resume_state,
+            updates_per_epoch=updates_per_epoch,
+        )
+        try:
+            optimizer.load_state_dict(resume_state["optimizer"])
+            scheduler.load_state_dict(resume_state["scheduler"])
+            scaler.load_state_dict(resume_state["scaler"])
+            train_loader.generator.set_state(resume_state["loader_generator_state"])
+            random.setstate(resume_state["python_rng_state"])
+            torch.set_rng_state(resume_state["torch_rng_state"])
+            if torch.cuda.is_available() and resume_state["cuda_rng_states"]:
+                torch.cuda.set_rng_state_all(resume_state["cuda_rng_states"])
+        except Exception as exc:
+            raise ValueError(
+                "resume checkpoint optimizer, scheduler, scaler, or RNG state "
+                f"is corrupt or incompatible: {exc}"
+            ) from exc
+        history = list(resume_state["history"])
+        best_metric = float(resume_state["best_metric"])
+        best_epoch = int(resume_state["best_epoch"])
+        global_updates = expected_updates
+        if not _checkpoint_is_complete(best_path):
+            raise ValueError(
+                f"resume best checkpoint is missing or incomplete: {best_path}"
+            )
+        best_state = _load_training_state(
+            torch,
+            best_path,
+            contract,
+            total_epochs=args.epochs,
+        )
+        if (
+            int(best_state["epoch"]) != best_epoch
+            or float(best_state["best_metric"]) != best_metric
+        ):
+            raise ValueError("resume checkpoint-latest and best checkpoint disagree")
+        print(
+            json.dumps(
+                {
+                    "event": "training_resume_ready",
+                    "saved_epoch": saved_epoch,
+                    "start_epoch": start_epoch,
+                    "global_updates": global_updates,
+                    "total_updates": total_updates,
+                },
+                sort_keys=True,
+            ),
+            flush=True,
+        )
     optimizer.zero_grad(set_to_none=True)
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(start_epoch, args.epochs + 1):
         model.train()
         losses: list[float] = []
+        total_train_batches = len(train_loader)
+        train_progress_interval = max(1, total_train_batches // 20)
         for step, batch in enumerate(train_loader, 1):
             labels = batch["labels"].to(device)
             inputs = _move_batch(torch, batch, device)
@@ -1241,14 +2002,21 @@ def run_train(args: argparse.Namespace) -> list[Path]:
                 enabled=amp_enabled,
             ):
                 logits = model(**inputs).logits.squeeze(-1)
-                loss = criterion(logits, labels)
+                if args.objective == "listwise":
+                    target_scores = batch["target_scores"].to(device)
+                    loss = _listwise_loss(
+                        torch,
+                        logits,
+                        target_scores,
+                        batch["group_sizes"],
+                        temperature=args.target_temperature,
+                    )
+                else:
+                    loss = criterion(logits, labels)
                 scaled_loss = loss / args.gradient_accumulation
             scaler.scale(scaled_loss).backward()
             losses.append(float(loss.detach().cpu()))
-            update = (
-                step % args.gradient_accumulation == 0
-                or step == len(train_loader)
-            )
+            update = step % args.gradient_accumulation == 0 or step == len(train_loader)
             if update:
                 scaler.unscale_(optimizer)
                 torch.nn.utils.clip_grad_norm_(parameters, args.max_grad_norm)
@@ -1256,6 +2024,27 @@ def run_train(args: argparse.Namespace) -> list[Path]:
                 scaler.update()
                 scheduler.step()
                 optimizer.zero_grad(set_to_none=True)
+                global_updates += 1
+            if (
+                step == 1
+                or step % train_progress_interval == 0
+                or step == total_train_batches
+            ):
+                print(
+                    json.dumps(
+                        {
+                            "event": "training_progress",
+                            "epoch": epoch,
+                            "epochs": args.epochs,
+                            "batch": step,
+                            "batches": total_train_batches,
+                            "percent": round(100 * step / total_train_batches, 1),
+                            "latest_loss": losses[-1],
+                        },
+                        sort_keys=True,
+                    ),
+                    flush=True,
+                )
         epoch_report: dict[str, Any] = {
             "epoch": epoch,
             "train_loss": sum(losses) / len(losses),
@@ -1268,6 +2057,8 @@ def run_train(args: argparse.Namespace) -> list[Path]:
                 device=device,
                 amp_enabled=amp_enabled,
                 positive_weight=positive_weight,
+                objective=args.objective,
+                target_temperature=args.target_temperature,
             )
             epoch_report["eval"] = evaluation
             selection_metric = evaluation["query_ranking_accuracy"]
@@ -1277,27 +2068,55 @@ def run_train(args: argparse.Namespace) -> list[Path]:
         print(json.dumps(epoch_report, sort_keys=True), flush=True)
         if selection_metric > best_metric:
             best_metric = selection_metric
-            target = (
-                best_path
-                if eval_loader is not None
-                else args.output_dir / "checkpoint-final"
-            )
+            best_epoch = epoch
+            is_new_best = True
+        else:
+            is_new_best = False
+        state = {
+            "schema_version": TRAINING_STATE_SCHEMA_VERSION,
+            "training_contract": contract,
+            "epoch": epoch,
+            "global_updates": global_updates,
+            "updates_per_epoch": updates_per_epoch,
+            "history": history,
+            "best_metric": best_metric,
+            "best_epoch": best_epoch,
+            "metrics": epoch_report,
+            "optimizer": optimizer.state_dict(),
+            "scheduler": scheduler.state_dict(),
+            "scaler": scaler.state_dict(),
+            "python_rng_state": random.getstate(),
+            "torch_rng_state": torch.get_rng_state(),
+            "cuda_rng_states": (
+                torch.cuda.get_rng_state_all() if torch.cuda.is_available() else []
+            ),
+            "loader_generator_state": train_loader.generator.get_state(),
+        }
+        if is_new_best:
             _save_checkpoint(
                 torch,
                 model,
                 tokenizer,
-                optimizer,
-                scheduler,
-                target,
-                {"epoch": epoch, "metrics": epoch_report},
+                best_path,
+                state,
             )
+        _save_checkpoint(
+            torch,
+            model,
+            tokenizer,
+            latest_path,
+            state,
+        )
     manifest = {
         "schema_version": SCHEMA_VERSION,
+        "status": "COMPLETE",
         "base_model": str(args.model_dir),
         "local_files_only": True,
         "model_class": "RobertaForSequenceClassification",
         "tokenizer_class": type(tokenizer).__name__,
         "max_length": args.max_length,
+        "objective": args.objective,
+        "target_temperature": args.target_temperature,
         "device": str(device),
         "amp": amp_enabled,
         "freeze_layers": args.freeze_layers,
@@ -1306,26 +2125,24 @@ def run_train(args: argparse.Namespace) -> list[Path]:
         "fit_all": args.fit_all,
         "audit": audit,
         "history": history,
+        "best_metric": best_metric,
+        "best_epoch": best_epoch,
+        "global_updates": global_updates,
+        "checkpoint": best_path.name,
+        "latest_checkpoint": latest_path.name,
+        "training_contract": contract,
         "organizer_exact_overlay_policy": "excluded; handled separately",
         "inputs": {
             "train": [
-                {"path": str(path), "sha256": _sha256(path)}
-                for path in args.train_data
+                {"path": str(path), "sha256": _sha256(path)} for path in args.train_data
             ],
             "eval": [
-                {"path": str(path), "sha256": _sha256(path)}
-                for path in args.eval_data
+                {"path": str(path), "sha256": _sha256(path)} for path in args.eval_data
             ],
         },
     }
-    manifest_path = args.output_dir / "training_manifest.json"
     _write_json(manifest_path, manifest)
-    checkpoint = (
-        best_path
-        if eval_loader is not None
-        else args.output_dir / "checkpoint-final"
-    )
-    return [checkpoint, manifest_path]
+    return [best_path, manifest_path]
 
 
 def _score_pairs(
@@ -1341,16 +2158,20 @@ def _score_pairs(
     device = next(model.parameters()).device
     model.eval()
     scores: list[float] = []
+    total_batches = math.ceil(len(pairs) / batch_size)
+    progress_interval = max(1, total_batches // 20)
     with torch.no_grad():
-        for offset in range(0, len(pairs), batch_size):
+        for batch_index, offset in enumerate(range(0, len(pairs), batch_size), 1):
             batch = pairs[offset : offset + batch_size]
             encoded = tokenizer(
                 [row["question"] for row in batch],
                 [row["parent_text"] for row in batch],
                 padding=True,
-                truncation=True,
+                truncation="only_second",
                 max_length=max_length,
+                return_overflowing_tokens=False,
                 return_tensors="pt",
+                verbose=False,
             )
             encoded = {
                 key: value.to(device, non_blocking=True)
@@ -1363,6 +2184,23 @@ def _score_pairs(
             ):
                 logits = model(**encoded).logits.squeeze(-1)
             scores.extend(float(value) for value in logits.float().cpu())
+            if (
+                batch_index == 1
+                or batch_index % progress_interval == 0
+                or batch_index == total_batches
+            ):
+                print(
+                    json.dumps(
+                        {
+                            "event": "scoring_progress",
+                            "batch": batch_index,
+                            "batches": total_batches,
+                            "percent": round(100 * batch_index / total_batches, 1),
+                        },
+                        sort_keys=True,
+                    ),
+                    flush=True,
+                )
     return scores
 
 
@@ -1383,11 +2221,27 @@ def run_score(args: argparse.Namespace) -> list[Path]:
         [args.questions, *args.candidates],
         [args.output],
     )
-    store = JsonlParentStore(args.parents_dir, max_cached_documents=256)
+    # Public scoring touches thousands of small parent files in retrieval order.
+    # Keeping only 256 documents causes severe cache churn on network-backed
+    # volumes (Modal/Beam) and used to leave this stage silent for many minutes.
+    candidate_doc_ids = {
+        hit.get("doc_id")
+        for row in candidates.values()
+        for hit in row.get("hits", [])[: args.candidate_k]
+        if isinstance(hit, dict)
+        and isinstance(hit.get("doc_id"), str)
+        and hit.get("doc_id", "").strip()
+    }
+    store = JsonlParentStore(
+        args.parents_dir,
+        max_cached_documents=max(256, len(candidate_doc_ids)),
+    )
     pairs: list[dict[str, Any]] = []
     grouped: dict[str, list[dict[str, Any]]] = {}
     hydration = Counter()
-    for question_id, row in candidates.items():
+    total_questions = len(candidates)
+    hydration_interval = max(1, total_questions // 20)
+    for question_index, (question_id, row) in enumerate(candidates.items(), 1):
         record = questions.get(question_id)
         if record is None:
             raise ValueError(f"questions are missing candidate ID {question_id!r}")
@@ -1407,6 +2261,29 @@ def run_score(args: argparse.Namespace) -> list[Path]:
                     "question": record["question"],
                     **parent,
                 }
+            )
+        if (
+            question_index == 1
+            or question_index % hydration_interval == 0
+            or question_index == total_questions
+        ):
+            print(
+                json.dumps(
+                    {
+                        "event": "candidate_hydration_progress",
+                        "question": question_index,
+                        "questions": total_questions,
+                        "pairs": len(pairs),
+                        "cached_document_capacity": max(
+                            256, len(candidate_doc_ids)
+                        ),
+                        "percent": round(
+                            100 * question_index / total_questions, 1
+                        ),
+                    },
+                    sort_keys=True,
+                ),
+                flush=True,
             )
     torch, tokenizer, model = _load_model_stack(args.checkpoint, args.device)
     device = next(model.parameters()).device

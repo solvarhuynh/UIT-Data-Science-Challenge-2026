@@ -41,6 +41,20 @@ def test_200_child_chunks_from_three_docs_make_only_three_candidates() -> None:
     assert {item.doc_id for item in candidates} == {"doc-0", "doc-1", "doc-2"}
 
 
+def test_high_recall_probe_accepts_300_document_candidates() -> None:
+    hits = [
+        _hit(index, f"doc-{index}", score=float(301 - index)) for index in range(1, 301)
+    ]
+
+    candidates = union_document_candidates(
+        {"child_dense": evidence_from_hits("child_dense", hits)},
+        candidate_depth=300,
+        evidence_limit=1,
+    )
+
+    assert len(candidates) == 300
+
+
 def test_document_union_preserves_sources_and_top2_evidence_deterministically() -> None:
     child = [_hit(3, "doc-a", score=0.4), _hit(1, "doc-a", score=0.9)]
     parent = [_hit(2, "doc-a", score=0.8, parent=True)]

@@ -9,13 +9,18 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
+import tempfile
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
-from udsc2026.evaluation.task1_canonical_evidence import CanonicalEvidenceResolver, corpus_fingerprint
+from udsc2026.evaluation.task1_canonical_evidence import (  # type: ignore[import-untyped]
+    CanonicalEvidenceResolver,
+    corpus_fingerprint,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FOLDS = Path("artifacts/task1/evaluation/strict_cv_v2/folds.json")
@@ -78,7 +83,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--near-duplicate-jaccard", type=float, default=0.90)
     parser.add_argument("--max-queries", type=_positive)
-    parser.add_argument("--processed-root", type=Path, default=Path("data/processed_v3"))
+    parser.add_argument(
+        "--processed-root", type=Path, default=Path("data/processed_v3")
+    )
     parser.add_argument("--evidence-limit", type=int, choices=(1, 2), default=2)
     return parser
 
@@ -116,20 +123,29 @@ def load_fold_map(path: Path) -> dict[str, int]:
     return result
 
 
-def load_rankings(source: str, path: Path) -> dict[str, list[Candidate]]:
+def load_rankings(
+    source: str, path: Path, *, rank_limit: int | None = None
+) -> dict[str, list[Candidate]]:
     if not path.is_file():
         raise FileNotFoundError(f"cached ranking not found: {path}")
     records: Iterable[Any]
     if path.suffix.casefold() == ".jsonl":
-        with path.open(encoding="utf-8-sig") as stream:
-            records = [json.loads(line) for line in stream if line.strip()]
+
+        def jsonl_records() -> Iterable[Any]:
+            with path.open(encoding="utf-8-sig") as stream:
+                for line in stream:
+                    if line.strip():
+                        yield json.loads(line)
+
+        records = jsonl_records()
     else:
         payload = json.loads(path.read_text(encoding="utf-8-sig"))
         records = (
             payload if isinstance(payload, list) else payload.get("predictions", [])
         )
     output: dict[str, list[Candidate]] = {}
-    for record in records:
+    record_count = 0
+    for record_count, record in enumerate(records, start=1):
         if not isinstance(record, dict):
             continue
         query_id = str(record.get("question_id", record.get("id", "")))
@@ -141,22 +157,37 @@ def load_rankings(source: str, path: Path) -> dict[str, list[Candidate]]:
         per_doc: dict[str, Candidate] = {}
         for index, raw in enumerate(entries, 1):
             item = raw if isinstance(raw, dict) else {"doc_id": raw}
+            raw_rank = item.get("rank", index)
+            rank = (
+                int(raw_rank)
+                if isinstance(raw_rank, int) and not isinstance(raw_rank, bool)
+                else index
+            )
+            if rank_limit is not None and rank > rank_limit:
+                continue
             evidence_rows = item.get("evidence", [])
-            evidence_text = "\n\n".join(
-                str(part.get("text", "")).strip()
-                for part in evidence_rows
-                if isinstance(part, dict) and str(part.get("text", "")).strip()
-            ) if isinstance(evidence_rows, list) else ""
+            evidence_text = (
+                "\n\n".join(
+                    str(part.get("text", "")).strip()
+                    for part in evidence_rows
+                    if isinstance(part, dict) and str(part.get("text", "")).strip()
+                )
+                if isinstance(evidence_rows, list)
+                else ""
+            )
             doc_id = str(
                 item.get("doc_id", item.get("document_id", item.get("id", "")))
             ).strip()
             if not doc_id or doc_id in per_doc:
                 continue
-            metadata = (
-                item.get("metadata") if isinstance(item.get("metadata"), dict) else {}
+            raw_metadata = item.get("metadata")
+            metadata: dict[str, Any] = (
+                dict(raw_metadata) if isinstance(raw_metadata, dict) else {}
             )
-            warnings = metadata.get("structure_warnings", [])
-            reasons = metadata.get("review_reasons", [])
+            raw_warnings = metadata.get("structure_warnings", [])
+            raw_reasons = metadata.get("review_reasons", [])
+            warnings = raw_warnings if isinstance(raw_warnings, list) else []
+            reasons = raw_reasons if isinstance(raw_reasons, list) else []
             ambiguous = any(
                 "ambiguous" in str(value).casefold() for value in [*warnings, *reasons]
             )
@@ -174,13 +205,23 @@ def load_rankings(source: str, path: Path) -> dict[str, list[Candidate]]:
                 law_name=str(
                     item.get("law_name", metadata.get("law_name", ""))
                 ).strip(),
-                rank=int(item.get("rank", index)),
+                rank=rank,
                 score=float(score) if score is not None else None,
                 source=source,
                 ambiguous=ambiguous,
             )
         output[query_id] = sorted(
             per_doc.values(), key=lambda item: (item.rank, item.doc_id)
+        )
+        if record_count % 500 == 0:
+            print(
+                f"loaded ranking {source}: {record_count} queries",
+                flush=True,
+            )
+    if record_count:
+        print(
+            f"loaded ranking {source}: {record_count} queries complete",
+            flush=True,
         )
     return output
 
@@ -260,6 +301,21 @@ def mine_query(
     for candidate in all_candidates:
         if candidate.doc_id in gold:
             positive_by_doc.setdefault(candidate.doc_id, candidate)
+    if resolver is not None:
+        for document_id in gold_docs:
+            if document_id in positive_by_doc:
+                continue
+            canonical = resolver.resolve(document_id)
+            if canonical is not None:
+                positive_by_doc[document_id] = Candidate(
+                    doc_id=document_id,
+                    text=canonical.text,
+                    law_name=canonical.title or "",
+                    rank=10**9,
+                    score=None,
+                    source=canonical.source,
+                    ambiguous=False,
+                )
     positive_laws = {
         candidate.law_name.casefold()
         for candidate in positive_by_doc.values()
@@ -297,7 +353,6 @@ def mine_query(
     easy = [item for item in selected.values() if item[2] == "easy"][:max_easy]
     rows: list[dict[str, Any]] = []
     for positive_doc in gold_docs:
-        positive = positive_by_doc.get(positive_doc)
         canonical = resolver.resolve(positive_doc) if resolver else None
         for negative, negative_type, strength in [*hard, *semi, *easy]:
             rows.append(
@@ -307,9 +362,13 @@ def mine_query(
                     "positive_doc": positive_doc,
                     "positive_document_id": positive_doc,
                     "positive_evidence": canonical.text if canonical else None,
-                    "positive_evidence_ids": list(canonical.evidence_ids) if canonical else [],
+                    "positive_evidence_ids": list(canonical.evidence_ids)
+                    if canonical
+                    else [],
                     "positive_evidence_source": canonical.source if canonical else None,
-                    "positive_resolution_status": "resolved" if canonical else "unresolved",
+                    "positive_resolution_status": "resolved"
+                    if canonical
+                    else "unresolved",
                     "negative_doc": negative.doc_id,
                     "negative_evidence": negative.text or None,
                     "negative_type": negative_type,
@@ -327,9 +386,39 @@ def mine_query(
 
 
 def _write_json(path: Path, value: Any) -> None:
-    path.write_text(
-        json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent)
     )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as stream:
+            json.dump(value, stream, ensure_ascii=False, indent=2, allow_nan=False)
+            stream.write("\n")
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _write_jsonl(path: Path, records: Sequence[dict[str, Any]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent)
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as stream:
+            for record in records:
+                stream.write(
+                    json.dumps(record, ensure_ascii=False, allow_nan=False) + "\n"
+                )
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temporary, path)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def _sha256(path: Path) -> str:
@@ -349,12 +438,23 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not 0.0 <= args.near_duplicate_jaccard <= 1.0:
         raise SystemExit("--near-duplicate-jaccard must be between 0 and 1")
     train = json.loads(args.train.read_text(encoding="utf-8"))
-    resolver = CanonicalEvidenceResolver(args.processed_root, evidence_limit=args.evidence_limit)
+    resolver = CanonicalEvidenceResolver(
+        args.processed_root, evidence_limit=args.evidence_limit
+    )
     if not isinstance(train, dict):
         raise SystemExit("--train must contain the LegalIR object mapping")
     fold_map = load_fold_map(args.folds)
     specs = parse_ranking_specs(args.rankings)
-    rankings = {source: load_rankings(source, path) for source, path in specs}
+    ranking_limit = max(args.hard_rank_max, args.semi_hard_max_rank)
+    if args.max_easy_per_query:
+        ranking_limit = max(
+            ranking_limit,
+            args.easy_rank_min + args.max_easy_per_query - 1,
+        )
+    rankings = {
+        source: load_rankings(source, path, rank_limit=ranking_limit)
+        for source, path in specs
+    }
     query_ids = sorted(
         set(fold_map)
         & set(train)
@@ -375,6 +475,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "record_count": 0,
     }
     for training_fold in sorted(set(fold_map.values())):
+        print(f"mining fold {training_fold}/4", flush=True)
         records: list[dict[str, Any]] = []
         for query_id in query_ids:
             if fold_map[query_id] == training_fold:
@@ -422,16 +523,17 @@ def main(argv: Sequence[str] | None = None) -> int:
                 stats["same_law_count"] += row["negative_type"] == "same_law"
             records.extend(rows)
         path = output_dir / f"fold_{training_fold}.jsonl"
-        path.write_text(
-            "".join(json.dumps(row, ensure_ascii=False) + "\n" for row in records),
-            encoding="utf-8",
-        )
+        _write_jsonl(path, records)
         stats["folds"][str(training_fold)] = {
             "path": str(path),
             "record_count": len(records),
             "excluded_validation_fold": training_fold,
         }
         stats["record_count"] += len(records)
+        print(
+            f"mined fold {training_fold}: {len(records)} records",
+            flush=True,
+        )
     stats["negative_types"] = dict(stats["negative_types"])
     stats["rank_bands"] = dict(stats["rank_bands"])
     stats["same_law_ratio"] = (

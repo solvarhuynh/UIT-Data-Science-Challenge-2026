@@ -154,3 +154,26 @@ def test_optional_easy_random_band_is_disabled_by_default_but_classifiable() -> 
         semi_max=100,
         easy_rank_min=101,
     ) == ("easy_random", "easy")
+
+
+def test_jsonl_rank_loading_streams_and_respects_rank_limit(tmp_path: Path) -> None:
+    rankings = tmp_path / "rankings.jsonl"
+    rankings.write_text(
+        json.dumps(
+            {
+                "question_id": "q1",
+                "documents": [
+                    {"doc_id": "a", "rank": 1, "evidence": [{"text": "A"}]},
+                    {"doc_id": "b", "rank": 2, "evidence": [{"text": "B"}]},
+                    {"doc_id": "c", "rank": 3, "evidence": [{"text": "C"}]},
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    loaded = MODULE.load_rankings("hcmute", rankings, rank_limit=2)
+
+    assert [candidate.doc_id for candidate in loaded["q1"]] == ["a", "b"]
+    assert [candidate.text for candidate in loaded["q1"]] == ["A", "B"]

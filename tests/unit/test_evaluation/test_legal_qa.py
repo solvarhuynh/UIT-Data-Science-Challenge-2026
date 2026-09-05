@@ -141,6 +141,13 @@ def test_question_manifest_loader_supports_phase_shapes_and_rejects_ambiguity(
     )
     assert load_legal_qa_question_ids(mapping) == ["001", "002"]
 
+    public_mapping = tmp_path / "public-mapping.json"
+    _write_json(
+        public_mapping,
+        {"80189": {"question": "Public question?", "answer": None}},
+    )
+    assert load_legal_qa_question_ids(public_mapping) == ["80189"]
+
     string_ids = tmp_path / "ids.json"
     _write_json(string_ids, ["002", "001"])
     assert load_legal_qa_question_ids(string_ids) == ["002", "001"]
@@ -161,6 +168,7 @@ def test_question_manifest_loader_supports_phase_shapes_and_rejects_ambiguity(
         [{"id": "001"}, {"id": "001"}],
         {"001": {"answer": "Thiếu question"}},
         [{"id": "001", "extra": True}],
+        {"001": {"question": "Question?", "answer": 123}},
     )
     for index, payload in enumerate(invalid_payloads):
         invalid = tmp_path / f"invalid-manifest-{index}.json"
