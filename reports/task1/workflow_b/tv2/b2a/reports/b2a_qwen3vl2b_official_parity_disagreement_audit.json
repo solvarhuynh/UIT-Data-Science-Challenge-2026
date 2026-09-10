@@ -1,0 +1,86 @@
+{
+  "audit": "Qwen3-VL-2B official parity disagreement analysis",
+  "status": "PASS",
+  "model": "Qwen/Qwen3-VL-Reranker-2B",
+  "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+  "aggregate_72_chunk_evidence": {
+    "joined_chunks": 72,
+    "qdocs": 24,
+    "max_abs_score_delta": 0.012802153825759888,
+    "mean_abs_score_delta": 0.0038371837387482324,
+    "median_abs_score_delta": 0.0033885836601257324,
+    "p95_abs_score_delta": 0.009725004434585571,
+    "chunk_pearson": 0.9997522649508032,
+    "chunk_spearman": 0.999244013387365,
+    "document_max_score_delta": 0.00977066159248352,
+    "document_mean_score_delta": 0.003016891578833262,
+    "document_pearson": 0.999801450486063,
+    "document_spearman": 0.9976046242371098,
+    "reported_top_chunk_agreement": "21/24"
+  },
+  "apparent_top_chunk_disagreements": [
+    {
+      "query_id": "44046",
+      "doc_id": "251472",
+      "classification": "OFFICIAL_TIE_CANONICAL_NUMERIC_SPLIT",
+      "canonical": [
+        {"chunk_id": "251472_article_12_clause_1_point_b", "probability": 0.306640625},
+        {"chunk_id": "251472_article_11_clause_1_point_b", "probability": 0.296875}
+      ],
+      "canonical_top1_top2_margin": 0.009765625,
+      "official": [
+        {"chunk_id": "251472_article_12_clause_1_point_b", "raw": -0.8125, "probability": 0.3073580265045166},
+        {"chunk_id": "251472_article_11_clause_1_point_b", "raw": -0.8125, "probability": 0.3073580265045166}
+      ],
+      "official_competing_pair_margin": 0.0
+    },
+    {
+      "query_id": "60060",
+      "doc_id": "137481",
+      "classification": "OFFICIAL_TIE_CANONICAL_NUMERIC_SPLIT",
+      "canonical": [
+        {"chunk_id": "137481_article_6_clause_7_point_c_part_2", "probability": 0.41015625},
+        {"chunk_id": "137481_article_6_clause_7_point_c_part_1", "probability": 0.39453125}
+      ],
+      "canonical_top1_top2_margin": 0.015625,
+      "official": [
+        {"chunk_id": "137481_article_6_clause_7_point_c_part_2", "raw": -0.375, "probability": 0.4073334038257599},
+        {"chunk_id": "137481_article_6_clause_7_point_c_part_1", "raw": -0.375, "probability": 0.4073334038257599}
+      ],
+      "official_competing_pair_margin": 0.0
+    },
+    {
+      "query_id": "77432",
+      "doc_id": "48031",
+      "classification": "OFFICIAL_TIE_CANONICAL_NUMERIC_SPLIT",
+      "canonical": [
+        {"chunk_id": "48031_article_9_clause_4", "probability": 0.478515625},
+        {"chunk_id": "48031_article_10_clause_5", "probability": 0.4765625}
+      ],
+      "canonical_top1_top2_margin": 0.001953125,
+      "official": [
+        {"chunk_id": "48031_article_9_clause_4", "raw": -0.125, "probability": 0.46879062056541443},
+        {"chunk_id": "48031_article_10_clause_5", "raw": -0.125, "probability": 0.46879062056541443}
+      ],
+      "official_competing_pair_margin": 0.0
+    }
+  ],
+  "material_official_rank_reversals": 0,
+  "numeric_source": "NUMERIC_PRECISION_SOURCE_UNPROVEN",
+  "code_evidence": "Canonical loads bf16 and scores last_hidden_state @ (lm_head[yes]-lm_head[no]) before sigmoid. The official CrossEncoder is configured with bf16 and its model-provided LogitScore computes last-token yes-minus-no logits. The available code proves the formula relationship and differing operation paths, but not the precise source of the observed numeric deltas.",
+  "scientific_gap": {
+    "qwen_recall": 0.799797619047619,
+    "workflow_a_recall": 0.9259285714285714,
+    "gap": -0.1261309523809524,
+    "interpretation": "OFFICIAL_DIFFERENCE_TOO_SMALL_TO_EXPLAIN_GAP"
+  },
+  "implementation_assessment": "IMPLEMENTATION_SUBSTANTIALLY_VALIDATED",
+  "model_task_mismatch": "MODEL_TASK_MISMATCH_HIGHLY_LIKELY",
+  "another_qwen_full_rerun_recommended": false,
+  "qwen_implementation_investigation": "CLOSED",
+  "gpu_launched": false,
+  "modal_used": false,
+  "labels_loaded": false,
+  "fold0_used": false,
+  "public_labels_used": false
+}

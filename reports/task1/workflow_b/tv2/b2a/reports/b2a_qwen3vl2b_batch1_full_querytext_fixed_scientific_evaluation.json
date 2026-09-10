@@ -1,0 +1,93 @@
+{
+  "status": "PASS_EVALUATION",
+  "experiment": "B2a Qwen3-VL-Reranker-2B Batch1 querytext-fixed full F1-F4 scientific evaluation",
+  "report_policy": "VERSIONED_NEW_FILE",
+  "prediction_artifact": "artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b/predictions.jsonl",
+  "prediction_sha256": "65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f",
+  "prediction_sha256_verified": true,
+  "model": "Qwen/Qwen3-VL-Reranker-2B",
+  "model_revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+  "model_forward_batch": 1,
+  "canonical_evaluator": "src/udsc2026/evaluation/legal_ir_recovery.py::metrics",
+  "canonical_fold_source": "artifacts/task1/evaluation/strict_cv_v2/folds.json",
+  "canonical_ground_truth_source": "data/raw/btc/LegalIR/train.json",
+  "metric_contract": {
+    "folds_used": [1, 2, 3, 4],
+    "primary": "set-based macro Recall",
+    "secondary": "set-based macro Precision",
+    "prediction_limit": 5,
+    "ranking_used_for_metric": false
+  },
+  "integrity": {
+    "prediction_records": 5600,
+    "scientific_queries_expected": 5600,
+    "scientific_queries_evaluated": 5600,
+    "fold0_queries_evaluated": 0,
+    "missing_prediction_queries": 0,
+    "duplicate_prediction_records": 0,
+    "unknown_query_ids": 0,
+    "predicted_documents_over_five": 0,
+    "duplicate_documents_within_prediction": 0,
+    "fold0_used": false,
+    "public_labels_used": false,
+    "gpu_inference_launched": false,
+    "prediction_artifact_modified": false
+  },
+  "artifact_status": "VALID_QUERYTEXT_FIXED_FULL",
+  "per_fold": {
+    "1": {
+      "query_count": 1400,
+      "recall": 0.8285714285714286,
+      "precision": 0.17542857142857143,
+      "workflow_a_recall": 0.9363690476190477,
+      "workflow_a_precision": 0.19842857142857143,
+      "recall_delta": -0.10779761904761909,
+      "precision_delta": -0.022999999999999993
+    },
+    "2": {
+      "query_count": 1400,
+      "recall": 0.79125,
+      "precision": 0.1672857142857143,
+      "workflow_a_recall": 0.9283333333333333,
+      "workflow_a_precision": 0.19771428571428573,
+      "recall_delta": -0.13708333333333333,
+      "precision_delta": -0.030428571428571444
+    },
+    "3": {
+      "query_count": 1400,
+      "recall": 0.7874404761904762,
+      "precision": 0.166,
+      "workflow_a_recall": 0.919404761904762,
+      "workflow_a_precision": 0.195,
+      "recall_delta": -0.13196428571428576,
+      "precision_delta": -0.028999999999999998
+    },
+    "4": {
+      "query_count": 1400,
+      "recall": 0.7919285714285714,
+      "precision": 0.16885714285714287,
+      "workflow_a_recall": 0.9196071428571428,
+      "workflow_a_precision": 0.19842857142857143,
+      "recall_delta": -0.12767857142857142,
+      "precision_delta": -0.029571428571428554
+    }
+  },
+  "pooled_f1_f4": {
+    "query_count": 5600,
+    "recall": 0.799797619047619,
+    "precision": 0.16939285714285715
+  },
+  "workflow_a_pooled": {
+    "recall": 0.9259285714285714,
+    "precision": 0.19739285714285715
+  },
+  "pooled_recall_delta": -0.1261309523809524,
+  "pooled_precision_delta": -0.027999999999999997,
+  "nonnegative_recall_folds": 0,
+  "materiality_gate": {
+    "pooled_recall_delta_gte_0_003": false,
+    "at_least_3_of_4_nonnegative_fold_recall_deltas": false,
+    "pooled_precision_delta_gte_minus_0_002": false,
+    "final_decision": "REJECT_B2A_MATERIALITY"
+  }
+}

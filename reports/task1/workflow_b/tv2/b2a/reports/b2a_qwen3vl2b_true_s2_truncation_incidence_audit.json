@@ -1,0 +1,43 @@
+{
+  "audit": "Qwen3-VL-2B TRUE-S2 truncation incidence",
+  "status": "PASS",
+  "model": "Qwen/Qwen3-VL-Reranker-2B",
+  "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+  "measurement": {
+    "method": "CPU-only exact rendered-text tokenization with pinned model tokenizer; add_special_tokens=false; truncation=false; no tensors and no model forward",
+    "tokenizer_files": "official pinned snapshot tokenizer.json, tokenizer_config.json, chat_template.jinja and reranker.jinja",
+    "rendering": "canonical text-only system/user pair with its query-text-fixed instruction and add_generation_prompt suffix",
+    "total_selected_inputs": 1293198,
+    "expected_selected_inputs": 1293198,
+    "maximum_untruncated_tokens": 1036,
+    "median_tokens": 180,
+    "p95_tokens": 372,
+    "p99_tokens": 446,
+    "p99_9_tokens": 534,
+    "inputs_gt_8192": 0,
+    "percent_gt_8192": 0.0,
+    "inputs_gt_16384": 0,
+    "inputs_gt_32768": 0,
+    "qdocs_affected_gt_8192": 0,
+    "queries_affected_gt_8192": 0
+  },
+  "micro24": {
+    "qdocs": 24,
+    "inputs": 72,
+    "maximum_untruncated_tokens": 413,
+    "inputs_gt_8192": 0
+  },
+  "official_interface_policies": {
+    "direct_qwen": "8192 custom truncation preserving the final five generation-template tokens",
+    "sentence_transformers_crossencoder": "processor tokenization with truncation=longest_first at the configured tokenizer/model maximum; this model advertises 32768 context"
+  },
+  "classification": "TRUNCATION_DIFFERENCE_NOT_EXERCISED",
+  "interpretation": "No valid TRUE-S2 text-only input reaches the direct Qwen 8192-token threshold. The 8192-vs-32k interface policy cannot explain the valid full Recall 0.799797619047619.",
+  "labels_loaded": false,
+  "fold0_used": false,
+  "public_labels_used": false,
+  "model_inference_run": false,
+  "gpu_launched": false,
+  "modal_used": false,
+  "canonical_runner_changed": false
+}

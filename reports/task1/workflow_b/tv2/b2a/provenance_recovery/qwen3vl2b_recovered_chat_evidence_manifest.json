@@ -1,0 +1,78 @@
+{
+  "source_attachments": {
+    "pre": "Văn bản đã dán (1)(20260907-105113).txt",
+    "post": "Văn bản đã dán (1)(20260907-110647).txt",
+    "official": "Văn bản đã dán (1)(20260908-144042).txt"
+  },
+  "pre_replay": {
+    "q_docs": 24,
+    "chunks": 72,
+    "path_a": "validation400_batch1_remote preparation -> canonical.score_batch",
+    "path_b": "run_remote worklist-order + query_id construction -> canonical.score_batch (temporary diagnostic SQLite only)",
+    "input_parity": {
+      "exact_equality": false,
+      "first_mismatch": {
+        "key": [
+          "13844",
+          "177925",
+          "177925_fallback_part_107"
+        ],
+        "field": "query_text",
+        "path_a": "Mang thai hộ vì mục đích nhân đạo được quy định như thế nào?",
+        "path_b": "13844"
+      }
+    },
+    "root_cause_classification": "INPUT_PREPROCESSING_DIVERGENCE"
+  },
+  "post_replay": {
+    "q_docs": 24,
+    "chunks": 72,
+    "path_a": "validation400_batch1_remote preparation -> canonical.score_batch",
+    "path_b": "patched run_remote canonical query-text construction -> canonical.score_batch (temporary diagnostic SQLite only)",
+    "input_parity": {
+      "exact_equality": true,
+      "first_mismatch": null
+    },
+    "postfix_pre_gpu_input_parity": {
+      "q_docs": 24,
+      "chunks": 72,
+      "query_13844": "Mang thai hộ vì mục đích nhân đạo được quy định như thế nào?"
+    },
+    "root_cause_classification": "FRESH_BOTH_PATHS_MATCH_GOOD_REGIME"
+  },
+  "official_parity": {
+    "joined_chunks": 72,
+    "qdocs": 24,
+    "max_abs_score_delta": 0.012802153825759888,
+    "mean_abs_score_delta": 0.0038371837387482324,
+    "median_abs_score_delta": 0.0033885836601257324,
+    "p95_abs_score_delta": 0.009725004434585571,
+    "pearson": 0.9997522649508032,
+    "spearman": 0.999244013387365,
+    "document_max_score_pearson": 0.999801450486063,
+    "document_max_score_spearman": 0.9976046242371098,
+    "top_ranked_chunk_agreement": "21/24"
+  },
+  "files": [
+    {
+      "name": "qwen3vl2b_micro_replay_prefix_raw.json",
+      "sha256": "4518ff5a6e72c035f9ae3a0568edc2c940d24ae6199a453dd8a2e58badcc3d22",
+      "size_bytes": 26298
+    },
+    {
+      "name": "qwen3vl2b_micro_replay_postfix_raw.json",
+      "sha256": "4daa211eb1078b8f6cbe6d55937e0aae177bde7847c6fcb594ced133a2833fcc",
+      "size_bytes": 25997
+    },
+    {
+      "name": "qwen3vl2b_official_api_parity_72rows_raw.json",
+      "sha256": "00777c1070337898ecf2fbfcc2d7087db08a33ac45fb58a87c03478790694109",
+      "size_bytes": 20484
+    },
+    {
+      "name": "qwen3vl2b_same_item_pre_post_72rows.jsonl",
+      "sha256": "a26885fb0ea4ebcf066bfdd10a8052aa20f3887eaeb7b59664b4c08f608dbba0",
+      "size_bytes": 21596
+    }
+  ]
+}

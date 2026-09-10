@@ -1,0 +1,39 @@
+{
+  "status": "BLOCKED",
+  "experiment": "B2a Qwen3-VL-Reranker-2B auxiliary-feature strict cross-fitted fusion",
+  "report_policy": "VERSIONED_NEW_FILE",
+  "blocker": "CANONICAL_WORKFLOW_A_CONTINUOUS_DOCUMENT_SCORE_AND_EXACT_QDOC_JOIN_NOT_PROVEN",
+  "workflow_a_comparator": {
+    "pooled_recall": 0.9259285714285714,
+    "pooled_precision": 0.19739285714285715,
+    "top5_artifact": "artifacts/task1/recovery_096/baseline_093_oof/predictions.jsonl",
+    "candidate_chunk_source": "artifacts/task1/recovery_096/baseline_093_oof/sources/f1to4_original_bge_chunk200_compact.jsonl"
+  },
+  "workflow_a_score_source_assessment": {
+    "continuous_fields_available": ["dense_score", "bge_score"],
+    "document_aggregation_used_for_test": "MAX(dense_score) per query/document",
+    "reproduced_baseline_top5_mismatches": 5575,
+    "conclusion": "The inspected continuous chunk-score source cannot be proven to be the exact per-document ranking-score source for the Workflow-A comparator; fusion was not run."
+  },
+  "qwen_score_source": "artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b/predictions.jsonl::document_scores",
+  "qwen_prediction_sha256": "65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f",
+  "join_audit": {
+    "scientific_queries": 5600,
+    "workflow_a_candidate_documents": 351762,
+    "qwen_document_scores": 431200,
+    "joined_qdoc_pairs": 229068,
+    "missing_workflow_a_scores_for_qwen_qdocs": 202132,
+    "missing_qwen_scores_for_workflow_a_qdocs": 122694,
+    "per_query_join_min": 4,
+    "per_query_join_max": 72,
+    "exact_full_universe_join": false
+  },
+  "cross_fit_protocol": "NOT_RUN: no exact Workflow-A document score source or complete q-doc join was established; no mismatched rows were dropped.",
+  "fold0_used": false,
+  "public_labels_used": false,
+  "gpu_inference_launched": false,
+  "modal_used": false,
+  "frozen_prediction_or_checkpoint_modified": false,
+  "decision": "REJECT_QWEN_AS_AUXILIARY_FEATURE",
+  "classification": "B2A_CLOSED_NO_FURTHER_GPU_RERUN_RECOMMENDED"
+}

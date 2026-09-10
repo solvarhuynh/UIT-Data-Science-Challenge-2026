@@ -139,6 +139,134 @@ Notes: Fold0=false; public=false; K_sweep=false; reranker_inference=false; GPU=f
 === PROGRESS_LOG_ENTRY END ===
 
 === PROGRESS_LOG_ENTRY START ===
+Task: B2A Qwen3-VL-2B B1 versus B16 bounded scientific recovery diagnostic
+Date: 2026-09-05
+Authorization: user-requested single detached diagnostic submission; no canonical-runner, K77, True-S2, model, prompt, revision, or frozen-prediction changes.
+Scope: deterministic 100 evenly-spaced F1-F4 queries, complete 77-document candidate sets, all frozen selected chunks; expected 7,700 q-doc pairs.
+Experimental design: one requested-A10 model instance scores identical immutable q-doc-chunk inputs first B1 then B16; labels are loaded only after both score maps/rankings are frozen in memory.
+Pre-submit checks: temporary script scripts/modal/_tmp_qwen3vl2b_scientific_recovery.py; .venv Python py_compile PASS; prior Modal app list preflight reported no active Qwen3-VL 2B FunctionCall.
+Lifecycle: planned exactly one `modal run --detach`; entrypoint uses recovery.spawn(); no retry authority.
+Status: SUBMISSION_PENDING
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A Qwen3-VL-Reranker-2B batch1 scientific recovery test
+Date: 2026-09-05
+Authorization: one bounded A10 100-query F1-F4 scientific diagnostic only (all 77 K77 q-doc candidates/query and their frozen True-S2 chunks), compare batch1 versus batch16 on one loaded model; load the selected F1-F4 labels only after both score sets are complete. No production runner change, no full 5600-query run, no prediction or SQLite reuse/overwrite, no Fold0/public labels, no K77/True-S2/model/prompt/revision/scoring change, and no submission.
+Preflight: all prior Qwen3-VL Modal apps stopped with zero tasks; no existing FunctionCall will be duplicated. A temporary detached diagnostic with one async spawn will be removed after results are collected.
+Status: STARTED
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A Qwen3-VL-Reranker-2B deterministic batch/permutation/alignment diagnostic
+Date: 2026-09-05
+App/FunctionCall: ap-W1Br4jNDgnyiunaGIInyQa / fc-01M1PVYGVY1DMZ9WAWTB7KVXZF
+GPU/model lifecycle: NVIDIA A10G; one frozen revision model loaded once (reloads=0), model.eval() and torch.inference_mode(), detached local entrypoint plus one async spawn, no retry.
+Sample: 64 evenly spaced ordered F1-F4 True-S2 q-doc worklist groups; 192 chunk keys (query_id,doc_id,chunk_id). No labels/Fold0/public data used. Key-score mapping was verified at runtime for every forward batch: outputs matched inputs in count and exact immutable-key sequence; no duplicates/missing keys or re-sorting occurred.
+Batch deltas versus B1: B2 max/median/p95=0.02734375/0.005859375/0.017578125; B16=0.03125/0.005859375/0.01953125; B32=0.03515625/0.005859375/0.017578125. Every B2/B16/B32 chunk and q-doc MAX ordering differed from B1. B16 permutation joined by immutable key had max delta 0.02734375 versus original B16 and ordering FAIL, while key-score alignment remained PASS.
+Neighbor test: all 8 targets retained identical non-padding IDs, effective attention length, final non-padding ten IDs, and final-token semantic position. Same-item score spreads ranged to 0.0234375 as batch padding width changed. For the largest-spread witness, fixed width 447 reduced the B1-vs-B16 delta from 0.0078125 (dynamic alone vs long-neighbor) to 0.001953125 (75% reduction), but did not eliminate it.
+Numerics: B16-vs-B1 hidden-state max delta 2.75 and pre-sigmoid max delta 0.1484375; FP32 final projection did not remove the issue (B16-vs-B1 FP32 score delta 0.03390538692474365; native-vs-FP32 maximum 0.002234935760498047). Thus the first divergence is before final projection, and output alignment is ruled out.
+Classification: DYNAMIC_PADDING_BATCH_SHAPE_BUG (fixed padding strongly reduces, but does not fully eliminate, the batch-composition sensitivity); no key-to-score association bug and no canonical runner change. No full inference/checkpoint/prediction/SQLite/model revision/K77/True-S2 changes or submission. Temporary diagnostic script removed.
+Next: FIX_PROVEN_BATCH_BUG
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A Qwen3-VL-Reranker-2B deterministic batch/permutation/alignment diagnostic
+Date: 2026-09-05
+Authorization: one bounded A10 diagnostic only: 64 F1-F4 True-S2 q-doc pairs and all selected chunks, batch matrix 1/2/16/32, one deterministic B16 permutation, repeated-item neighbor test, FP32 final-projection control, and fixed-padding control only if triggered. No full inference, no canonical runner change, no Fold0/public labels, no K77/True-S2/model/revision/prompt changes, and no submission.
+Preflight: all existing Qwen3-VL Modal apps are stopped with zero tasks. One detached temporary diagnostic with one async spawn may be submitted; it will be removed after results are collected.
+Status: STARTED
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A Qwen3-VL-Reranker-2B complete 32-qdoc official parity confirmation
+Date: 2026-09-05
+App/FunctionCall: ap-xaZBSSMkFz2gb3nl9a291P / fc-01M1PVH0A5JKM1C8839T3MYB52
+GPU/batch/lifecycle: NVIDIA A10 / 1 / one detached local entrypoint with one async spawn; no retry.
+Deterministic selection: take the first 32,768 ordered F1-F4 True-S2 worklist groups; selectively decode only those already-targeted F1-F4 train records; then take the first 16 gold and first 16 non-gold q-doc groups in original worklist order. Completed 32/32 q-docs and all 96 selected chunks, with no skips. Labels were used only for construction of this bounded sample; Fold0 and public labels were not decoded or used.
+Parity result: rendered prompt/input IDs/attention mask/length all exact 96/96; final 10 IDs exact for every chunk; truncations 0; hidden position PASS; max canonical-vs-official hidden/pre-sigmoid/final-score deltas 0.0/0.0/0.0; chunk and q-doc MAX aggregation orderings PASS; first divergence NONE; failed q-docs 0.
+Result: PASS_32QDOC_OFFICIAL_PARITY. Root-cause interpretation: BASIC_OFFICIAL_IMPLEMENTATION_PARITY_CONFIRMED. No canonical runner, frozen prediction SHA256 9e5750ef71f2f0d300ab4fb850358e913b2d1bc5f923f940a2ebcd766999dfa1, SQLite, K77, True-S2, model revision, or scientific artifacts were changed. No full inference or submission occurred. Temporary diagnostic script removed after result collection.
+Next: RUN_BATCH_PERMUTATION_ALIGNMENT_TEST
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A Qwen3-VL-Reranker-2B complete 32-qdoc official parity confirmation
+Date: 2026-09-05
+Authorization: exactly one bounded A10 batch-1 confirmation using 16 gold and 16 non-gold F1-F4 True-S2 q-doc pairs, all their selected chunks, no runner change, no full inference, no Fold0/public labels, no K77/True-S2/model revision change, and no submission.
+Preflight: all prior Qwen3-VL parity Modal apps are stopped with zero tasks; no existing FunctionCall will be duplicated.
+Lifecycle: temporary standalone diagnostic only, submitted detached with one async spawn. It will be deleted locally after terminal results are collected.
+Status: STARTED
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A Qwen3-VL-Reranker-2B exact batch-1 micro-parity diagnosis
+Date: 2026-09-05
+App/FunctionCall: ap-c643AIIT41KRvvI5pqZiim / fc-01M1PTMWREEC966D84DZJKV8V4
+GPU/batch: NVIDIA A10 / 1. Detached local entrypoint with one async spawn; no retry.
+Deterministic selection: scan the first 8,192 ordered F1-F4 True-S2 worklist q-doc groups, decode train records only for those already-targeted F1-F4 query IDs, then take the first 4 gold and first 4 non-gold q-doc groups in worklist order. Completed 8/8 q-docs and all 24 selected chunks (no chunk skipped); labels were used only for this selection.
+Official frozen paths: models/qwen3-vl-reranker-2b/scripts/qwen3_vl_reranker.py; models/qwen3-vl-reranker-2b/1_LogitScore/config.json; models/qwen3-vl-reranker-2b/sentence_bert_config.json; models/qwen3-vl-reranker-2b/config_sentence_transformers.json; models/qwen3-vl-reranker-2b/modules.json. yes/no IDs: 9693/2152.
+Parity result: rendered prompts 24/24, input IDs 24/24, attention masks 24/24, lengths 24/24, truncations 0, hidden position PASS, max hidden/pre-sigmoid/final canonical-vs-official deltas 0.0/0.0/0.0, chunk and q-doc ordering PASS. Every item first-divergence stage was NO_DIVERGENCE.
+Exact extraction rules: official self.model(**inputs).last_hidden_state[:, -1]; canonical model.model(**encoded).last_hidden_state[:, -1]. Both execute BF16 through model, hidden state, LM-head vectors, direction, dot product, and sigmoid. FP32 final-score diagnostic differed from native BF16 by at most 0.0025377273559570312, but this is shared arithmetic and not a canonical-versus-official divergence.
+Result: PASS_MICRO_PARITY. No concrete canonical bug proven. No runner, prediction, SQLite, K77, True-S2, model revision, Fold0, public labels, or full inference changed/used. The temporary diagnostic script was removed after result collection.
+Next: RUN_32_QDOC_PARITY_CONFIRMATION
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A Qwen3-VL-Reranker-2B exact batch-1 micro-parity diagnosis
+Date: 2026-09-05
+Authorization: one bounded A10 diagnostic only: exactly 8 F1-F4 True-S2 q-doc pairs (4 gold, 4 non-gold) and all their selected chunks; no full inference, no 32-qdoc run, no production runner change, no Fold0/public labels, no K77/True-S2/model revision change, and no submission.
+Preflight: current Modal app listing shows ap-sI5Ujo4ovfQCddhgw2AfsG and all prior Qwen3-VL 2B apps stopped with zero tasks. It is therefore safe to submit one new bounded diagnostic call.
+Lifecycle: temporary standalone Modal diagnostic (not the canonical runner), detached local entrypoint plus async FunctionCall.spawn(). The temporary script will be removed after logs/result collection.
+Status: STARTED
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A Qwen3-VL-Reranker-2B official scorer parity resolution — preflight block
+Date: 2026-09-05
+Existing-call evidence: Modal app ap-sI5Ujo4ovfQCddhgw2AfsG reports "ephemeral (detached)", tasks=1. Filtered logs for fc-01M1PMNB73Q2GX75Z56C6PQZJ3 contain only worker heartbeat failures (2026-09-04 23:56 and 2026-09-05 00:06 +07); no selector, tokenizer, model, or scoring marker was emitted. The function timeout was one hour, so this call has no usable 32/32 result and is an orphan-risk, but Modal still marks its container active.
+Official snapshot evidence inspected: models/qwen3-vl-reranker-2b/scripts/qwen3_vl_reranker.py; models/qwen3-vl-reranker-2b/1_LogitScore/config.json; models/qwen3-vl-reranker-2b/sentence_bert_config.json; models/qwen3-vl-reranker-2b/config_sentence_transformers.json; models/qwen3-vl-reranker-2b/modules.json. Locked true/false token IDs verified as 9693/2152.
+Static comparison: both paths use the base model final position [-1], BF16 yes-minus-no LM-head direction, and sigmoid. The official tokenizer route uses processor(...) then restores the final five tokens; canonical manually invokes tokenizer on rendered text. Runtime/token/hidden parity cannot be claimed without the required bounded call.
+Safety action: inspected stop command only. An attempted stop required confirmation; the automatic stop request was rejected because the user has not explicitly authorized terminating the currently active remote container. No Modal app/call was changed, no new GPU was submitted, and no runner/scientific artifact was modified.
+Status: BLOCKED_PENDING_EXPLICIT_ORPHAN_CALL_CANCELLATION_AUTHORITY
+Next: USER_CONFIRM_CANCEL_ap-sI5Ujo4ovfQCddhgw2AfsG_THEN_RUN_ONE_STREAMING_32_PAIR_A10_PARITY_DIAGNOSTIC
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A Qwen3-VL-Reranker-2B official scorer parity resolution
+Date: 2026-09-05
+Authorization: bounded A10 parity diagnostic only; no full F1-F4 inference, no frozen prediction or SQLite reuse, no Fold0/public labels, no True-S2/K77/model-revision changes, and no submission.
+Primary existing FunctionCall to inspect before any new GPU work: fc-01M1PMNB73Q2GX75Z56C6PQZJ3 (App ap-sI5Ujo4ovfQCddhgw2AfsG).
+Plan: inspect the existing call; recover or deterministically reproduce the exact 32 q-doc sample only if needed; compare official and canonical paths at batch 1, then isolate batch-16 numerical effects. Patch the canonical runner only after a first-divergence implementation defect is proven.
+Status: STARTED
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A Qwen3-VL-Reranker-2B model-load dependency validation
+Date: 2026-09-03
+Technical status: PASS_MODEL_LOAD
+Prompt/task: Fix missing torchvision dependency and validate model loading only
+Canonical runner: scripts/modal/task1_b2a_qwen3vl2b.py
+Modal profile: hoconlinea10
+Environment: main
+GPU: NVIDIA A10
+Torch: 2.8.0
+Torchvision: 0.23.0
+Model: Qwen/Qwen3-VL-Reranker-2B
+Requested/resolved revision: 4bd860ac4f15ad1897a214615cccc700f8f71818
+HF download: PASS
+Processor: Qwen3VLProcessor
+Yes token ID: 9693
+No token ID: 2152
+Model: Qwen3VLForConditionalGeneration
+CUDA: PASS
+Score direction finite: PASS
+Inference: NOT_RUN
+Worklist/chunks/labels: NOT_READ
+Temporary probe: removed
+Next: RETURN_TO_A10_B16_TRUE_S2_SMOKE
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
 Task: Workflow B B2a — Qwen true S2 top-3 worklist build (superseded by integrity correction)
 Date: 2026-09-02
 Technical status: BLOCKED_INCOMPLETE_WORKLIST
@@ -1507,6 +1635,17 @@ GPU: NOT_RUN
 === B2A TRUE-S2 CANONICAL PROMOTION END ===
 
 === PROGRESS_LOG_ENTRY START ===
+Task: Modal pending-call diagnosis
+Date: 2026-09-04
+Observed app: ap-jauKb7QQ8kfk6QlGGovWla (tmp-qwen3vl2b-load-probe)
+Finding: stale temporary probe remains ephemeral and repeatedly retries container startup
+Exact repeated error: ModuleNotFoundError: No module named 'scripts'
+Evidence: app logs show failed containers approximately every 10 minutes; canonical smoke apps are stopped
+Cause: orphaned temporary probe call retrying import failure, not A10 capacity and not Qwen True-S2 execution
+Action: no cancellation performed
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
 Experiment: B2A-0 — Frozen Qwen3-Reranker-0.6B F1-F4 Scientific Evaluation
 Date: 2026-09-03
 Technical status: PASS
@@ -1532,4 +1671,474 @@ Canonical F1-F4 source: artifacts/task1/evaluation/strict_cv_v2/folds.json + dat
 Reference artifact: reports/task1/workflow_a/step2p1_oof_policy_decisions.jsonl
 Persistent B2a evaluation report: REPORT_PERSISTENCE_NEEDS_USER_DECISION
 Next: PROFESSOR B2A RESULT REVIEW
+=== PROGRESS_LOG_ENTRY END ===
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A Qwen3-VL-Reranker-2B A10 B16 True-S2 compatibility smoke
+Date: 2026-09-03
+Prompt/task: Run canonical 2B True-S2 smoke after model-load validation
+Modal profile: hoconlinea10
+Environment: main
+GPU requested: NVIDIA A10
+Batch size: 16
+App ID: ap-Nk5UFW1Pomgpjh1C2lSQOe
+FunctionCall ID: fc-01M1M31HGRJA7NTW0V228TA40N
+Execution: one smoke call submitted; existing FunctionCall reattached
+Result: BLOCKED
+Exact exception: modal.exception.RemoteError('')
+Metrics: NOT_AVAILABLE
+True-S2/worklist/chunks/labels: no rebuild; labels not loaded
+Full inference: NOT_RUN
+Next: FIX_EXACT_SMOKE_ERROR
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A self-diagnosing True-S2 smoke
+Date: 2026-09-04
+Modal profile: hoconlinea10
+Environment: main
+GPU requested: A10
+Batch size: 16
+App ID: ap-fCWXFpy8C6WPNvVNwzlvFK
+FunctionCall ID: fc-01M1M6YFAMK2WCNE5P4K1T4XRT
+Execution: exactly one smoke FunctionCall submitted; reattachment used without replacement call
+Result: BLOCKED
+Local result: modal.exception.RemoteError('')
+Diagnostic path checked: /runtime/reports/task1/workflow_b/tv2/b2a/runtime/qwen3vl2b_smoke_diagnostic.json
+Diagnostic artifact: NOT_FOUND
+Classification: FAIL_BEFORE_SMOKE_FUNCTION_BODY_OR_VOLUME_WRITE
+Labels/Fold0/full inference: NOT_RUN
+Next: FIX_PRE_FUNCTION_MODAL_FAILURE
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A canonical decorated smoke() reversible no-op startup isolation
+Date: 2026-09-04
+Modal profile/environment: hoconlinea10/main
+Pre-test runner SHA256: 974c28cd694171599d8596a6a1a9f5036de0f255913fe9f65c52a747bc627815
+Temporary change: smoke() body only; emitted CANONICAL_NOOP_SMOKE_ENTERED, wrote canonical_noop_smoke_probe.json, committed volume, and returned PASS. Decorator/resources were unchanged (A10, CPU 8, 32768 MiB).
+Local temporary validation: py_compile PASS; git diff --check PASS.
+Duplicate guard: no active Qwen3-VL 2B app listed; prior exact-resource probe was stopped.
+App ID: ap-WzN6Aumo6WXDYQigfNNx06
+FunctionCall ID: fc-01M1MVH6SBE76ZHA0ZGMTPQFFF
+Result: modal.exception.RemoteError(''); reattachment made no new FunctionCall.
+No-op marker: NOT_FOUND in udsc-p13 runtime directory.
+Classification: FAIL_CANONICAL_MODULE_OR_FUNCTION_STARTUP (failure before entering exact decorated smoke() body).
+Qwen/worklist/chunks/inference: NOT_RUN.
+Restoration: exact canonical smoke() wrapper restored; post-restore SHA256 matches pre-test; post-restore py_compile PASS; git diff --check PASS.
+Scientific/model/True-S2 contract changed: false
+Next: FIX_CANONICAL_MODULE_STARTUP
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A exact canonical smoke resource-contract probe
+Date: 2026-09-04
+Modal profile: hoconlinea10
+Environment: main
+Canonical/probe resource contract: A10; CPU 8; memory 32768 MiB; timeout 3600 seconds; Volume udsc-p13 mounted at /workspace/p13; canonical heavy image dependencies
+App ID: ap-5WRVuz2kB0wkZUNJe114dy
+FunctionCall ID: fc-01M1MTM3MQ21VCN71RV3PTMCHK
+Result: CANONICAL_RESOURCE_REQUEST_HEALTHY
+Function body entered: true
+CUDA/GPU/mount: true/NVIDIA A10/true
+Smoke resource modified: false
+Real True-S2 smoke submitted: false (resource blocker not proven)
+Temporary probe removed: true
+Next: INVESTIGATE_NON_RESOURCE_PREFUNCTION_FAILURE
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A Qwen3-VL-Reranker-2B A10 B16 True-S2 compatibility smoke retry after orphan cancellation
+Date: 2026-09-04
+Modal profile: hoconlinea10
+Environment: main
+GPU requested: A10
+Batch size: 16
+App ID: ap-ZKoIipQsAKdVfAJxxj1a0E
+FunctionCall ID: fc-01M1M6HXHW00ZC6XGH7RJ8S686
+Execution: exactly one smoke FunctionCall submitted; reattachment used without spawning a second call
+Result: BLOCKED
+Exact exception: modal.exception.RemoteError('')
+FunctionCall-scoped logs: no output retained by Modal CLI
+Metrics: NOT_AVAILABLE
+Labels/Fold0/full inference: NOT_RUN
+Next: FIX_EXACT_SMOKE_ERROR
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A canonical Modal bootstrap probe
+Date: 2026-09-04
+Modal profile: hoconlinea10
+Environment: main
+Resource contract: canonical image dependencies, volume udsc-p13, mount /workspace/p13, A10, CPU 8, memory 32768 MiB
+App ID: ap-KSkds8nUvZld5mhzL9KCq5
+FunctionCall ID: fc-01M1M7H6FPHYPQJ69CS8C4QVZ0
+Result: FAIL_MODAL_PLATFORM_PRE_FUNCTION
+Remote return: modal.exception.RemoteError('')
+Volume marker: /runtime/reports/task1/workflow_b/tv2/b2a/runtime/modal_bootstrap_probe.json NOT_FOUND
+Function body entered: false
+Qwen/worklist/chunks/inference: NOT_RUN
+Temporary probe removed: true
+Next: FIX_CANONICAL_FUNCTION_STARTUP
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: UDSC-P13 minimal CPU Volume mount probe
+Date: 2026-09-04
+Modal profile: hoconlinea10
+Environment: main
+Volume: udsc-p13
+Mount: /workspace/p13
+App ID: ap-7rJMfbe7xynXnFwPG107MA
+FunctionCall ID: fc-01M1M8EWPE1T6MGSK4RE6EFF58
+Result: PASS_VOLUME_MOUNT
+Function body entered: true
+Mount exists: true
+train.json exists: true
+chunks directory exists: true
+canonical worklist exists: true
+GPU/Qwen/scientific data parsing/inference: NOT_RUN
+Temporary probe removed: true
+Next: TEST_QWEN_IMAGE_WITH_VOLUME_NO_MODEL
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A heavy Qwen image plus Volume bootstrap probe
+Date: 2026-09-04
+Modal profile: hoconlinea10
+Environment: main
+Volume/mount: udsc-p13 /workspace/p13
+GPU: NVIDIA A10
+App ID: ap-c80775O2e88ix4W9SaIeHC
+FunctionCall ID: fc-01M1M8MPBXT6AMXTFHEADA1QFQ
+Result: PASS_QWEN_IMAGE_VOLUME_BOOTSTRAP
+Function body entered: true
+Mount/train.json visible: true/true
+Dependencies: torch 2.8.0+cu128; torchvision 0.23.0+cu128; transformers 4.57.6; accelerate 1.14.0; huggingface_hub 0.36.2
+CUDA available: true
+Diagnostic marker persisted: runtime/reports/task1/workflow_b/tv2/b2a/runtime/qwen_image_volume_probe.json
+Qwen model/worklist/chunks/inference: NOT_RUN
+Temporary probe removed: true
+Next: COMPARE_CANONICAL_SMOKE_FUNCTION_GRAPH
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A canonical Qwen3-VL smoke function graph audit
+Date: 2026-09-04
+Scope: no GPU submission; no Qwen/data/inference execution
+Finding: canonical module has only stdlib plus modal imports; no scripts.* package imports or module-level data reads found.
+Resource graph comparison: heavy-image+A10+udsc-p13 probe passed, so image, Volume, CUDA and basic function startup are independently healthy.
+Local Modal definition validation: PASS via `modal run scripts/modal/task1_b2a_qwen3vl2b.py::smoke --help`.
+Wrapper observability added: qwen3vl2b_smoke_wrapper_entry.json persisted before smoke_remote() is referenced.
+Scientific/model/True-S2 contract changed: false
+Root cause: NOT_PROVEN
+Next: RUN_ONE_A10_B16_SMOKE
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A decisive A10 B16 True-S2 smoke with wrapper markers
+Date: 2026-09-04
+Modal profile: hoconlinea10
+Environment: main
+App ID: ap-mKRWM3AnbyLk4FHhW2FS8V
+FunctionCall ID: fc-01M1M9N1RK30HW4NJ8FWT6KC2N
+GPU/batch: A10/16
+Execution: exactly one smoke FunctionCall; reattachment performed without replacement call
+Result: BLOCKED
+Local result: modal.exception.RemoteError('')
+Wrapper marker: NOT_FOUND
+Smoke diagnostic: NOT_FOUND
+Classification: FAIL_BEFORE_DECORATED_SMOKE_BODY
+Labels/Fold0/full inference: NOT_RUN
+Next: FIX_PRE_FUNCTION_MODAL_FAILURE
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A canonical Qwen3-VL 2B detached A10 B16 True-S2 compatibility smoke
+Date: 2026-09-04
+Modal profile/environment: hoconlinea10/main
+Lifecycle: modal run --detach plus canonical smoke.spawn(); runner unchanged.
+App ID: ap-nKgDn3I7QBQ3iRzubLBWOx
+FunctionCall ID: fc-01M1MW76TQX11YB2FBQ4E3B3YV
+Result: PASS_2B_COMPATIBILITY_SMOKE
+Lifecycle classification: DETACH_FIXED_PREFUNCTION_LIFECYCLE
+Wrapper marker: qwen3vl2b_smoke_wrapper_entry.json present.
+Diagnostic: PASS / SMOKE_PASS; GPU NVIDIA A10; batch 16; pairs 64/64; chunks 192; finite document scores 64/64; NaN/Inf 0; OOM false.
+Runtime/throughput/peak VRAM/max tokens: 5.322410393 s / 36.07388115965601 chunks/s / 4.360501289367676 GiB / 481.
+Labels/Fold0/full inference: false/false/false.
+Runner/scientific contract changed: false
+Next: RUN_2B_BATCH_BENCHMARK
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A Qwen3-VL-Reranker-2B controlled A10 batch benchmark
+Date: 2026-09-04
+Modal profile/environment: hoconlinea10/main
+Lifecycle: modal run --detach plus benchmark.spawn(); no full inference.
+App ID: ap-0ClSRTBV9Vu75Lq5T3TGj6
+FunctionCall ID: fc-01M1N58VQS5XGD3Q5C95N11JTM
+Sample: existing deterministic 512 True-S2 q-doc pairs / 1536 selected chunks; labels and Fold0 not loaded.
+Batch 16: 40.476026434999994 s; 37.948389090679285 chunks/s; 4.526285648345947 GiB; max tokens 683; truncated 0; NaN/Inf 0; OOM false; reference.
+Batch 32: 42.79800470999999 s; 35.88952359830703 chunks/s; 5.081110000610352 GiB; NaN/Inf 0; OOM false; max delta 0.033203125; chunk/document parity false; ineligible.
+Batch 64: 46.31273936900001 s; 33.165820483254336 chunks/s; 6.188146114349365 GiB; NaN/Inf 0; OOM false; max delta 0.03515625; chunk/document parity false; ineligible.
+Selection: batch 16, the only parity-safe batch and also highest measured throughput.
+Model/revision/scoring/prompt/max_length/K77/True-S2 changed: false
+Full inference/predictions: NOT_RUN
+Next: RUN_FULL_F1_F4_INFERENCE
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A Qwen3-VL-Reranker-2B full F1-F4 scientific inference launch
+Date: 2026-09-04
+Modal profile/environment: hoconlinea10/main
+Runner: scripts/modal/task1_b2a_qwen3vl2b.py
+Model/revision: Qwen/Qwen3-VL-Reranker-2B / 4bd860ac4f15ad1897a214615cccc700f8f71818
+Execution: exactly one detached full call; no labels, Fold0, evaluation, or public submission.
+GPU/batch: NVIDIA A10 / 16. Full decorator changed only from A100-40GB to A10 per frozen benchmark selection.
+App ID: ap-4ebAucBSSKuqqee1sC7T3J
+FunctionCall ID: fc-01M1N6S0003JNTR1AK80ADRQJC
+Initial checkpoint: integrity=absent; completed_chunks=0; completed_q_doc_pairs=0; canonical 2B namespace isolated.
+Observed logs: CHECKPOINT_VERIFIED, HF snapshot download in progress; app state ephemeral (detached), tasks=1.
+Status: RUNNING
+Full scientific inference/evaluation: NOT_COMPLETE / NOT_RUN
+Next: REATTACH_EXISTING_FUNCTIONCALL
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A Qwen3-VL-Reranker-2B F1-F4 scientific evaluation
+Date: 2026-09-04
+Prediction artifact: artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b/predictions.jsonl
+Prediction SHA256: 9e5750ef71f2f0d300ab4fb850358e913b2d1bc5f923f940a2ebcd766999dfa1 (verified)
+Evaluation: F1-F4 only; 5600 queries; exactly 5 unique predictions/query; Fold0/public labels/GPU/submission not used.
+Comparator: reports/task1/workflow_a/step2p1_realizability_report.json plus canonical baseline top-5 artifact; reference Recall 0.9259285714285714; Precision 0.19739285714285715.
+Qwen 2B metrics: Recall 0.05084821428571429; Precision 0.011464285714285715; Recall delta -0.8750803571428571; Precision delta -0.18592857142857144.
+Per-fold Recall: F1 0.050119047619047626 (delta -0.88625); F2 0.050238095238095234 (delta -0.8780952380952382); F3 0.04755952380952381 (delta -0.8718452380952382); F4 0.05547619047619048 (delta -0.8641309523809524).
+Materiality gate: FAIL; nonnegative Recall folds 0/4; Precision guard FAIL; top-5 sets differ 5600/5600; Recall better/same/worse 25/550/5025.
+Final decision: REJECT_B2A_QWEN3VL_2B.
+Persistence: no canonical 2B evaluation report path defined; REPORT_PERSISTENCE_NEEDS_USER_DECISION.
+Next: PROFESSOR_REVIEW_OR_NEW_AUTHORIZED_B2A_BRANCH
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A catastrophic-failure sanity audit (no full rerun)
+Date: 2026-09-04
+Prediction SHA256: 9e5750ef71f2f0d300ab4fb850358e913b2d1bc5f923f940a2ebcd766999dfa1 verified; predictions unchanged.
+Official contract/source: models/qwen3-vl-reranker-2b/scripts/qwen3_vl_reranker.py and sentence-transformers metadata. Contract conceptually matches current runner: final hidden state, yes(9693)-no(2152), sigmoid, higher-is-relevant; template/truncation/padding are materially consistent for text-only input.
+Frozen score diagnostics (F1-F4, no Fold0/public labels): normal Recall@5 0.05084821428571429; reversed Recall@5 0.03927083333333333; gold/non-gold q-doc medians 0.443359375/0.44140625; AUC 0.511060740015279.
+True-S2 diagnostic: 5984 gold q-docs, 17935 selected gold chunks; selected BM25 rank median 2 (range 1-3), score median 20.97980564953179. Raw available-chunk inventory not materialized from frozen artifact, so TRUE_S2_NOT_PROVEN_BROKEN.
+Official parity probe: initial 23-pair bounded probe completed with max delta 0.0234375, median delta 0.0078125, chunk/q-doc ordering parity FAIL (official script initially lacked scipy; no scientific artifacts written). Corrected exact-32 probe submitted as one detached FunctionCall fc-01M1PMNB73Q2GX75Z56C6PQZJ3 (App ap-sI5Ujo4ovfQCddhgw2AfsG); remained detached/pending with no terminal logs at audit stop.
+Classification: INCONCLUSIVE_NEEDS_PROFESSOR_REVIEW (exact-32 parity call not terminal; partial parity evidence materially mismatched).
+Full inference rerun: NO. GPU used only for bounded parity probes; no predictions/checkpoints modified.
+Next: PROFESSOR_REVIEW
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A Qwen3-VL-2B B1 versus B16 bounded scientific recovery diagnostic
+Date: 2026-09-05
+Modal profile/environment: hoconlinea10/main
+Lifecycle: exactly one detached temporary diagnostic submission; recovery.spawn() FunctionCall fc-01M1PX3HJWMGZ7C46GYBFXT219, App ap-GLC6uPp4XowJyyt2Dvu0mr. No retry.
+Hardware: requested NVIDIA A10; runtime observed NVIDIA A10 (exact requested class, no hardware mismatch).
+Scope/result: 100 deterministic evenly-spaced F1-F4 query units; 7,700 q-doc pairs; 23,093 True-S2 selected chunks. Labels loaded only after B1 and B16 score maps were held in memory.
+B1 vs B16: maximum/median/p95 chunk-score delta 0.046875/0.005859375/0.01953125; top-5 sets differed for 40/100; mean top-5 overlap 0.908.
+Scientific metrics: B1 Recall/Precision/AUC 0.81/0.168/0.9242780772352798; B16 0.79/0.16400000000000003/0.9237191188522721; improvements 0.020000000000000018/0.003999999999999976/0.0005589583830076794. Query Recall B1 better/same/worse 4/94/2; B1 added a gold document for 4 queries.
+Decision: BATCH1_MODEST_RECOVERY (the +0.02 recall threshold was met; B1-vs-B16 AUC change was negligible). Both conditions scored successfully in a single loaded model instance.
+Guards: Fold0 false; public labels false; full inference false; frozen predictions false; canonical runner false. Temporary script removed after terminal result retrieval.
+Next: PROFESSOR_REVIEW
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A frozen-full versus 100-query diagnostic-B16 contradiction audit
+Date: 2026-09-05
+Authorization/safety: CPU-only read-only audit; no model inference, GPU, Modal submission, runner or artifact modification, Fold0, or public labels.
+Frozen artifact: predictions.jsonl SHA256 verified exactly 9e5750ef71f2f0d300ab4fb850358e913b2d1bc5f923f940a2ebcd766999dfa1.
+Exact sample recovery: canonical distinct-worklist query indices {round(i * 5599 / 99) for i in range(100)}; 100 IDs recovered. Frozen subset has 100 queries and 7,700 q-doc scores, Recall 0.055, Precision 0.012000000000000002, AUC 0.5204742937775815.
+Checkpoint audit: read-only SQLite integrity ok; 1,293,198 chunks, 431,200 q-doc groups, 5,600 queries. For the exact 100 queries, checkpoint MAX aggregation and frozen serialization match exactly: 100/100 candidate sets, 7,700 scores, document order, top-5, and every document score (max/median/p95 delta 0.0).
+Diagnostic evidence: the temporary recovery source deliberately retained B1/B16 keyed scores only in memory and wrote only RECOVERY_RESULT aggregates; the source was removed after the permitted diagnostic and no exact B16 score/ranking artifact exists. Per-doc frozen-vs-diagnostic comparison is therefore unavailable.
+Representativeness: sample/full fold counts 25/25/25/25 versus 1400/1400/1400/1400; K77 gold-presence 0.97 versus 0.99125; K77 oracle Recall@5 0.665 versus 0.6687113095238095; no obvious easy-sample bias.
+Decision: INCONCLUSIVE_MISSING_DIAGNOSTIC_SCORES. The frozen same-query subset is low-performing, while the recorded diagnostic B16 aggregate is high-performing; candidate, True-S2, model/prompt, aggregation, and checkpoint-to-frozen-serialization contracts are not the shown divergence.
+Next: RECOVER_EXACT_DIAGNOSTIC_SCORES
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A exact frozen-versus-fresh B16 per-score trace
+Date: 2026-09-05
+Authorization: recover existing task-scoped B16 scores if available; otherwise one deterministic 100-query B16-only rerun with exact keyed score persistence. No B1, full inference, canonical-runner or frozen-artifact modification, Fold0, or public labels.
+Preflight: prior temporary source is absent; only its bytecode remains. Relevant runtime/artifact paths contain no keyed recovery B16 score artifact, so a single B16 rerun is required.
+Status: PREPARING_SINGLE_B16_RERUN
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A exact frozen-versus-fresh B16 per-score trace outcome
+Date: 2026-09-05
+Lifecycle: exactly one detached B16-only trace call, App ap-5eJz5iUq5SZDySnZKw0cTI, FunctionCall fc-01M1Q1VDNC5198Q59W1M8YBCXT; no B1 or retry.
+Hardware/scope: NVIDIA A10; 100/100 deterministic queries, 7,700/7,700 q-doc pairs, 23,093 chunks; frozen SHA verified before comparison.
+Persisted bounded diagnostic: /workspace/p13/runtime/reports/task1/workflow_b/tv2/b2a/runtime/qwen3vl2b_fresh_b16_score_trace.jsonl, one JSONL row per immutable q-doc-chunk score.
+Fresh versus frozen document comparison: 7,700 rows; no missing or duplicate keys; max/median/p95 absolute score delta 0.521484375/0.109375/0.33203125; Pearson 0.1137284087764302; Spearman 0.07716167246485887.
+Metrics: fresh Recall/AUC 0.79/0.9237191188522721; frozen Recall/AUC 0.055/0.5204742937775815.
+Checkpoint evidence: all 23,093 fresh keys present; fresh versus checkpoint chunk max/median/p95 delta 0.609375/0.1015625/0.306640625. Prior read-only audit established checkpoint MAX aggregation, document ordering, top-5, and frozen serialization exact (0.0 deltas), localizing the first observed divergence to CHECKPOINT_STORED_SCORE rather than aggregation/key association/serialization.
+Classification: MODEL_FORWARD_FULL_VS_FRESH_DIVERGENCE. The exact source-level trigger remains unlocalized; no checkpoint corruption or mapping bug is proven. Temporary runner script removed; bounded score trace retained as authorized.
+Next: FIX_PROVEN_FULL_RUN_BUG
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A batched kernel stability search against batch-1 reference
+Date: 2026-09-05
+Authorization: one small A10 diagnostic only. Reuse the 64 evenly-spaced ordered F1-F4 True-S2 q-doc worklist groups (192 chunks), score batch1 reference and batch16 attention-backend alternatives; no labels, Fold0, public data, full inference, or canonical-runner change.
+Status: PREPARING_SINGLE_STABILITY_DIAGNOSTIC
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A batched kernel stability search outcome
+Date: 2026-09-05
+Lifecycle: exactly one detached A10 diagnostic, App ap-ntG92jiX4R5VrlnS2dLsL7, FunctionCall fc-01M1Q39Y57M9ZWJ7JJN10N9S9K; no retry.
+Sample/reference: 64 evenly spaced ordered F1-F4 True-S2 q-doc groups, 192 immutable chunk keys; default B1 reference PASS. No labels, Fold0, public data, production checkpoint/predictions, or runner modification.
+Installed supported paths observed: default attention=sdpa; model supports SDPA; torch SDPA API exposes MATH (also CUDNN/EFFICIENT/FLASH/OVERRIDEABLE). Tested only default, SDPA-MATH-only, and model-accepted eager; FlashAttention was not tested.
+CURRENT_DEFAULT_B16: max/median/p95 B1 delta 0.02734375/0.0078125/0.021484375; >1e-4/>1e-3/>1e-2=172/170/52; Spearman 0.9971302372469503; chunk/doc ordering false/true; neighbor spread 0.029296875; 39.94432168489901 chunks/s; 4.333388328552246 GiB; gate FAIL.
+SDPA_MATH_ONLY_B16: 0.02734375/0.0078125/0.01953125; 171/168/62; Spearman 0.9977533691114752; chunk/doc false/true; neighbor 0.017578125; 29.990661353228464 chunks/s; 4.824692249298096 GiB; gate FAIL.
+EAGER_B16: 0.02734375/0.00634765625/0.01953125; 172/170/56; Spearman 0.9974418037060654; chunk/doc false/true; neighbor 0.0234375; 34.54781279747685 chunks/s; 4.65053129196167 GiB; gate FAIL.
+Decision: NO_STABLE_BATCHED_CONFIGURATION. Math-only reduced neighbor spread but remained above the 0.005 stability gate. Temporary diagnostic script removed.
+Next: TEST_BATCH1_EFFICIENT_MICROBATCH_STRATEGY
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A micro-batch stability selection
+Date: 2026-09-05
+Authorization: one small A10 diagnostic using the exact prior 64 evenly-spaced ordered F1-F4 True-S2 q-doc groups and 192 chunks. B1/B2/B4/B8 only; no B16, backend changes, labels, Fold0, public data, production checkpoint, or canonical-runner change.
+Status: PREPARING_SINGLE_MICROBATCH_DIAGNOSTIC
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A micro-batch stability selection outcome
+Date: 2026-09-05
+Lifecycle: exactly one detached A10 diagnostic, App ap-ld1nTULMlhIqkfBJkf0Sqi, FunctionCall fc-01M1Q3X87SQS7KY55VJBS7XPNC; no B16 or retry.
+Sample/reference: same 64/64 q-doc groups and 192 keyed chunks; B1 throughput/VRAM 37.5939056406784 chunks/s and 3.993192195892334 GiB.
+B2/B4/B8: all q-doc order parity true but chunk ordering false and strict/practical gates fail. Max/p95/neighbor deltas respectively B2 0.029296875/0.01953125/0.01953125, B4 0.02734375/0.01953125/0.01953125, B8 0.02734375/0.015625/0.01953125.
+Selection: BATCH1_ONLY_SAFE. Temporary diagnostic script removed; no labels/Fold0/public data, production checkpoint/prediction, full inference, or runner change.
+Next: TRACE_REMAINING_FULL_RUN_DIVERGENCE
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A canonical B1 100-query post-score trace
+Date: 2026-09-05
+Authorization/lifecycle: CPU-only, read-only diagnosis of existing isolated replay artifacts; temporary local downloads and audit script classified TEMPORARY_DELETE. No Modal call, GPU inference, runner/full-run/frozen-artifact change, Fold0, or public labels.
+Artifacts inspected: Modal Volume `udsc-p13:/runtime/artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b-batch1-100q-replay/{predictions.jsonl,run_state.json}`; 100 queries, 7,700 document rows, 23,093 chunks, prediction SHA256 `879f66168798b2ad59170120cc05489d7f1ac7e8c550f6946b5521d4d7a52e66`.
+Result: canonical frozen replay predictions equal descending MAX(document chunk score) top-5 exactly for 100/100 queries (bottom-5 0/100); reconstructed Recall/Precision `0.79/0.164`, AUC `0.9237562524511432`. Direct source trace proves the evaluator instead used unsorted `grouped[query][:5]` after `work.sort(query, doc, chunk)`, reproducing exactly Recall/Precision `0.03/0.006`.
+Classification: EVALUATOR_INPUT_MISMATCH; post-score prediction construction is correct. Next: PATCH_PROVEN_POST_SCORE_BUG.
+FILE LIFECYCLE REVIEW: UPDATE_IN_PLACE both TV2 ledgers; delete three temporary local audit/download files after logging; no consumer impact.
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A canonical batch-1 100-query replay outcome
+Date: 2026-09-05
+App/FunctionCall: ap-8dcyGpyl9Id6peRKzpqC72 / fc-01M1Q4TAG2NWWA2ZNVQA5XVM00
+Runner: scripts/modal/task1_b2a_qwen3vl2b.py; canonical effective model-forward batch patched to 1; isolated replay namespace only.
+Runtime: requested NVIDIA A10; actual NVIDIA A10G; 100 queries, 7,700 q-doc pairs, 23,093 chunks; missing/duplicate/checkpoint errors 0.
+Result: PASS infrastructure/key coverage but PRODUCTION_B1_FIX_NOT_CONFIRMED: Recall 0.03, Precision 0.006000000000000001, AUC 0.9237562524511432. Elapsed 714.0007578279999 seconds; throughput 32.34310292645798 chunks/sec; peak VRAM 4.006190776824951 GiB.
+Replay prediction SHA256: 879f66168798b2ad59170120cc05489d7f1ac7e8c550f6946b5521d4d7a52e66; historical frozen prediction SHA unchanged. No Fold0/public labels/full inference. User supplied terminal result; no rerun.
+Next: TRACE_REMAINING_FULL_RUN_DIVERGENCE
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A replay100 evaluator input bug fix and artifact re-evaluation
+Date: 2026-09-05
+Authorization/lifecycle: narrow source patch plus CPU-only evaluation of the existing immutable replay artifact. No Modal FunctionCall, GPU inference, score/model/prediction/frozen-artifact change, full F1-F4 run, Fold0, or public labels.
+Scope proof: the faulty `grouped[query][:5]` occurred only in `scripts/modal/task1_b2a_qwen3vl2b.py::replay100_batch1_remote`, reached only through `replay100()` / `main(mode="replay100")`; `run_remote()` persists predictions with `metrics=NOT_RUN` and has no call to this evaluator.
+Patch: the replay metric path now applies the same descending `(score, canonical_k77_rank, doc_id)` ordering as materialized `predicted_doc_ids` before selecting top-5. Formulae, AUC, scores, aggregation, candidate pool, and output ordering are unchanged.
+Re-evaluation: downloaded existing Volume artifact SHA256 `879f66168798b2ad59170120cc05489d7f1ac7e8c550f6946b5521d4d7a52e66`; 100 queries/7,700 pairs/23,093 chunks; 100/100 top-5 parity, missing/duplicate IDs 0; Recall `0.79`, Precision `0.16400000000000003`, AUC `0.9237562524511432`.
+Gate: PRODUCTION_B1_FIX_CONFIRMED for this bounded replay only. Historical full 2B and Workflow-A were not called through this evaluator; fresh recovery evaluator provenance not proven. Next: RUN_LARGER_B1_VALIDATION.
+FILE LIFECYCLE REVIEW: UPDATE_IN_PLACE runner and two ledgers; downloaded replay JSONL and local re-evaluator are TEMPORARY_DELETE; no downstream artifact consumer changed.
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A disjoint 400-query F1-F4 batch-1 validation
+Date: 2026-09-05
+Authorization: exactly one new bounded A10 validation before any possible full run; no full 5,600-query execution, no batch above 1, Fold0, public labels, retrieval/True-S2/model/prompt/metric change, or historical artifact overwrite.
+Preparation: added isolated `validation400_batch1_remote` / `validation400` mode to the canonical runner. It reconstructs the prior 100 replay IDs by their documented 100 evenly-spaced positions, deterministically selects 100 evenly spread non-overlapping queries in each F1-F4, and refuses an existing output namespace.
+Contract: unchanged Qwen3-VL 2B revision `4bd860ac4f15ad1897a214615cccc700f8f71818`, A10, model.eval/inference_mode, effective forward batch 1, K77, True-S2, MAX chunk-to-document score, and fixed score-sorted top-5 evaluator. Pre-forward checks will print F1-F4=100 each, total=400, overlap=0; expected 30,800 q-doc pairs.
+Status: READY_FOR_SINGLE_VALIDATION_SUBMISSION.
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A disjoint 400-query F1-F4 batch-1 validation outcome
+Date: 2026-09-05
+Lifecycle: first non-detached local entrypoint call `fc-01M1Q9VNCHT5CK2BRBNQGH4FQ0` stopped before container/GPU allocation (no remote logs); one detached validation FunctionCall `fc-01M1QA0ZSMSVBP14E71J2NCMEQ` then completed on App `ap-ZuWwUUJx080xdsOfXciywe`. No full inference or retry after a GPU-backed call.
+Contract/integrity: NVIDIA A10; effective forward batch 1; immutable revision `4bd860ac4f15ad1897a214615cccc700f8f71818`; F1/F2/F3/F4=100/100/100/100; total 400; overlap with replay100=0; 30,800 q-doc pairs; 92,380 chunks; missing/duplicate query IDs 0; 5 predictions/query; score-sorted prediction/evaluation top-5 consistency 400/400. Fold0/public labels/historical frozen predictions were not used/changed.
+Pooled: Recall `0.7820833333333332`, Precision `0.169`, AUC `0.9139076992763887`; elapsed `2233.8103294459997` s, `41.355346415159104` chunks/s, peak `4.019114971160889` GiB. F1 `0.835/0.18/0.9312806121453382`; F2 `0.785/0.17/0.9147000497599813`; F3 `0.6983333333333333/0.15200000000000002/0.9038866644348269`; F4 `0.81/0.17400000000000002/0.9068348017406237` (Recall/Precision/AUC).
+Gate: B1_LARGER_VALIDATION_PASS. Artifact: `udsc-p13:/runtime/artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b-batch1-400q-disjoint-validation/{predictions.jsonl,run_state.json}`, prediction SHA256 `011fa8859cffe90ccc84e96b90c8bce425860af375449dae1d0294b5ae62aeb3`. Next: RUN_FULL_F1_F4_BATCH1.
+FILE LIFECYCLE REVIEW: UPDATE_IN_PLACE runner and ledgers; no local scientific artifact retained; remove syntax-check bytecode if present; only the new isolated Volume namespace is consumed by downstream validation review.
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A full F1-F4 batch-1 no-GPU pre-flight
+Date: 2026-09-05
+Lifecycle: CPU/config and read-only Modal Volume checks only; no GPU FunctionCall, full run, artifact write, Fold0, or public labels.
+Workload/storage PASS: local canonical worklist SHA256 `a935e356cf8fe62a000e56c3817fd31dfc5ebbc079c4eef849803a7552c3c25a`; runner constants declare F1-F4 `5600` queries, `431200` q-doc pairs, `1293198` chunks, `77` docs/query, batch `1`, fixed 2B revision/prompt/token scoring/MAX aggregation. Active Modal profile/workspace `hoconlinea10`; workspace default environment `main`; Volume `udsc-p13` contains the worklist and chunk files.
+BLOCKER: `run_remote()` still binds full mode to `OUTPUT_ROOT=/workspace/p13/runtime/artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b` and `CHECKPOINT_DB=.../chunk_scores.sqlite3`. That historical namespace exists remotely with checkpoint, WAL/SHM, predictions, and run_state, so full mode would inspect/resume it. Proposed clean namespace is absent: `/workspace/p13/runtime/artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b-batch1-full-corrected` (checkpoint `chunk_scores.sqlite3`, predictions `predictions.jsonl`, status `run_state.json`).
+Status: BLOCKED — do not launch until a separately authorized runner namespace/provenance patch isolates full Batch1. Future command after that patch: `.\\.venv\\Scripts\\modal.exe run --detach --profile hoconlinea10 --env main scripts\\modal\\task1_b2a_qwen3vl2b.py::main --mode full`.
+FILE LIFECYCLE REVIEW: UPDATE_IN_PLACE ledgers only; no new namespace/artifact created; historical and frozen artifacts untouched.
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A full-mode checkpoint routing trace
+Date: 2026-09-05
+Lifecycle: strict read-only source and Volume trace; no code/Volume/checkpoint mutation, GPU call, full run, Fold0, or public labels.
+Call chain: `main(mode="full")` line 1506 → `run.spawn()` line 1509 → `run()` line 1419 → `run_remote()` line 686 → `inspect_checkpoint()` line 691 (read-only SQLite URI line 399) → `init_db(CHECKPOINT_DB)` line 711 → `sqlite3.connect(path)` line 384. There are no full-mode arguments, environment-path reads, resume flags, fallback paths, or checkpoint auto-discovery helpers.
+Resolution: module lines 33–38 set `OUTPUT_ROOT=/workspace/p13/runtime/artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b`, `CHECKPOINT_DB=OUTPUT_ROOT/chunk_scores.sqlite3`, prediction `OUTPUT_ROOT/predictions.jsonl`, status `OUTPUT_ROOT/run_state.json`; full mode passes that exact checkpoint unchanged to SQLite. Volume confirms the same namespace contains checkpoint/WAL/SHM/predictions/run_state. Thus actual full and historical Batch16 checkpoint/namespace are literally identical.
+Corrected candidate namespace `.../qwen3-vl-reranker-2b-batch1-full-corrected` is absent on `udsc-p13`, so no corrected SQLite exists (size/rows/provenance unavailable). The prior `Historical checkpoint reused: YES` was a preflight conclusion from this literal equality, not a runner boolean/expression. Classification: FULL_MODE_HARDCODED_HISTORICAL_PATH. Next: PATCH_EXACT_CHECKPOINT_ROUTING_BUG.
+FILE LIFECYCLE REVIEW: UPDATE_IN_PLACE ledgers only; no temporary files or artifact changes.
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A full Batch1 corrected checkpoint routing patch and CPU/config pre-flight
+Date: 2026-09-05
+Authorization/lifecycle: one routing-only runner edit plus CPU/config and read-only storage verification; no Modal FunctionCall, GPU inference, full F1-F4, Fold0, public labels, or historical artifact mutation.
+Patch: `scripts/modal/task1_b2a_qwen3vl2b.py` updates shared full-mode `OUTPUT_ROOT` to `.../qwen3-vl-reranker-2b-batch1-full-corrected`. Thus `CHECKPOINT_DB`, predictions, errors, and run state resolve only inside the corrected namespace; replay100 and validation400 retain their explicitly separate local namespaces.
+Pre-flight: py_compile PASS. Corrected namespace/checkpoint is absent on `udsc-p13` before launch, while historical `.../qwen3-vl-reranker-2b` remains untouched. Contract/storage PASS: 5,600 queries, 431,200 q-doc pairs, 1,293,198 chunks, worklist SHA `a935e356cf8fe62a000e56c3817fd31dfc5ebbc079c4eef849803a7552c3c25a`, effective batch 1, profile `hoconlinea10`, env `main`.
+Status: READY_TO_LAUNCH. Next: RUN_FULL_F1_F4_BATCH1.
+FILE LIFECYCLE REVIEW: UPDATE_IN_PLACE canonical runner and both ledgers; runner remains KEEP_ACTIVE, consumed by the future full launch; no new local/Volume artifact, cleanup, or historical consumer impact.
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A full Batch1 SQLite hot-path optimization
+Date: 2026-09-07
+Authorization/lifecycle: canonical runner persistence/progress-only patch; no Modal call, GPU inference, checkpoint/Volume mutation, model-forward batch, scientific-contract, Fold0, or public-label change.
+Patch: full mode retains sequential batch-1 scoring but buffers scored rows and commits at 256 q-doc pairs or 1,024 chunk rows, then final flushes. Startup counts remain authoritative; hot-loop full-table COUNT/GROUP BY was removed. In-memory counters advance from committed rows/pairs. Logs retain `throughput` and add `cumulative_new_chunks_per_sec` and 60-second `rolling_new_chunks_per_sec`.
+Validation: CPU SQLite old-vs-buffered row/key/value/count equivalence PASS; interruption simulation confirms committed rows skip, uncommitted rows rescore, and final result is identical (duplicates/missing 0). py_compile and git diff --check PASS. Existing schema/WAL/FULL durability and checkpoint resume format unchanged.
+Status: PASS_SQLITE_OPTIMIZATION. Next: RESUME_FULL_BATCH1_FROM_EXISTING_CHECKPOINT.
+FILE LIFECYCLE REVIEW: UPDATE_IN_PLACE canonical runner and both ledgers; runner is KEEP_ACTIVE and directly consumed by full resume; test databases used TemporaryDirectory and were removed; no historical or current Volume artifact changed.
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A Qwen3-VL-2B Batch1 full F1-F4 frozen scientific evaluation
+Date: 2026-09-07
+Evaluation-only: SHA256 verified frozen prediction `artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b/predictions.jsonl` = `556af4f7d83484c5fdabced049ea98e983923038180346b7a7e59b939b7c3cb3`. Canonical set evaluator `src/udsc2026/evaluation/legal_ir_recovery.py::metrics`, target-only fold reader, and target-only train reader evaluated 5,600 F1-F4 queries.
+Result: pooled Recall `0.05327380952380952`, Precision `0.012071428571428573`; folds Recall F1=`0.05648809523809523`, F2=`0.050833333333333335`, F3=`0.05125`, F4=`0.05452380952380952`. Workflow-A pooled comparator Recall/Precision `0.9259285714285714/0.19739285714285715`; deltas `-0.8726547619047619/-0.18532142857142858`; nonnegative folds `0/4`.
+Decision: REJECT_B2A_MATERIALITY (all three fixed gates fail). Integrity: missing/duplicate/unknown predictions `0/0/0`; Fold0 NO; public labels NO; GPU/Modal/model inference NO; frozen predictions unchanged. Report: `reports/task1/workflow_b/tv2/b2a/reports/b2a_qwen3vl2b_batch1_full_scientific_evaluation.json`.
+FILE LIFECYCLE REVIEW: VERSIONED_NEW_FILE canonical B2a evaluation report plus UPDATE_IN_PLACE ledgers; report is consumed by professor review; no temporary artifact or frozen input changed. Next: SEND_FROZEN_FULL_EVAL_TO_PROFESSOR_REVIEW.
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A frozen JSON top-5 reconstruction diagnostic
+Date: 2026-09-07
+Read-only/CPU-only: verified frozen predictions SHA256 `556af4f7d83484c5fdabced049ea98e983923038180346b7a7e59b939b7c3cb3`; did not read or use the failed local SQLite checkpoint. JSON has exactly `query_id`, `predicted_doc_ids`, and `document_scores`: 5,600 records, 431,200 numeric document scores, exactly 77/query, no missing score list.
+Trace/result: `run_remote()` lines 807-816 aggregates `MAX(score)` by `(query,doc)`, sorts `(-score, canonical_k77_rank, doc_id)`, and serializes both top-5 and full ordered document scores. Frozen and independently reconstructed descending top-5 match exactly in set/order for 5,600/5,600; overlap 5.0/5; frozen equals both first five serialized score records and descending top-5 because document_scores are serialized score-sorted.
+Diagnostic evaluation is unchanged: pooled Recall/Precision `0.05327380952380952/0.012071428571428573`; classification FROZEN_DOCUMENT_SCORE_FAILURE. No GPU/Modal/inference/Fold0/public labels or frozen-artifact mutation. Next: SEND_CONFIRMED_FAILURE_TO_PROFESSOR.
+FILE LIFECYCLE REVIEW: UPDATE_IN_PLACE ledgers only; no new scientific artifact, temporary file, frozen prediction, or checkpoint changed.
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A Batch1 bounded-400Q versus full score divergence trace
+Date: 2026-09-07
+Read-only/CPU-only: frozen full SHA verified. Exact 400Q evidence is the completed Volume artifact `udsc-p13:/runtime/artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b-batch1-400q-disjoint-validation/{predictions.jsonl,run_state.json}` recorded with matching 400Q metrics and revision in the TV2 ledger; it is not local, so its top-5/document scores cannot be joined without download.
+Same-query diagnostic: reconstructed the deterministic 400 IDs from `validation400_batch1_remote` and canonical local worklist (100 per F1-F4, 30,800 q-doc). Full frozen coverage is 400/400 but on those exact queries Recall/Precision is `0.04166666666666667/0.009500000000000001`, versus bounded `0.7820833333333332/0.169`.
+Static trace: both paths call the same `download_locked_snapshot`, `load_model`, and `score_batch` contract (revision, bf16/eval, prompt/tokenization, batch 1, yes/no vector, sigmoid, MAX doc aggregation). Bounded path is independent in-memory/sorted work; full uses sequential worklist plus checkpoint/resume SQLite. Same-item scores and resume-key membership cannot be proven because 400Q scores and a valid full checkpoint are unavailable locally. Classification: UNRESOLVED. Next: RECOVER_400Q_DOCUMENT_SCORES_AND_FINAL_CHECKPOINT_PROVENANCE.
+FILE LIFECYCLE REVIEW: UPDATE_IN_PLACE ledgers only; no frozen artifact, checkpoint, GPU/Modal run, Fold0, or public label use.
+=== PROGRESS_LOG_ENTRY END ===
+
+=== PROGRESS_LOG_ENTRY START ===
+Task: B2A same-item 400Q versus valid full checkpoint score/provenance trace
+Date: 2026-09-07
+Inputs PASS: frozen prediction SHA and worklist SHA verified; `chunk_scores_FULL.sqlite3` read-only integrity `ok`, 1,293,198 rows, 431,200 q-doc pairs, duplicate PK 0. Exact nested 400Q `predictions.jsonl`/`run_state.json` found; run state exactly matches known PASS metrics, revision, batch 1, provenance, and worklist SHA. No chunk-score artifact is present in that directory.
+Same-item result: all 30,800 q-doc scores joined (missing 0/0). Absolute score delta max/median/p95/mean `0.57421875/0.10546875/0.322265625/0.12786021839488637`; Pearson/Spearman `0.11502696061016578/0.0810068890816878`. Good-vs-full reconstructed top5 set/ordered matches `0/400`, mean overlap `0.3275/5`; full frozen equals final SQLite top5 `400/400`, and full same-400 Recall/Precision remains `0.04166666666666667/0.009500000000000001`.
+Row-level pre/post-resume origin is absent from schema, so count 693322 cannot prove prefix membership. Classification: FULL_VS_400Q_SCORE_DIVERGENCE_UNEXPLAINED. Next: FORENSIC_COMPARE_PRE_RESUME_SOURCE_CHECKPOINT_PROVENANCE.
+FILE LIFECYCLE REVIEW: UPDATE_IN_PLACE ledgers only; no SQLite, frozen output, GPU/Modal, Fold0, or public-label modification.
 === PROGRESS_LOG_ENTRY END ===

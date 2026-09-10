@@ -1,0 +1,667 @@
+Loading weights: 100%|██████████| 625/625 [00:00<00:00, 3187.58it/s, Materializing param=model.visual.pos_embed.weight]
+Default prompt name is set to 'query'. This prompt will be applied to all inference calls, except if a `prompt` or `prompt_name` parameter is provided.
+{
+  "joined_chunks": 72,
+  "qdocs": 24,
+  "max_abs_score_delta": 0.012802153825759888,
+  "mean_abs_score_delta": 0.0038371837387482324,
+  "median_abs_score_delta": 0.0033885836601257324,
+  "p95_abs_score_delta": 0.009725004434585571,
+  "pearson": 0.9997522649508032,
+  "spearman": 0.999244013387365,
+  "document_max_score_delta": 0.00977066159248352,
+  "document_mean_score_delta": 0.003016891578833262,
+  "document_max_score_pearson": 0.999801450486063,
+  "document_max_score_spearman": 0.9976046242371098,
+  "top_ranked_chunk_agreement": "21/24",
+  "rows": [
+    {
+      "stage": null,
+      "query_id": "23932",
+      "doc_id": "278236",
+      "chunk_id": "278236_document_context_5_part_394",
+      "canonical_probability": 0.6015625,
+      "official_raw_logit_difference": 0.4375,
+      "official_probability": 0.6076632142066956
+    },
+    {
+      "stage": null,
+      "query_id": "23932",
+      "doc_id": "278236",
+      "chunk_id": "278236_document_context_5_part_366",
+      "canonical_probability": 0.82421875,
+      "official_raw_logit_difference": 1.5625,
+      "official_probability": 0.8267117738723755
+    },
+    {
+      "stage": null,
+      "query_id": "23932",
+      "doc_id": "278236",
+      "chunk_id": "278236_document_context_5_part_302",
+      "canonical_probability": 0.62890625,
+      "official_raw_logit_difference": 0.5,
+      "official_probability": 0.622459352016449
+    },
+    {
+      "stage": null,
+      "query_id": "28298",
+      "doc_id": "257943",
+      "chunk_id": "257943_article_18_clause_8",
+      "canonical_probability": 0.8984375,
+      "official_raw_logit_difference": 2.1875,
+      "official_probability": 0.8991213440895081
+    },
+    {
+      "stage": null,
+      "query_id": "28298",
+      "doc_id": "257943",
+      "chunk_id": "257943_article_22_clause_7",
+      "canonical_probability": 0.8671875,
+      "official_raw_logit_difference": 1.875,
+      "official_probability": 0.8670357465744019
+    },
+    {
+      "stage": null,
+      "query_id": "28298",
+      "doc_id": "257943",
+      "chunk_id": "257943_article_10_clause_4",
+      "canonical_probability": 0.79296875,
+      "official_raw_logit_difference": 1.3125,
+      "official_probability": 0.7879312038421631
+    },
+    {
+      "stage": null,
+      "query_id": "23932",
+      "doc_id": "213154",
+      "chunk_id": "213154_fallback_part_165",
+      "canonical_probability": 0.76953125,
+      "official_raw_logit_difference": 1.1875,
+      "official_probability": 0.7662936449050903
+    },
+    {
+      "stage": null,
+      "query_id": "23932",
+      "doc_id": "213154",
+      "chunk_id": "213154_fallback_part_166",
+      "canonical_probability": 0.71484375,
+      "official_raw_logit_difference": 0.9375,
+      "official_probability": 0.7185943722724915
+    },
+    {
+      "stage": null,
+      "query_id": "23932",
+      "doc_id": "213154",
+      "chunk_id": "213154_fallback_part_164",
+      "canonical_probability": 0.55859375,
+      "official_raw_logit_difference": 0.25,
+      "official_probability": 0.562176525592804
+    },
+    {
+      "stage": null,
+      "query_id": "29466",
+      "doc_id": "91006",
+      "chunk_id": "91006_article_5_clause_3_point_b",
+      "canonical_probability": 0.73046875,
+      "official_raw_logit_difference": 1.0,
+      "official_probability": 0.7310585975646973
+    },
+    {
+      "stage": null,
+      "query_id": "29466",
+      "doc_id": "91006",
+      "chunk_id": "91006_article_7_clause_3_point_d",
+      "canonical_probability": 0.75390625,
+      "official_raw_logit_difference": 1.125,
+      "official_probability": 0.7549149990081787
+    },
+    {
+      "stage": null,
+      "query_id": "29466",
+      "doc_id": "91006",
+      "chunk_id": "91006_article_6_clause_2_point_e",
+      "canonical_probability": 0.84375,
+      "official_raw_logit_difference": 1.6875,
+      "official_probability": 0.8438951373100281
+    },
+    {
+      "stage": null,
+      "query_id": "13844",
+      "doc_id": "177925",
+      "chunk_id": "177925_fallback_part_123",
+      "canonical_probability": 0.27734375,
+      "official_raw_logit_difference": -0.9375,
+      "official_probability": 0.28140562772750854
+    },
+    {
+      "stage": null,
+      "query_id": "13844",
+      "doc_id": "177925",
+      "chunk_id": "177925_fallback_part_124",
+      "canonical_probability": 0.28125,
+      "official_raw_logit_difference": -0.9375,
+      "official_probability": 0.28140562772750854
+    },
+    {
+      "stage": null,
+      "query_id": "13844",
+      "doc_id": "177925",
+      "chunk_id": "177925_fallback_part_107",
+      "canonical_probability": 0.32421875,
+      "official_raw_logit_difference": -0.75,
+      "official_probability": 0.32082128524780273
+    },
+    {
+      "stage": null,
+      "query_id": "28788",
+      "doc_id": "72411",
+      "chunk_id": "72411_article_6_clause_4_point_c",
+      "canonical_probability": 0.447265625,
+      "official_raw_logit_difference": -0.1875,
+      "official_probability": 0.4532618522644043
+    },
+    {
+      "stage": null,
+      "query_id": "28788",
+      "doc_id": "72411",
+      "chunk_id": "72411_document_context_2_part_5",
+      "canonical_probability": 0.375,
+      "official_raw_logit_difference": -0.5,
+      "official_probability": 0.3775406777858734
+    },
+    {
+      "stage": null,
+      "query_id": "28788",
+      "doc_id": "72411",
+      "chunk_id": "72411_article_7_clause_2",
+      "canonical_probability": 0.7265625,
+      "official_raw_logit_difference": 0.9375,
+      "official_probability": 0.7185943722724915
+    },
+    {
+      "stage": null,
+      "query_id": "44046",
+      "doc_id": "251472",
+      "chunk_id": "251472_article_11_clause_1_point_b",
+      "canonical_probability": 0.296875,
+      "official_raw_logit_difference": -0.8125,
+      "official_probability": 0.3073580265045166
+    },
+    {
+      "stage": null,
+      "query_id": "44046",
+      "doc_id": "251472",
+      "chunk_id": "251472_article_43_clause_1",
+      "canonical_probability": 0.1728515625,
+      "official_raw_logit_difference": -1.5625,
+      "official_probability": 0.17328819632530212
+    },
+    {
+      "stage": null,
+      "query_id": "44046",
+      "doc_id": "251472",
+      "chunk_id": "251472_article_12_clause_1_point_b",
+      "canonical_probability": 0.306640625,
+      "official_raw_logit_difference": -0.8125,
+      "official_probability": 0.3073580265045166
+    },
+    {
+      "stage": null,
+      "query_id": "60060",
+      "doc_id": "137481",
+      "chunk_id": "137481_article_6_clause_7_point_c_part_1",
+      "canonical_probability": 0.39453125,
+      "official_raw_logit_difference": -0.375,
+      "official_probability": 0.4073334038257599
+    },
+    {
+      "stage": null,
+      "query_id": "60060",
+      "doc_id": "137481",
+      "chunk_id": "137481_article_6_clause_7_point_c_part_2",
+      "canonical_probability": 0.41015625,
+      "official_raw_logit_difference": -0.375,
+      "official_probability": 0.4073334038257599
+    },
+    {
+      "stage": null,
+      "query_id": "60060",
+      "doc_id": "137481",
+      "chunk_id": "137481_document_context_6_part_13",
+      "canonical_probability": 0.287109375,
+      "official_raw_logit_difference": -0.9375,
+      "official_probability": 0.28140562772750854
+    },
+    {
+      "stage": null,
+      "query_id": "84796",
+      "doc_id": "190541",
+      "chunk_id": "190541_article_4_clause_1_part_63",
+      "canonical_probability": 0.7109375,
+      "official_raw_logit_difference": 0.875,
+      "official_probability": 0.7057850360870361
+    },
+    {
+      "stage": null,
+      "query_id": "84796",
+      "doc_id": "190541",
+      "chunk_id": "190541_article_4_clause_1_part_66",
+      "canonical_probability": 0.734375,
+      "official_raw_logit_difference": 1.0,
+      "official_probability": 0.7310585975646973
+    },
+    {
+      "stage": null,
+      "query_id": "84796",
+      "doc_id": "190541",
+      "chunk_id": "190541_article_4_clause_1_part_65",
+      "canonical_probability": 0.83203125,
+      "official_raw_logit_difference": 1.5625,
+      "official_probability": 0.8267117738723755
+    },
+    {
+      "stage": null,
+      "query_id": "74262",
+      "doc_id": "114669",
+      "chunk_id": "114669_article_17_clause_1",
+      "canonical_probability": 0.90234375,
+      "official_raw_logit_difference": 2.25,
+      "official_probability": 0.9046505093574524
+    },
+    {
+      "stage": null,
+      "query_id": "74262",
+      "doc_id": "114669",
+      "chunk_id": "114669_article_18_clause_1_point_b",
+      "canonical_probability": 0.8125,
+      "official_raw_logit_difference": 1.4375,
+      "official_probability": 0.8080672025680542
+    },
+    {
+      "stage": null,
+      "query_id": "74262",
+      "doc_id": "114669",
+      "chunk_id": "114669_article_17_clause_2_occurrence_2",
+      "canonical_probability": 0.80078125,
+      "official_raw_logit_difference": 1.4375,
+      "official_probability": 0.8080672025680542
+    },
+    {
+      "stage": null,
+      "query_id": "74694",
+      "doc_id": "257089",
+      "chunk_id": "257089_article_6_body",
+      "canonical_probability": 0.89453125,
+      "official_raw_logit_difference": 2.125,
+      "official_probability": 0.8933094143867493
+    },
+    {
+      "stage": null,
+      "query_id": "74694",
+      "doc_id": "257089",
+      "chunk_id": "257089_article_14_intro",
+      "canonical_probability": 0.78125,
+      "official_raw_logit_difference": 1.3125,
+      "official_probability": 0.7879312038421631
+    },
+    {
+      "stage": null,
+      "query_id": "74694",
+      "doc_id": "257089",
+      "chunk_id": "257089_article_13_clause_3_part_1",
+      "canonical_probability": 0.79296875,
+      "official_raw_logit_difference": 1.375,
+      "official_probability": 0.7981867790222168
+    },
+    {
+      "stage": null,
+      "query_id": "90126",
+      "doc_id": "10507",
+      "chunk_id": "10507_article_12_intro",
+      "canonical_probability": 0.875,
+      "official_raw_logit_difference": 1.9375,
+      "official_probability": 0.8740772008895874
+    },
+    {
+      "stage": null,
+      "query_id": "90126",
+      "doc_id": "10507",
+      "chunk_id": "10507_article_28_intro",
+      "canonical_probability": 0.8046875,
+      "official_raw_logit_difference": 1.4375,
+      "official_probability": 0.8080672025680542
+    },
+    {
+      "stage": null,
+      "query_id": "90126",
+      "doc_id": "10507",
+      "chunk_id": "10507_article_12_clause_1",
+      "canonical_probability": 0.75390625,
+      "official_raw_logit_difference": 1.125,
+      "official_probability": 0.7549149990081787
+    },
+    {
+      "stage": null,
+      "query_id": "77432",
+      "doc_id": "48031",
+      "chunk_id": "48031_article_10_clause_5",
+      "canonical_probability": 0.4765625,
+      "official_raw_logit_difference": -0.125,
+      "official_probability": 0.46879062056541443
+    },
+    {
+      "stage": null,
+      "query_id": "77432",
+      "doc_id": "48031",
+      "chunk_id": "48031_article_9_clause_4",
+      "canonical_probability": 0.478515625,
+      "official_raw_logit_difference": -0.125,
+      "official_probability": 0.46879062056541443
+    },
+    {
+      "stage": null,
+      "query_id": "77432",
+      "doc_id": "48031",
+      "chunk_id": "48031_article_4_clause_1",
+      "canonical_probability": 0.361328125,
+      "official_raw_logit_difference": -0.5625,
+      "official_probability": 0.36296918988227844
+    },
+    {
+      "stage": null,
+      "query_id": "80844",
+      "doc_id": "123538",
+      "chunk_id": "123538_article_32_clause_3",
+      "canonical_probability": 0.451171875,
+      "official_raw_logit_difference": -0.1875,
+      "official_probability": 0.4532618522644043
+    },
+    {
+      "stage": null,
+      "query_id": "80844",
+      "doc_id": "123538",
+      "chunk_id": "123538_article_33_clause_2",
+      "canonical_probability": 0.3984375,
+      "official_raw_logit_difference": -0.4375,
+      "official_probability": 0.3923368453979492
+    },
+    {
+      "stage": null,
+      "query_id": "80844",
+      "doc_id": "123538",
+      "chunk_id": "123538_article_5_clause_3_part_3",
+      "canonical_probability": 0.251953125,
+      "official_raw_logit_difference": -1.125,
+      "official_probability": 0.24508501589298248
+    },
+    {
+      "stage": null,
+      "query_id": "83994",
+      "doc_id": "162157",
+      "chunk_id": "162157_article_24_body",
+      "canonical_probability": 0.40234375,
+      "official_raw_logit_difference": -0.375,
+      "official_probability": 0.4073334038257599
+    },
+    {
+      "stage": null,
+      "query_id": "83994",
+      "doc_id": "162157",
+      "chunk_id": "162157_article_14_clause_1",
+      "canonical_probability": 0.478515625,
+      "official_raw_logit_difference": -0.0625,
+      "official_probability": 0.4843800365924835
+    },
+    {
+      "stage": null,
+      "query_id": "83994",
+      "doc_id": "162157",
+      "chunk_id": "162157_article_14_intro",
+      "canonical_probability": 0.46484375,
+      "official_raw_logit_difference": -0.125,
+      "official_probability": 0.46879062056541443
+    },
+    {
+      "stage": null,
+      "query_id": "87546",
+      "doc_id": "237268",
+      "chunk_id": "237268_article_3_clause_3_point_a_occurrence_4",
+      "canonical_probability": 0.359375,
+      "official_raw_logit_difference": -0.5625,
+      "official_probability": 0.36296918988227844
+    },
+    {
+      "stage": null,
+      "query_id": "87546",
+      "doc_id": "237268",
+      "chunk_id": "237268_article_3_clause_3_occurrence_2",
+      "canonical_probability": 0.31640625,
+      "official_raw_logit_difference": -0.8125,
+      "official_probability": 0.3073580265045166
+    },
+    {
+      "stage": null,
+      "query_id": "87546",
+      "doc_id": "237268",
+      "chunk_id": "237268_document_context_2_part_104",
+      "canonical_probability": 0.474609375,
+      "official_raw_logit_difference": -0.0625,
+      "official_probability": 0.4843800365924835
+    },
+    {
+      "stage": null,
+      "query_id": "95460",
+      "doc_id": "197875",
+      "chunk_id": "197875_article_7_clause_5",
+      "canonical_probability": 0.6171875,
+      "official_raw_logit_difference": 0.5,
+      "official_probability": 0.622459352016449
+    },
+    {
+      "stage": null,
+      "query_id": "95460",
+      "doc_id": "197875",
+      "chunk_id": "197875_article_11_body_part_1",
+      "canonical_probability": 0.87890625,
+      "official_raw_logit_difference": 2.0,
+      "official_probability": 0.8807970285415649
+    },
+    {
+      "stage": null,
+      "query_id": "95460",
+      "doc_id": "197875",
+      "chunk_id": "197875_article_13_clause_3",
+      "canonical_probability": 0.328125,
+      "official_raw_logit_difference": -0.6875,
+      "official_probability": 0.334589421749115
+    },
+    {
+      "stage": null,
+      "query_id": "139958",
+      "doc_id": "3613",
+      "chunk_id": "3613_article_4_clause_1",
+      "canonical_probability": 0.88671875,
+      "official_raw_logit_difference": 2.0625,
+      "official_probability": 0.8872045874595642
+    },
+    {
+      "stage": null,
+      "query_id": "139958",
+      "doc_id": "3613",
+      "chunk_id": "3613_article_10_clause_2",
+      "canonical_probability": 0.6328125,
+      "official_raw_logit_difference": 0.5625,
+      "official_probability": 0.6370307803153992
+    },
+    {
+      "stage": null,
+      "query_id": "139958",
+      "doc_id": "3613",
+      "chunk_id": "3613_article_9_clause_4",
+      "canonical_probability": 0.58984375,
+      "official_raw_logit_difference": 0.375,
+      "official_probability": 0.5926666259765625
+    },
+    {
+      "stage": null,
+      "query_id": "109610",
+      "doc_id": "118868",
+      "chunk_id": "118868_article_3_clause_2_point_b_part_3",
+      "canonical_probability": 0.875,
+      "official_raw_logit_difference": 1.9375,
+      "official_probability": 0.8740772008895874
+    },
+    {
+      "stage": null,
+      "query_id": "109610",
+      "doc_id": "118868",
+      "chunk_id": "118868_article_3_clause_2_point_b_part_2_occurrence_2",
+      "canonical_probability": 0.87890625,
+      "official_raw_logit_difference": 2.0,
+      "official_probability": 0.8807970285415649
+    },
+    {
+      "stage": null,
+      "query_id": "109610",
+      "doc_id": "118868",
+      "chunk_id": "118868_article_3_clause_3_part_2_occurrence_2",
+      "canonical_probability": 0.64453125,
+      "official_raw_logit_difference": 0.5625,
+      "official_probability": 0.6370307803153992
+    },
+    {
+      "stage": null,
+      "query_id": "119024",
+      "doc_id": "76095",
+      "chunk_id": "76095_article_3_clause_6_occurrence_22",
+      "canonical_probability": 0.828125,
+      "official_raw_logit_difference": 1.5625,
+      "official_probability": 0.8267117738723755
+    },
+    {
+      "stage": null,
+      "query_id": "119024",
+      "doc_id": "76095",
+      "chunk_id": "76095_article_3_clause_6_occurrence_21",
+      "canonical_probability": 0.86328125,
+      "official_raw_logit_difference": 1.8125,
+      "official_probability": 0.859663724899292
+    },
+    {
+      "stage": null,
+      "query_id": "119024",
+      "doc_id": "76095",
+      "chunk_id": "76095_article_3_clause_6_occurrence_23",
+      "canonical_probability": 0.84765625,
+      "official_raw_logit_difference": 1.6875,
+      "official_probability": 0.8438951373100281
+    },
+    {
+      "stage": null,
+      "query_id": "109242",
+      "doc_id": "71629",
+      "chunk_id": "71629_article_4_clause_2_point_a",
+      "canonical_probability": 0.578125,
+      "official_raw_logit_difference": 0.3125,
+      "official_probability": 0.5774953961372375
+    },
+    {
+      "stage": null,
+      "query_id": "109242",
+      "doc_id": "71629",
+      "chunk_id": "71629_article_4_clause_2_point_b",
+      "canonical_probability": 0.46875,
+      "official_raw_logit_difference": -0.125,
+      "official_probability": 0.46879062056541443
+    },
+    {
+      "stage": null,
+      "query_id": "109242",
+      "doc_id": "71629",
+      "chunk_id": "71629_article_44_clause_3",
+      "canonical_probability": 0.419921875,
+      "official_raw_logit_difference": -0.3125,
+      "official_probability": 0.42250463366508484
+    },
+    {
+      "stage": null,
+      "query_id": "123688",
+      "doc_id": "134366",
+      "chunk_id": "134366_article_4_body",
+      "canonical_probability": 0.578125,
+      "official_raw_logit_difference": 0.3125,
+      "official_probability": 0.5774953961372375
+    },
+    {
+      "stage": null,
+      "query_id": "123688",
+      "doc_id": "134366",
+      "chunk_id": "134366_article_19_clause_5_point_b",
+      "canonical_probability": 0.375,
+      "official_raw_logit_difference": -0.5,
+      "official_probability": 0.3775406777858734
+    },
+    {
+      "stage": null,
+      "query_id": "123688",
+      "doc_id": "134366",
+      "chunk_id": "134366_article_27_clause_1",
+      "canonical_probability": 0.390625,
+      "official_raw_logit_difference": -0.4375,
+      "official_probability": 0.3923368453979492
+    },
+    {
+      "stage": null,
+      "query_id": "139798",
+      "doc_id": "190257",
+      "chunk_id": "190257_article_23_clause_1",
+      "canonical_probability": 0.369140625,
+      "official_raw_logit_difference": -0.5,
+      "official_probability": 0.3775406777858734
+    },
+    {
+      "stage": null,
+      "query_id": "139798",
+      "doc_id": "190257",
+      "chunk_id": "190257_article_37_clause_2",
+      "canonical_probability": 0.50390625,
+      "official_raw_logit_difference": 0.0,
+      "official_probability": 0.5
+    },
+    {
+      "stage": null,
+      "query_id": "139798",
+      "doc_id": "190257",
+      "chunk_id": "190257_article_23_clause_4",
+      "canonical_probability": 0.3046875,
+      "official_raw_logit_difference": -0.8125,
+      "official_probability": 0.3073580265045166
+    },
+    {
+      "stage": null,
+      "query_id": "154844",
+      "doc_id": "238368",
+      "chunk_id": "238368_article_2_clause_11",
+      "canonical_probability": 0.765625,
+      "official_raw_logit_difference": 1.1875,
+      "official_probability": 0.7662936449050903
+    },
+    {
+      "stage": null,
+      "query_id": "154844",
+      "doc_id": "238368",
+      "chunk_id": "238368_article_2_clause_4_point_c",
+      "canonical_probability": 0.57421875,
+      "official_raw_logit_difference": 0.3125,
+      "official_probability": 0.5774953961372375
+    },
+    {
+      "stage": null,
+      "query_id": "154844",
+      "doc_id": "238368",
+      "chunk_id": "238368_article_2_clause_4_point_k",
+      "canonical_probability": 0.65234375,
+      "official_raw_logit_difference": 0.625,
+      "official_probability": 0.6513549089431763
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "status": "PARTIAL",
+  "modal_volume_read_only_inspection": true,
+  "frozen72_score_regime_recovery": {
+    "manifest": "reports/task1/workflow_b/tv2/b2a/manifests/qwen3vl2b_micro_same_item_24qdoc_manifest.jsonl",
+    "manifest_sha256": "a574991397e3dbd31b238e2ba6ef0882adbb40715e8623ba335f1d8c50960da0",
+    "qdocs": 24,
+    "chunks": 72,
+    "historical_good": "HISTORICAL_GOOD_PARTIAL: document-level validation evidence only; no frozen chunk scores recovered",
+    "historical_bad": "HISTORICAL_BAD_PROVEN: old full checkpoint covers 72/72 frozen chunks",
+    "querytext_fixed": "QUERYTEXT_FIXED_CHUNK_SOURCE_NOT_FOUND: valid full prediction and run_state exist, but no local chunk checkpoint",
+    "path_a_path_b": "UNAVAILABLE",
+    "comparison": "NOT_COMPUTABLE: fewer than two joined rows for every pair"
+  },
+  "candidates": [
+    {
+      "path": "artifacts/task1/workflow_b/tv2/b2a/acc_a_400q/predictions.jsonl",
+      "source": "LOCAL",
+      "sha256": "011fa8859cffe90ccc84e96b90c8bce425860af375449dae1d0294b5ae62aeb3",
+      "row_count": 400,
+      "frozen72_matches": 0,
+      "role": "historical_good_document_predictions",
+      "authoritative": "NO",
+      "reason": "400-query Batch1 validation predictions; document-level only, not chunk scores"
+    },
+    {
+      "path": "artifacts/task1/workflow_b/tv2/b2a/acc_a_400q/run_state.json",
+      "source": "LOCAL",
+      "sha256": "ec1d5b999a42205ec4dbd6c68871558fcf3c5653f387a7258472feac537502cf",
+      "row_count": null,
+      "frozen72_matches": 0,
+      "role": "historical_good_validation_run_state",
+      "authoritative": "YES",
+      "reason": "records Batch1 validation regime and provenance but contains no chunk scores"
+    },
+    {
+      "path": "artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b/acc_c_full_old/chunk_scores_FULL.sqlite3",
+      "source": "LOCAL",
+      "sha256": "99889c2a119e1c0821ab420e38439b0bbcf708598357f7bd691090b88b4c8b29",
+      "row_count": 1293198,
+      "frozen72_matches": 72,
+      "role": "historical_bad_full_chunk_scores",
+      "authoritative": "YES",
+      "reason": "old full checkpoint; full 72/72 frozen chunk overlap; paired old predictions SHA is known historical bad SHA"
+    },
+    {
+      "path": "artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b/acc_c_full_old/predictions.jsonl",
+      "source": "LOCAL",
+      "sha256": "556af4f7d83484c5fdabced049ea98e983923038180346b7a7e59b939b7c3cb3",
+      "row_count": 5600,
+      "frozen72_matches": 0,
+      "role": "historical_bad_full_predictions",
+      "authoritative": "YES",
+      "reason": "prediction SHA matches known historical bad full artifact"
+    },
+    {
+      "path": "artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b/predictions.jsonl",
+      "source": "LOCAL",
+      "sha256": "65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f",
+      "row_count": 5600,
+      "frozen72_matches": 0,
+      "role": "querytext_fixed_full_predictions",
+      "authoritative": "YES",
+      "reason": "prediction SHA matches valid querytext-fixed full artifact; document-level only"
+    },
+    {
+      "path": "artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b/run_state.json",
+      "source": "LOCAL",
+      "sha256": "e949e84ac1902e16c1f2295d50014c613ce2466b166ea6819259039c89852f4d",
+      "row_count": null,
+      "frozen72_matches": 0,
+      "role": "querytext_fixed_full_run_state",
+      "authoritative": "YES",
+      "reason": "fresh 1,293,198-chunk run state; local chunk checkpoint absent"
+    },
+    {
+      "path": "artifacts/task1/workflow_b/tv2/b2a/acc_b_500k/chunk_scores.sqlite3",
+      "source": "LOCAL",
+      "sha256": "279c285432c38cc44bfc4acf8927c25fe1b2687e1b4f79355da011b543d43455",
+      "row_count": 559170,
+      "frozen72_matches": 24,
+      "role": "inspected_nonfinal_checkpoint",
+      "authoritative": "NO",
+      "reason": "checkpoint content does not establish historical good/bad/fixed regime provenance"
+    },
+    {
+      "path": "artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b/acc_c_600k_fix_sqlite/chunk_scores.sqlite3",
+      "source": "LOCAL",
+      "sha256": "279c285432c38cc44bfc4acf8927c25fe1b2687e1b4f79355da011b543d43455",
+      "row_count": 559170,
+      "frozen72_matches": 24,
+      "role": "inspected_nonfinal_checkpoint",
+      "authoritative": "NO",
+      "reason": "checkpoint content does not establish historical good/bad/fixed regime provenance"
+    },
+    {
+      "path": "artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b/acc_c_600k_fix_sqlite/chunk_scores_692k_before_sqlite_fix.sqlite3",
+      "source": "LOCAL",
+      "sha256": "aa6b9257fe0ef37f4795d0b09943f85547edfdc4b17b1f743a9995db9b99e22b",
+      "row_count": 693322,
+      "frozen72_matches": 48,
+      "role": "inspected_nonfinal_checkpoint",
+      "authoritative": "NO",
+      "reason": "checkpoint content does not establish historical good/bad/fixed regime provenance"
+    },
+    {
+      "path": "artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b/acc_c_chưa_biết/chunk_scores.sqlite3",
+      "source": "LOCAL",
+      "sha256": "5059ae9886feb0de855f117d9fafc1003739ba2fcb1f72871c155d8d84f8bb02",
+      "row_count": null,
+      "frozen72_matches": null,
+      "role": "inspected_nonfinal_checkpoint",
+      "authoritative": "NO",
+      "reason": "read-only inspection failed: database disk image is malformed"
+    }
+  ],
+  "missing_evidence": [
+    "historical good per-chunk scores for frozen72",
+    "querytext-fixed per-chunk checkpoint/scores for frozen72",
+    "PATH_A/PATH_B provenance",
+    "raw official 72-row parity",
+    "historical pre-fix source diff"
+  ],
+  "gpu_launched": false,
+  "model_inference": false,
+  "modal_gpu_app": false
+}

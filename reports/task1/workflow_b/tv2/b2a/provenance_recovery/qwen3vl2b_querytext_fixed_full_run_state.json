@@ -1,0 +1,33 @@
+{
+  "status": "PASS_PREDICTIONS_FROZEN",
+  "model": "Qwen/Qwen3-VL-Reranker-2B",
+  "requested_revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+  "resolved_revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+  "model_revision_verified": true,
+  "true_token_id": 9693,
+  "false_token_id": 2152,
+  "snapshot_provenance_sha256": {
+    "config.json": "82d38a8f803e38e13986fdd622114a6fec12a834adbd3cee9253d757a257d23d",
+    "tokenizer_config.json": "81ec7bb9530159b326c0bef1d0b6c33d392090524014ea3f0123a3c1eb9c2af5",
+    "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+    "model.safetensors": "466ec01961061e9d7f804b4fb1625fb6f406106cd1567e026096d4736fa9d5b9",
+    "1_LogitScore/config.json": "73e3156450564d8a98b7e47bcf5aace0f29600828b51937da545571e84db3ff3"
+  },
+  "instruction": "Given a Vietnamese legal question, determine whether the Document contains legal provisions relevant to answering the Query.",
+  "worklist_sha256": "a935e356cf8fe62a000e56c3817fd31dfc5ebbc079c4eef849803a7552c3c25a",
+  "smoke": "NOT_RUN_FULL_MODE",
+  "full_q_doc_pairs": 431200,
+  "full_chunks_scored": 1293198,
+  "checkpoint_integrity": "absent",
+  "checkpoint_chunks_recovered": 0,
+  "chunks_skipped_as_already_complete": 0,
+  "chunks_resumed_scored": 1293198,
+  "full_runtime_seconds": 35575.007443385,
+  "full_throughput_chunks_per_second": 36.351306519275624,
+  "errors": 0,
+  "prediction_artifact": "/workspace/p13/runtime/artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b-batch1-full-querytext-fixed/predictions.jsonl",
+  "prediction_sha256": "65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f",
+  "labels_loaded": false,
+  "fold0_used": false,
+  "metrics": "NOT_RUN"
+}

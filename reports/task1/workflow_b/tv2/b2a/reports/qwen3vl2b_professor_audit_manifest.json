@@ -1,0 +1,20 @@
+{
+  "bundle_status": "READY_FOR_PROFESSOR_AUDIT_WITH_DOCUMENTED_LIMITATION",
+  "evidence_hierarchy": {"level_1": "ORIGINAL_RAW_EXECUTION_OR_RUN_EVIDENCE", "level_2": "DERIVED_AUDIT_TABLES"},
+  "artifacts": [
+    {"path":"reports/task1/workflow_b/tv2/b2a/provenance_recovery/qwen3vl2b_micro_replay_prefix_raw.json","sha256":"4518ff5a6e72c035f9ae3a0568edc2c940d24ae6199a453dd8a2e58badcc3d22","role":"PROVEN_RAW_EXECUTION pre-fix same-item replay","authoritative_source":"YES","qdocs":24,"chunks":72},
+    {"path":"reports/task1/workflow_b/tv2/b2a/provenance_recovery/qwen3vl2b_micro_replay_postfix_raw.json","sha256":"4daa211eb1078b8f6cbe6d55937e0aae177bde7847c6fcb594ced133a2833fcc","role":"PROVEN_RAW_EXECUTION post-fix same-item replay","authoritative_source":"YES","qdocs":24,"chunks":72},
+    {"path":"reports/task1/workflow_b/tv2/b2a/provenance_recovery/qwen3vl2b_querytext_fixed_full_run_state.json","sha256":"e949e84ac1902e16c1f2295d50014c613ce2466b166ea6819259039c89852f4d","role":"PROVEN_RAW_RUN_STATE fresh full-run counters","authoritative_source":"YES"},
+    {"path":"reports/task1/workflow_b/tv2/b2a/reports/b2a_qwen3vl2b_batch1_full_querytext_fixed_scientific_evaluation.json","sha256":"790996043f863b1622ed2564376abc1ce06d4390a3d990232bfbee38639fd515","role":"PROVEN_SCIENTIFIC_EVALUATION F1-F4","authoritative_source":"YES","prediction_sha256":"65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f"},
+    {"path":"reports/task1/workflow_b/tv2/b2a/provenance_recovery/qwen3vl2b_official_api_parity_72rows_raw.json","sha256":"00777c1070337898ecf2fbfcc2d7087db08a33ac45fb58a87c03478790694109","role":"PROVEN_OFFICIAL_PARITY raw 72-row output","authoritative_source":"YES","rows":72},
+    {"path":"reports/task1/workflow_b/tv2/b2a/provenance_recovery/qwen3vl2b_final_prediction_chain_of_custody.json","role":"FINAL_PREDICTION_CHAIN_OF_CUSTODY","authoritative_source":"YES_FOR_SHA_IDENTITY_NO_FOR_COPY_EVENT","classification":"BYTES_IDENTICAL_COPY_EVENT_UNRECOVERED","fresh_source_sha256":"65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f","local_evaluated_sha256":"65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f"},
+    {"path":"reports/task1/workflow_b/tv2/b2a/provenance_recovery/qwen3vl2b_same_item_pre_post_72rows.jsonl","actual_sha256":"0bd554cc7e17b16678af7b2153c898d684393fd136b339111136bcaad050be5d","role":"DERIVED_NORMALIZED_PRE_POST_REPLAY_TABLE","authoritative_source":"NO","derived_from":["qwen3vl2b_micro_replay_prefix_raw.json","qwen3vl2b_micro_replay_postfix_raw.json"],"semantic_validation":"72/72_EXACT"}
+  ],
+  "historical_source_limitation": "UNRECOVERABLE_HISTORICAL_SOURCE_SNAPSHOT: exact pre-fix source snapshot NOT_RECOVERED; real source diff NOT_AVAILABLE; source-code-level validation escape proof UNPROVEN.",
+  "execution_level_evidence": "PROVEN_BY_RAW_MICRO_REPLAY",
+  "fold0_used": false,
+  "public_labels_used": false,
+  "gpu_launched": false,
+  "modal_used": false,
+  "model_inference": false
+}

@@ -1,0 +1,28 @@
+{
+  "status": "PASS",
+  "fresh_run_output_namespace": "/workspace/p13/runtime/artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b-batch1-full-querytext-fixed/",
+  "fresh_run_prediction_path": "/workspace/p13/runtime/artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b-batch1-full-querytext-fixed/predictions.jsonl",
+  "fresh_source_sha256": "65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f",
+  "fresh_source_identity_evidence": "authoritative recovered qwen3vl2b_querytext_fixed_full_run_state.json records prediction_artifact and prediction_sha256",
+  "local_evaluated_prediction_path": "artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b/predictions.jsonl",
+  "local_evaluated_sha256": "65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f",
+  "local_evaluated_file_bytes": 27365076,
+  "local_evaluated_query_rows": 5600,
+  "scientific_evaluation_report_path": "reports/task1/workflow_b/tv2/b2a/reports/b2a_qwen3vl2b_batch1_full_querytext_fixed_scientific_evaluation.json",
+  "scientific_evaluation_recorded_prediction_sha256": "65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f",
+  "metric_integrity": "METRIC_BOUND_TO_CORRECT_BYTES_BY_SHA",
+  "source_destination_byte_identity": "YES_BY_RECORDED_SHA256",
+  "historical_copy_event": "NOT_RECOVERED",
+  "classification": "BYTES_IDENTICAL_COPY_EVENT_UNRECOVERED",
+  "copy_event_evidence": "Task-scoped reports, artifacts, scripts, provenance recovery, and relevant Git history were searched for the exact fresh namespace and transfer terms (modal volume get, copy, Copy-Item, Move-Item, cp, mv, materialization, download, SHA verification). No original transfer command or materialization event was recovered.",
+  "limitations": [
+    "The recovered run_state proves the remote fresh artifact path and its recorded SHA, but no live remote Volume inspection was performed because no Modal CLI is available in this environment.",
+    "Equal SHA256 values establish byte identity of the recorded fresh source and local evaluated artifact; they do not establish the historical transfer mechanism or timestamp."
+  ],
+  "prediction_bytes_modified": false,
+  "gpu_launched": false,
+  "modal_gpu_app": false,
+  "model_inference": false,
+  "fold0_used": false,
+  "public_labels_used": false
+}
