@@ -1,0 +1,432 @@
+{
+  "workflow": "C0-A — HISTORICAL-POLICY-INDEPENDENT ORACLE / OPPORTUNITY ANATOMY",
+  "status": "PASS",
+  "timestamp_utc": "2026-09-10T20:42:52.381889+00:00",
+  "code": {
+    "path": "scripts/analysis/workflow_c/workflow_c_c0a_oracle_opportunity_anatomy.py",
+    "sha256": "de16dabd890f1407f7ca715a1ed939b5bd22a245a8dddaef6c941b0d75f96ac7",
+    "classification": "KEEP_REPRODUCIBILITY"
+  },
+  "environment": {
+    "python": "3.12.6 (tags/v3.12.6:a4a2d2b, Sep  6 2024, 20:11:23) [MSC v.1940 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "implementation": "CPython"
+  },
+  "metric_contract": {
+    "official_primary": "macro_recall",
+    "official_secondary": "macro_precision",
+    "tolerance": 1e-12
+  },
+  "inputs": {
+    "artifacts/task1/evaluation/strict_cv_v2/folds.json": {
+      "path": "artifacts/task1/evaluation/strict_cv_v2/folds.json",
+      "exists": true,
+      "sha256": "acc4792f1b067d9c58cbfa16789c4c0bd47b71cad081443fbb37eb6017803a0a",
+      "expected_sha256": "acc4792f1b067d9c58cbfa16789c4c0bd47b71cad081443fbb37eb6017803a0a",
+      "sha256_match": true,
+      "bytes": 607797,
+      "scientific_role": "canonical strict-CV F1--F4 membership",
+      "label_bearing": false,
+      "row_or_query_count": 5600,
+      "schema": {
+        "kind": "fold mapping",
+        "target_folds": [
+          1,
+          2,
+          3,
+          4
+        ]
+      }
+    },
+    "data/raw/btc/LegalIR/train.json": {
+      "path": "data/raw/btc/LegalIR/train.json",
+      "exists": true,
+      "sha256": "c39cde9e74977e350f1456e7d487aafe67d2bcbaa4fa26fcabd557fe635635b7",
+      "expected_sha256": "c39cde9e74977e350f1456e7d487aafe67d2bcbaa4fa26fcabd557fe635635b7",
+      "sha256_match": true,
+      "bytes": 1526741,
+      "scientific_role": "F1--F4-only diagnostic gold labels after structural freeze",
+      "label_bearing": true,
+      "row_or_query_count": 5600,
+      "schema": {
+        "target_record_keys": [
+          "answer",
+          "question"
+        ]
+      }
+    },
+    "artifacts/task1/recovery_096/baseline_093_oof/predictions.jsonl": {
+      "path": "artifacts/task1/recovery_096/baseline_093_oof/predictions.jsonl",
+      "exists": true,
+      "sha256": "1272cb9e8b465f433c725674081084f084a60cdb9807d6ca6a3aa3d9acc1e7d5",
+      "expected_sha256": "1272cb9e8b465f433c725674081084f084a60cdb9807d6ca6a3aa3d9acc1e7d5",
+      "sha256_match": true,
+      "bytes": 854218,
+      "scientific_role": "canonical baseline top5 identity",
+      "label_bearing": false,
+      "row_or_query_count": 7000,
+      "schema": {
+        "target_top_level_keys": [
+          "fold",
+          "gold_documents",
+          "query_id",
+          "top5"
+        ]
+      }
+    },
+    "artifacts/task1/recovery_096/baseline_093_oof/report.json": {
+      "path": "artifacts/task1/recovery_096/baseline_093_oof/report.json",
+      "exists": true,
+      "sha256": "152017dc14978505bd8931a572e4b9c47c98cc497632c2180bcf07b242b245d2",
+      "expected_sha256": null,
+      "sha256_match": null,
+      "bytes": 9280,
+      "scientific_role": "canonical baseline Recall/Precision reference",
+      "label_bearing": true,
+      "row_or_query_count": 7000,
+      "schema": {
+        "top_level_keys": [
+          "baseline_093_oof",
+          "bge_chunk_only_control",
+          "change_policy_oof",
+          "leakage_audit",
+          "producer",
+          "query_count",
+          "schema_version",
+          "status",
+          "v3_locked_oof"
+        ]
+      }
+    },
+    "artifacts/task1/recovery_096/v3_residual/policy/actions.jsonl": {
+      "path": "artifacts/task1/recovery_096/v3_residual/policy/actions.jsonl",
+      "exists": true,
+      "sha256": "7b7acbdd5c26c1e7b21cba42c84900f7894b8fc3dff1475941534345a140eb3a",
+      "expected_sha256": "7b7acbdd5c26c1e7b21cba42c84900f7894b8fc3dff1475941534345a140eb3a",
+      "sha256_match": true,
+      "bytes": 499381219,
+      "scientific_role": "canonical K20 swap action universe",
+      "label_bearing": true,
+      "row_or_query_count": 215422,
+      "schema": {
+        "target_top_level_keys": [
+          "baseline_recall",
+          "baseline_top5",
+          "drop_rank",
+          "dropped_doc_id",
+          "features",
+          "fold",
+          "gain",
+          "incoming_doc_id",
+          "label",
+          "query_id"
+        ],
+        "feature_size_distribution": {
+          "58": 172338
+        }
+      }
+    },
+    "artifacts/task1/recovery_096/inference_matched_reranker_v1/compact/candidate_refs_full.jsonl": {
+      "path": "artifacts/task1/recovery_096/inference_matched_reranker_v1/compact/candidate_refs_full.jsonl",
+      "exists": true,
+      "sha256": "e09a59852b722fc6e33761cce964920e4929cba59f0171dcd85cbe62d96edfa6",
+      "expected_sha256": "e09a59852b722fc6e33761cce964920e4929cba59f0171dcd85cbe62d96edfa6",
+      "sha256_match": true,
+      "bytes": 138477283,
+      "scientific_role": "canonical full candidate pool and retrieval provenance",
+      "label_bearing": false,
+      "row_or_query_count": 7000,
+      "schema": {
+        "target_top_level_keys": [
+          "candidates",
+          "fold",
+          "query_id"
+        ]
+      }
+    },
+    "reports/task1/workflow_a/step0_metric_contract_report.json": {
+      "path": "reports/task1/workflow_a/step0_metric_contract_report.json",
+      "exists": true,
+      "sha256": "9de98cc66158c866e964daa8760588805a079ef68708b87a267118a456495bc5",
+      "expected_sha256": null,
+      "sha256_match": null,
+      "bytes": 8876,
+      "scientific_role": "metric-contract equivalence evidence",
+      "label_bearing": false,
+      "row_or_query_count": 5600,
+      "schema": {
+        "top_level_keys": [
+          "core_recall_formula_consistent",
+          "cv_evaluator_trace",
+          "duplicate_gold_id_query_count",
+          "fold0_touched",
+          "fold_mapping_source",
+          "folds_used",
+          "gold_count_gt5_query_count",
+          "gold_count_gt5_rate",
+          "historical_launcher_contains_fold0_stage",
+          "implementation_guards_consistent",
+          "metric_semantics_consistent_on_v3_domain",
+          "metric_source_evidence",
+          "metric_sources_consistent",
+          "multi_gold_query_count",
+          "multi_gold_rate",
+          "notes",
+          "official_primary_metric",
+          "official_secondary_metric",
+          "per_query_max_recall_distribution",
+          "public_labels_used",
+          "ranking_order_affects_official_metric",
+          "relevant_count_distribution",
+          "score_equivalence_check",
+          "status",
+          "submission_validator_findings",
+          "total_queries",
+          "train_label_source"
+        ]
+      }
+    },
+    "reports/task1/workflow_a/exp_1a_recall_gap_report.json": {
+      "path": "reports/task1/workflow_a/exp_1a_recall_gap_report.json",
+      "exists": true,
+      "sha256": "8ec0319d4d57d90d861807abf8f43879a075bb192d3f53f859a78db1217c2e68",
+      "expected_sha256": null,
+      "sha256_match": null,
+      "bytes": 9744,
+      "scientific_role": "canonical full-pool oracle evidence",
+      "label_bearing": false,
+      "row_or_query_count": 5600,
+      "schema": {
+        "top_level_keys": [
+          "aggregate_artifacts_contain_fold0",
+          "audited_queries",
+          "baseline_non_target_records_skipped",
+          "candidate_non_target_records_skipped",
+          "fold0_labels_used",
+          "fold0_payload_materialized",
+          "fold0_touched",
+          "fold0_used_in_oracle",
+          "fold0_used_in_statistics",
+          "folds_used",
+          "input_artifacts",
+          "input_provenance",
+          "missing_gold_found_in_pool_total",
+          "missing_gold_total",
+          "notes",
+          "official_metric",
+          "one_swap_candidate_ceiling_gain",
+          "per_fold",
+          "public_labels_used",
+          "queries_below_capacity_ceiling",
+          "queries_with_all_missing_gold_in_full_pool",
+          "queries_with_any_missing_gold_in_full_pool",
+          "queries_with_positive_one_swap_gain",
+          "sample_query_ids",
+          "sanity_checks",
+          "status",
+          "sum_one_swap_gain",
+          "sum_unconstrained_gain",
+          "total_queries",
+          "unconstrained_top5_repair_ceiling_gain"
+        ]
+      }
+    },
+    "reports/task1/workflow_a/exp_1b_oracle_gap_decomposition_report.json": {
+      "path": "reports/task1/workflow_a/exp_1b_oracle_gap_decomposition_report.json",
+      "exists": true,
+      "sha256": "225ea6b600f4c1a9994bedf59f9165a3982fecd541e17dccecfd2eb302eaa4d6",
+      "expected_sha256": null,
+      "sha256_match": null,
+      "bytes": 10729,
+      "scientific_role": "canonical K20 oracle evidence",
+      "label_bearing": false,
+      "row_or_query_count": 5600,
+      "schema": {
+        "top_level_keys": [
+          "action_non_target_records_skipped",
+          "actual_policy_available",
+          "actual_policy_unavailable_reason",
+          "aggregate_artifacts_contain_fold0",
+          "audited_queries",
+          "baseline_non_target_records_skipped",
+          "candidate_non_target_records_skipped",
+          "fold0_labels_used",
+          "fold0_payload_materialized",
+          "fold0_touched",
+          "fold0_used_in_oracle",
+          "fold0_used_in_statistics",
+          "folds_used",
+          "input_artifacts",
+          "input_provenance",
+          "notes",
+          "official_metric",
+          "per_fold",
+          "pooled_A",
+          "pooled_B",
+          "pooled_C",
+          "pooled_action_space_gap",
+          "pooled_actual_policy_gain",
+          "pooled_decision_policy_gap",
+          "pooled_rank_limit_gap",
+          "public_labels_used",
+          "queries_actual_policy_benefit",
+          "queries_actual_policy_harm",
+          "queries_actual_policy_neutral",
+          "queries_with_A_gt_0",
+          "queries_with_B_gt_0",
+          "queries_with_C_gt_0",
+          "queries_with_action_space_gap_gt_0",
+          "queries_with_decision_policy_gap_gt_0",
+          "queries_with_rank_limit_gap_gt_0",
+          "sample_queries",
+          "sanity_checks",
+          "status",
+          "step1a_crosscheck",
+          "sum_A",
+          "sum_B",
+          "sum_C",
+          "sum_D",
+          "total_queries"
+        ]
+      }
+    },
+    "reports/task1/workflow_a/exp_1b_rerun_k77_oracle_gap_decomposition_report.json": {
+      "path": "reports/task1/workflow_a/exp_1b_rerun_k77_oracle_gap_decomposition_report.json",
+      "exists": true,
+      "sha256": "53002e916d9cd247a0f9f3fb7c276e99f895b4ca476b8a5835441e40db495381",
+      "expected_sha256": null,
+      "sha256_match": null,
+      "bytes": 4868,
+      "scientific_role": "canonical K77 oracle evidence",
+      "label_bearing": false,
+      "row_or_query_count": 5600,
+      "schema": {
+        "top_level_keys": [
+          "D77",
+          "actual_policy_available",
+          "adopted_research_K",
+          "baseline_non_target_records_skipped",
+          "candidate_non_target_records_skipped",
+          "counts",
+          "experiment",
+          "fold0_labels_used",
+          "fold0_payload_materialized",
+          "fold0_touched",
+          "fold0_used_in_oracle",
+          "fold0_used_in_statistics",
+          "folds_used",
+          "input_artifacts",
+          "k77_action_space",
+          "notes",
+          "official_metric",
+          "oracle_decomposition",
+          "per_fold",
+          "policy_C_minus_D_status",
+          "production_K_selected",
+          "public_labels_used",
+          "rank13_decision",
+          "rank_limit_gate",
+          "sanity_checks",
+          "status",
+          "total_queries",
+          "workflow_document_updated"
+        ]
+      }
+    }
+  },
+  "fold_and_label_isolation": {
+    "target_folds": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "target_query_count": 5600,
+    "fold_counts": {
+      "1": 1400,
+      "2": 1400,
+      "3": 1400,
+      "4": 1400
+    },
+    "target_query_id_sha256": "8ce31031ed7c5f560e77700b9794ca3ee9b7145da9b0a377f6e8dc6fb2d3827c",
+    "duplicate_target_fold_ids": 0,
+    "missing_target_ids": 0,
+    "fold0_validation_ids_materialized": false,
+    "fold0_gold_payload_decoded_count": 0,
+    "fold0_gold_records_structurally_skipped": 1400,
+    "aggregate_baseline_non_target_rows_structurally_skipped": 1400,
+    "aggregate_actions_non_target_rows_structurally_skipped": 43084,
+    "aggregate_candidates_non_target_rows_structurally_skipped": 1400,
+    "public_labels_used": false
+  },
+  "join_cardinalities": {
+    "target": 5600,
+    "gold": 5600,
+    "baseline": 5600,
+    "K20_action_queries": 5600,
+    "candidate_queries": 5600,
+    "K20_action_rows": 172338,
+    "K77_incoming_candidates": 403322,
+    "full_incoming_candidates": 1092015
+  },
+  "duplicate_and_missing_counts": {
+    "fold_target_duplicates": 0,
+    "baseline_target_duplicate_rows": 0,
+    "baseline_missing_target_queries": 0,
+    "K20_duplicate_action_identities": 0,
+    "K20_missing_target_queries": 0,
+    "candidate_missing_target_queries": 0
+  },
+  "branch_statuses": {
+    "K20": "PASS",
+    "K77": "PASS",
+    "FULL": "PASS"
+  },
+  "evidence_crosschecks": {
+    "baseline_recall_expected": 0.9259285714285714,
+    "baseline_recall_actual": 0.9259285714285714,
+    "baseline_per_fold_recall_precision_match": true,
+    "K20_evidence_gain_match": true,
+    "K77_evidence_gain_match": true,
+    "K77_expected_incoming_count": 403322,
+    "K77_actual_incoming_count": 403322,
+    "FULL_evidence_gain_match": true
+  },
+  "structural_freeze_before_gold_decode": true,
+  "file_lifecycle_review": {
+    "pre_create_duplicate_check": {
+      "searched_paths": [
+        "scripts/analysis/workflow_c",
+        "reports/task1/workflow_c/tv2/c0a"
+      ],
+      "equivalent_canonical_c0a_implementation_found": false,
+      "equivalent_c0a_outputs_found": false
+    },
+    "decisions": [
+      {
+        "path": "scripts/analysis/workflow_c/workflow_c_c0a_oracle_opportunity_anatomy.py",
+        "decision": "VERSIONED_NEW_FILE",
+        "classification": "KEEP_REPRODUCIBILITY",
+        "reason": "canonical CPU-only C0-A implementation"
+      },
+      {
+        "path": "reports/task1/workflow_c/tv2/c0a/c0a_integrity_manifest.json",
+        "decision": "VERSIONED_NEW_FILE",
+        "reason": "canonical integrity manifest required by C0-A"
+      },
+      {
+        "path": "reports/task1/workflow_c/tv2/c0a/c0a_oracle_opportunity_report.json",
+        "decision": "VERSIONED_NEW_FILE",
+        "reason": "canonical opportunity report required by C0-A"
+      },
+      {
+        "path": "reports/task1/workflow_c/tv2/c0a/c0a_oracle_opportunity_trace.jsonl",
+        "decision": "VERSIONED_NEW_FILE",
+        "reason": "canonical 5,600-query opportunity trace required by C0-A"
+      }
+    ],
+    "workflow_a_or_b_artifacts_modified": false,
+    "deletions": []
+  },
+  "git_diff_check": "PASS"
+}
