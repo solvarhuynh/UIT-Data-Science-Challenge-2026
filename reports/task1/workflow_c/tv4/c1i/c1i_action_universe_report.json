@@ -11,7 +11,7 @@
   "model_inference": false,
   "gpu": false,
   "modal": false,
-  "generated_at_utc": "2026-09-11T11:36:52.950023+00:00",
+  "generated_at_utc": "2026-09-11T13:04:39.939683+00:00",
   "input_paths": {
     "folds": "artifacts/task1/evaluation/strict_cv_v2/folds.json",
     "baseline": "artifacts/task1/recovery_096/baseline_093_oof/predictions.jsonl",
@@ -20,7 +20,7 @@
     "k77_contract": "reports/task1/workflow_b/tv4/b1/contracts/workflow_b_b1_preregistered_contract.json"
   },
   "missing_required_inputs": [],
-  "status": "PARTIAL",
+  "status": "PASS",
   "baseline": {
     "target_queries": 5600,
     "missing_target_queries": 0,
@@ -29,8 +29,12 @@
     "fold_mismatches": 0
   },
   "k20": {
-    "status": "BLOCKED",
+    "status": "PASS",
     "actions": 215422,
+    "k20_total_action_rows": 215422,
+    "k20_target_f1_f4_action_rows": 172338,
+    "k20_fold0_structurally_excluded_rows": 43084,
+    "k20_unknown_query_action_rows": 0,
     "queries": 5600,
     "feature_count": 58,
     "feature_names_ordered": [
@@ -110,7 +114,7 @@
     ],
     "duplicate_action_identities": 0,
     "invalid_rank_actions": 0,
-    "missing_query_ids": 43084,
+    "missing_query_ids": 0,
     "missing_doc_ids": 0,
     "drop_baseline_mismatches": 0,
     "fold_mismatches": 0,

@@ -11,7 +11,7 @@
   "model_inference": false,
   "gpu": false,
   "modal": false,
-  "generated_at_utc": "2026-09-11T11:36:52.950023+00:00",
+  "generated_at_utc": "2026-09-11T13:04:39.939683+00:00",
   "input_paths": {
     "folds": "artifacts/task1/evaluation/strict_cv_v2/folds.json",
     "baseline": "artifacts/task1/recovery_096/baseline_093_oof/predictions.jsonl",
@@ -20,7 +20,7 @@
     "k77_contract": "reports/task1/workflow_b/tv4/b1/contracts/workflow_b_b1_preregistered_contract.json"
   },
   "missing_required_inputs": [],
-  "status": "PARTIAL",
+  "status": "PASS",
   "normalization": {
     "query_id": "str(value), non-empty",
     "doc_id": "str(value), non-empty",

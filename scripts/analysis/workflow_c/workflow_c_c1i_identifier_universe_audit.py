@@ -130,7 +130,7 @@ def normalize_id(value: Any) -> str | None:
     return result if result else None
 
 
-def load_fold_map(path: Path) -> dict[str, int]:
+def load_canonical_fold_map(path: Path) -> dict[str, int]:
     raw = json.loads(path.read_text(encoding="utf-8-sig"))
     if not isinstance(raw, dict) or set(raw) != {
         "fold_count", "folds", "input", "input_sha256", "normalization", "schema_version", "seed"
@@ -153,7 +153,12 @@ def load_fold_map(path: Path) -> dict[str, int]:
             if query_id in result:
                 raise ValueError("duplicate canonical validation query ID")
             result[query_id] = fold
-    return {q: f for q, f in result.items() if f in TARGET_FOLDS}
+    return result
+
+
+def load_fold_map(path: Path) -> dict[str, int]:
+    """Return the F1-F4 scientific target subset of canonical membership."""
+    return {q: f for q, f in load_canonical_fold_map(path).items() if f in TARGET_FOLDS}
 
 
 def audit_baseline(path: Path, fold_map: dict[str, int]) -> tuple[dict[str, list[str]], dict[str, Any]]:
@@ -205,9 +210,10 @@ def action_record(line: str) -> tuple[dict[str, Any], list[str], list[str]]:
     return result, keys, feature_order
 
 
-def audit_k20(path: Path, fold_map: dict[str, int], baseline: dict[str, list[str]]) -> tuple[dict[str, Any], set[tuple[str, str]], set[tuple[str, str, str, int]]]:
+def audit_k20(path: Path, full_fold_map: dict[str, int], fold_map: dict[str, int], baseline: dict[str, list[str]]) -> tuple[dict[str, Any], set[tuple[str, str]], set[tuple[str, str, str, int]]]:
     action_count = duplicate_actions = invalid_actions = fold_mismatches = 0
-    missing_query_ids = missing_doc_ids = drop_baseline_mismatches = 0
+    target_action_count = fold0_excluded_action_count = unknown_query_action_count = 0
+    missing_doc_ids = drop_baseline_mismatches = 0
     top_keys: Counter[str] = Counter()
     feature_order: list[str] | None = None
     feature_schema_variants = 0
@@ -220,17 +226,27 @@ def audit_k20(path: Path, fold_map: dict[str, int], baseline: dict[str, list[str
         row, keys, current_features = action_record(line)
         top_keys.update(keys)
         action_count += 1
-        if feature_order is None:
-            feature_order = current_features
-        elif current_features != feature_order:
-            feature_schema_variants += 1
         query_id = normalize_id(row.get("query_id"))
         incoming = normalize_id(row.get("incoming_doc_id"))
         dropped = normalize_id(row.get("dropped_doc_id"))
         rank = row.get("drop_rank")
-        if query_id not in fold_map:
-            missing_query_ids += 1
+        if query_id not in full_fold_map:
+            unknown_query_action_count += 1
             continue
+        assigned_fold = full_fold_map[query_id]
+        if "fold" in row and int(row["fold"]) != assigned_fold:
+            fold_mismatches += 1
+        if assigned_fold == 0:
+            fold0_excluded_action_count += 1
+            continue
+        if query_id not in fold_map:
+            unknown_query_action_count += 1
+            continue
+        target_action_count += 1
+        if feature_order is None:
+            feature_order = current_features
+        elif current_features != feature_order:
+            feature_schema_variants += 1
         if incoming is None or dropped is None:
             missing_doc_ids += 1
             continue
@@ -247,13 +263,15 @@ def audit_k20(path: Path, fold_map: dict[str, int], baseline: dict[str, list[str
             invalid_actions += 1
         elif query_id not in baseline or baseline[query_id][rank - 1] != dropped:
             drop_baseline_mismatches += 1
-        if "fold" in row and int(row["fold"]) != fold_map[query_id]:
-            fold_mismatches += 1
         structural_hash.update(json.dumps(identity, separators=(",", ":"), ensure_ascii=True).encode() + b"\n")
     features = feature_order or []
     return {
-        "status": "PASS" if action_count == EXPECTED["k20_actions"] and len(features) == EXPECTED["k20_features"] and not any((duplicate_actions, invalid_actions, missing_query_ids, missing_doc_ids, drop_baseline_mismatches, fold_mismatches, feature_schema_variants)) else "BLOCKED",
+        "status": "PASS" if action_count == EXPECTED["k20_actions"] and len(features) == EXPECTED["k20_features"] and not any((duplicate_actions, invalid_actions, unknown_query_action_count, missing_doc_ids, drop_baseline_mismatches, fold_mismatches, feature_schema_variants)) else "BLOCKED",
         "actions": action_count,
+        "k20_total_action_rows": action_count,
+        "k20_target_f1_f4_action_rows": target_action_count,
+        "k20_fold0_structurally_excluded_rows": fold0_excluded_action_count,
+        "k20_unknown_query_action_rows": unknown_query_action_count,
         "queries": len({item[0] for item in identities}),
         "feature_count": len(features),
         "feature_names_ordered": features,
@@ -261,7 +279,7 @@ def audit_k20(path: Path, fold_map: dict[str, int], baseline: dict[str, list[str
         "forbidden_value_fields_skipped": sorted(FORBIDDEN_ACTION_VALUE_FIELDS & set(top_keys)),
         "duplicate_action_identities": duplicate_actions,
         "invalid_rank_actions": invalid_actions,
-        "missing_query_ids": missing_query_ids,
+        "missing_query_ids": unknown_query_action_count,
         "missing_doc_ids": missing_doc_ids,
         "drop_baseline_mismatches": drop_baseline_mismatches,
         "fold_mismatches": fold_mismatches,
@@ -474,11 +492,12 @@ def main() -> int:
         print_summary("BLOCKED", universe, schema, paths)
         return 2
 
-    fold_map = load_fold_map(PATHS["folds"])
+    full_fold_map = load_canonical_fold_map(PATHS["folds"])
+    fold_map = {q: f for q, f in full_fold_map.items() if f in TARGET_FOLDS}
     baseline, baseline_report = audit_baseline(PATHS["baseline"], fold_map)
     contract = json.loads(PATHS["k77_contract"].read_text(encoding="utf-8"))
     k77_features = [str(name) for name in contract.get("feature_columns", [])]
-    k20, k20_incoming, _ = audit_k20(PATHS["k20_actions"], fold_map, baseline)
+    k20, k20_incoming, _ = audit_k20(PATHS["k20_actions"], full_fold_map, fold_map, baseline)
     full, k77, full_members, _ = audit_full_and_k77(PATHS["full_candidates"], fold_map, baseline, k77_features)
     k20_not_full = len(k20_incoming - full_members)
     schema_mapping = classify_schemas(k20["feature_names_ordered"], k77_features)
