@@ -132,19 +132,27 @@ def normalize_id(value: Any) -> str | None:
 
 def load_fold_map(path: Path) -> dict[str, int]:
     raw = json.loads(path.read_text(encoding="utf-8-sig"))
+    if not isinstance(raw, dict) or set(raw) != {
+        "fold_count", "folds", "input", "input_sha256", "normalization", "schema_version", "seed"
+    }:
+        raise ValueError("unsupported canonical folds.json root schema")
+    folds = raw["folds"]
+    if not isinstance(folds, list):
+        raise ValueError("canonical folds.json 'folds' must be a list")
+
     result: dict[str, int] = {}
-    if isinstance(raw, dict) and all(isinstance(v, list) for v in raw.values()):
-        for fold, query_ids in raw.items():
-            for query_id in query_ids:
-                result[str(query_id)] = int(fold)
-    elif isinstance(raw, dict):
-        for query_id, fold in raw.items():
-            result[str(query_id)] = int(fold)
-    elif isinstance(raw, list):
-        for row in raw:
-            result[str(row["query_id"])] = int(row["fold"])
-    else:
-        raise ValueError("unsupported fold-map structure")
+    for row in folds:
+        if not isinstance(row, dict) or set(row) != {"fold", "training_ids", "validation_ids"}:
+            raise ValueError("unsupported canonical folds.json entry schema")
+        fold, query_ids = row["fold"], row["validation_ids"]
+        if not isinstance(fold, int) or fold not in range(raw["fold_count"]):
+            raise ValueError("invalid canonical fold ID")
+        if not isinstance(query_ids, list) or not all(isinstance(query_id, str) and query_id for query_id in query_ids):
+            raise ValueError("invalid canonical validation query IDs")
+        for query_id in query_ids:
+            if query_id in result:
+                raise ValueError("duplicate canonical validation query ID")
+            result[query_id] = fold
     return {q: f for q, f in result.items() if f in TARGET_FOLDS}
 
 

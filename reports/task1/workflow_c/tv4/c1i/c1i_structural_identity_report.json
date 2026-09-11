@@ -11,7 +11,7 @@
   "model_inference": false,
   "gpu": false,
   "modal": false,
-  "generated_at_utc": "2026-09-11T03:21:03.519141+00:00",
+  "generated_at_utc": "2026-09-11T11:36:52.950023+00:00",
   "input_paths": {
     "folds": "artifacts/task1/evaluation/strict_cv_v2/folds.json",
     "baseline": "artifacts/task1/recovery_096/baseline_093_oof/predictions.jsonl",
@@ -19,13 +19,27 @@
     "full_candidates": "artifacts/task1/recovery_096/inference_matched_reranker_v1/compact/candidate_refs_full.jsonl",
     "k77_contract": "reports/task1/workflow_b/tv4/b1/contracts/workflow_b_b1_preregistered_contract.json"
   },
-  "missing_required_inputs": [
-    "folds",
-    "baseline",
-    "k20_actions",
-    "full_candidates"
-  ],
-  "status": "BLOCKED",
-  "reason": "required canonical structural inputs are absent",
-  "phase_2_endpoint_verification": "UNVERIFIED: Phase 1 could not freeze identities"
+  "missing_required_inputs": [],
+  "status": "PARTIAL",
+  "normalization": {
+    "query_id": "str(value), non-empty",
+    "doc_id": "str(value), non-empty",
+    "action_identity": "(query_id, incoming_doc_id, dropped_doc_id, drop_rank)",
+    "drop_rank_domain": [
+      4,
+      5
+    ],
+    "duplicate_rule": "duplicate action identities and duplicate query/doc candidate memberships are invalid"
+  },
+  "phase_1_freeze": {
+    "input_file_sha256": {
+      "baseline": "1272cb9e8b465f433c725674081084f084a60cdb9807d6ca6a3aa3d9acc1e7d5",
+      "k20_actions": "7b7acbdd5c26c1e7b21cba42c84900f7894b8fc3dff1475941534345a140eb3a",
+      "full_candidates": "e09a59852b722fc6e33761cce964920e4929cba59f0171dcd85cbe62d96edfa6",
+      "k77_contract": "8d54469ca1a1ffa0213cced2ff9ace2c0a9fd06ebd825b6cf60988f7627538cb"
+    },
+    "k20_structural_identity_sha256": "c7b053613c8b1f8a0627356cbda5ead22d7959315b6e44f067f207546ae9bb81",
+    "k77_structural_identity_sha256": "009fff99adef0da12894440a84c630583cdf785aa7673788a8541d4f98eb768d",
+    "phase_2_endpoint_verification": "UNVERIFIED: optional endpoint verification intentionally deferred; it requires a separately frozen endpoint-prediction identity protocol"
+  }
 }
