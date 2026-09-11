@@ -1,0 +1,31 @@
+{
+  "experiment": "C1-I",
+  "owner": "TV4",
+  "phase_1_label_free": true,
+  "fold0_labels_materialized": false,
+  "public_labels_used": false,
+  "historical_v3a_selected_actions_used": false,
+  "qwen_used": false,
+  "b1_resumed": false,
+  "model_training": false,
+  "model_inference": false,
+  "gpu": false,
+  "modal": false,
+  "generated_at_utc": "2026-09-11T03:21:03.519141+00:00",
+  "input_paths": {
+    "folds": "artifacts/task1/evaluation/strict_cv_v2/folds.json",
+    "baseline": "artifacts/task1/recovery_096/baseline_093_oof/predictions.jsonl",
+    "k20_actions": "artifacts/task1/recovery_096/v3_residual/policy/actions.jsonl",
+    "full_candidates": "artifacts/task1/recovery_096/inference_matched_reranker_v1/compact/candidate_refs_full.jsonl",
+    "k77_contract": "reports/task1/workflow_b/tv4/b1/contracts/workflow_b_b1_preregistered_contract.json"
+  },
+  "missing_required_inputs": [
+    "folds",
+    "baseline",
+    "k20_actions",
+    "full_candidates"
+  ],
+  "status": "BLOCKED",
+  "reason": "required canonical structural inputs are absent",
+  "phase_2_endpoint_verification": "UNVERIFIED: Phase 1 could not freeze identities"
+}
