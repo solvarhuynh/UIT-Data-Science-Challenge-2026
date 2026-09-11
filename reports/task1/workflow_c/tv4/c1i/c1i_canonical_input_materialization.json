@@ -1,0 +1,60 @@
+{
+  "experiment": "C1-I",
+  "owner": "TV4",
+  "purpose": "Canonical-input materialization/provenance verification after MANIFEST_GATE_PASS",
+  "verification_timestamp_utc": "2026-09-11T07:08:08Z",
+  "handoff_manifest": "handoff/task1_workflow_c/c1i_canonical_handoff_manifest.json",
+  "materialization_mode": "NO_COPY_REQUIRED",
+  "artifacts_regenerated": false,
+  "artifacts": [
+    {
+      "canonical_destination_path": "artifacts/task1/evaluation/strict_cv_v2/folds.json",
+      "source_handoff_provenance": "D:\\udsc2026\\handoff\\task1_workflow_c_c1i_inputs\\artifacts\\task1\\evaluation\\strict_cv_v2\\folds.json",
+      "manifest_sha256": "acc4792f1b067d9c58cbfa16789c4c0bd47b71cad081443fbb37eb6017803a0a",
+      "destination_sha256": "acc4792f1b067d9c58cbfa16789c4c0bd47b71cad081443fbb37eb6017803a0a",
+      "expected_canonical_sha256": "acc4792f1b067d9c58cbfa16789c4c0bd47b71cad081443fbb37eb6017803a0a",
+      "file_size": 607797,
+      "byte_identical": true,
+      "status": "ALREADY_PRESENT_IDENTICAL"
+    },
+    {
+      "canonical_destination_path": "artifacts/task1/recovery_096/baseline_093_oof/predictions.jsonl",
+      "source_handoff_provenance": "D:\\udsc2026\\handoff\\task1_workflow_c_c1i_inputs\\artifacts\\task1\\recovery_096\\baseline_093_oof\\predictions.jsonl",
+      "manifest_sha256": "1272cb9e8b465f433c725674081084f084a60cdb9807d6ca6a3aa3d9acc1e7d5",
+      "destination_sha256": "1272cb9e8b465f433c725674081084f084a60cdb9807d6ca6a3aa3d9acc1e7d5",
+      "expected_canonical_sha256": "1272cb9e8b465f433c725674081084f084a60cdb9807d6ca6a3aa3d9acc1e7d5",
+      "file_size": 854218,
+      "byte_identical": true,
+      "status": "ALREADY_PRESENT_IDENTICAL"
+    },
+    {
+      "canonical_destination_path": "artifacts/task1/recovery_096/v3_residual/policy/actions.jsonl",
+      "source_handoff_provenance": "D:\\udsc2026\\handoff\\task1_workflow_c_c1i_inputs\\artifacts\\task1\\recovery_096\\v3_residual\\policy\\actions.jsonl",
+      "manifest_sha256": "7b7acbdd5c26c1e7b21cba42c84900f7894b8fc3dff1475941534345a140eb3a",
+      "destination_sha256": "7b7acbdd5c26c1e7b21cba42c84900f7894b8fc3dff1475941534345a140eb3a",
+      "expected_canonical_sha256": "7b7acbdd5c26c1e7b21cba42c84900f7894b8fc3dff1475941534345a140eb3a",
+      "file_size": 499381219,
+      "byte_identical": true,
+      "status": "ALREADY_PRESENT_IDENTICAL"
+    },
+    {
+      "canonical_destination_path": "artifacts/task1/recovery_096/inference_matched_reranker_v1/compact/candidate_refs_full.jsonl",
+      "source_handoff_provenance": "D:\\udsc2026\\handoff\\task1_workflow_c_c1i_inputs\\artifacts\\task1\\recovery_096\\inference_matched_reranker_v1\\compact\\candidate_refs_full.jsonl",
+      "manifest_sha256": "e09a59852b722fc6e33761cce964920e4929cba59f0171dcd85cbe62d96edfa6",
+      "destination_sha256": "e09a59852b722fc6e33761cce964920e4929cba59f0171dcd85cbe62d96edfa6",
+      "expected_canonical_sha256": "e09a59852b722fc6e33761cce964920e4929cba59f0171dcd85cbe62d96edfa6",
+      "file_size": 138477283,
+      "byte_identical": true,
+      "status": "ALREADY_PRESENT_IDENTICAL"
+    }
+  ],
+  "verification_result": "4/4 manifest SHA256 == destination SHA256 == expected canonical SHA256",
+  "fold0_labels_materialized": false,
+  "public_labels_used": false,
+  "qwen_used": false,
+  "b1_resumed": false,
+  "model_training": false,
+  "model_inference": false,
+  "gpu": false,
+  "modal": false
+}
