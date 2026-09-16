@@ -1,0 +1,121 @@
+{
+  "experiment": "FULLDOC_TOP10_COMMON_BM25_SLOT5",
+  "coverage": 5600,
+  "prediction_sha256": "ba4e8b551674fe003a25935b2cb5e60045aab4587d80dd9bf90087e6ecf2c6d6",
+  "parity": {
+    "status": "PASS",
+    "parity_rows": 256,
+    "gate": "max_abs_score_difference <= 1e-8 (enforced before prediction write)",
+    "representation": "canonical raw link + raw passage; repository-pinned PyVi tokenizer; rank_bm25==0.2.2"
+  },
+  "baseline": {
+    "recall_at_5": 0.9259285714285714,
+    "precision_at_5": 0.19739285714285715
+  },
+  "new": {
+    "recall_at_5": 0.9155119047619048,
+    "precision_at_5": 0.19485714285714287
+  },
+  "delta": {
+    "recall_at_5": -0.01041666666666663,
+    "precision_at_5": -0.00253571428571428
+  },
+  "folds": {
+    "1": {
+      "queries": 1400,
+      "baseline_recall": 0.9363690476190477,
+      "new_recall": 0.92375,
+      "recall_delta": -0.012619047619047752,
+      "baseline_precision": 0.19842857142857143,
+      "new_precision": 0.1952857142857143,
+      "precision_delta": -0.003142857142857114
+    },
+    "2": {
+      "queries": 1400,
+      "baseline_recall": 0.9283333333333333,
+      "new_recall": 0.9214285714285714,
+      "recall_delta": -0.006904761904761969,
+      "baseline_precision": 0.19771428571428573,
+      "new_precision": 0.19600000000000004,
+      "precision_delta": -0.001714285714285696
+    },
+    "3": {
+      "queries": 1400,
+      "baseline_recall": 0.919404761904762,
+      "new_recall": 0.9080952380952381,
+      "recall_delta": -0.01130952380952388,
+      "baseline_precision": 0.195,
+      "new_precision": 0.19214285714285714,
+      "precision_delta": -0.0028571428571428636
+    },
+    "4": {
+      "queries": 1400,
+      "baseline_recall": 0.9196071428571428,
+      "new_recall": 0.9087738095238095,
+      "recall_delta": -0.010833333333333361,
+      "baseline_precision": 0.19842857142857143,
+      "new_precision": 0.19600000000000004,
+      "precision_delta": -0.002428571428571391
+    }
+  },
+  "slot5": {
+    "changed": 5039,
+    "beneficial": 20,
+    "harmful": 91,
+    "neutral": 4928,
+    "zero_hit_rescued": 15,
+    "previously_correct_broken": 67,
+    "net_relevant_document_hits": -71,
+    "weighted_recall_gain": 16.333333333333332,
+    "weighted_recall_loss": 74.66666666666667
+  },
+  "known66": {
+    "count": 66,
+    "recovered_at_200": 12,
+    "present_in_top10": 1,
+    "selected_as_final_slot5": 0,
+    "beneficial_final_slot5": 0
+  },
+  "novel_information": {
+    "executed_new_candidate_outside_fulldoc_top200": 0,
+    "beneficial": 0,
+    "harmful": 0,
+    "recall_contribution": 0
+  },
+  "structural_attribution": {
+    "winner_frozen_rank": {
+      "1": {
+        "executed": 2190,
+        "neutral": 2112,
+        "harmful": 65,
+        "beneficial": 13
+      },
+      "2": {
+        "executed": 1328,
+        "neutral": 1307,
+        "beneficial": 5,
+        "harmful": 16
+      },
+      "3": {
+        "executed": 886,
+        "neutral": 882,
+        "harmful": 3,
+        "beneficial": 1
+      },
+      "4": {
+        "executed": 461,
+        "neutral": 455,
+        "harmful": 6
+      },
+      "5": {
+        "executed": 174,
+        "neutral": 172,
+        "harmful": 1,
+        "beneficial": 1
+      }
+    }
+  },
+  "status": "FULLDOC_SLOT5_FAIL",
+  "interpretation": "NEW_RETRIEVAL_SIGNAL_EXISTS_BUT_BM25_ONLY_SLOT5_SELECTION_IS_INSUFFICIENT",
+  "safe_next_action": "PRESERVE_NEW_RETRIEVAL_ARTIFACT_AND_DO_NOT_EXPAND_BM25_ONLY_SLOT5"
+}

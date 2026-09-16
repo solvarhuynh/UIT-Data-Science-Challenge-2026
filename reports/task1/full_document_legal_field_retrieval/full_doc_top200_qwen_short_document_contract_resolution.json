@@ -1,0 +1,86 @@
+{
+  "status": "QWEN_TOP200_MATERIALIZATION_FULL_PASS",
+  "historical_short_document_semantics": {
+    "source_script": "scripts/beam/task1_v2/build_b2a_true_s2_missing_pairs.py::selector_rows; scripts/beam/task1_v2/evidence.py::select_true_s2_prepared",
+    "relevant_code": "ordered[:max(0,int(topk))], then non-empty chunks only; worklist validation permits ranks 1..len(selected) with len<=3",
+    "classification": "TOP3_UP_TO_AVAILABLE",
+    "historical_1_chunk_qdocs": 184,
+    "historical_2_chunk_qdocs": 34,
+    "historical_3_chunk_qdocs": 430982,
+    "persisted_output_evidence": {
+      "qdoc_groups": 431200,
+      "short_qdoc_groups": 218,
+      "all_historical_groups_have_persisted_document_score": true
+    }
+  },
+  "current_three_short_documents": [
+    {
+      "document_id": "125611",
+      "canonical_chunk_count": 2,
+      "affected_qdocs": [
+        {
+          "query_id": "22160",
+          "full_doc_rank": 158
+        }
+      ],
+      "raw_document_mapping_valid": true,
+      "canonical_chunk_source": "data/processed_v3/chunks/125611.jsonl"
+    },
+    {
+      "document_id": "176011",
+      "canonical_chunk_count": 2,
+      "affected_qdocs": [
+        {
+          "query_id": "37344",
+          "full_doc_rank": 96
+        },
+        {
+          "query_id": "94980",
+          "full_doc_rank": 167
+        }
+      ],
+      "raw_document_mapping_valid": true,
+      "canonical_chunk_source": "data/processed_v3/chunks/176011.jsonl"
+    },
+    {
+      "document_id": "198337",
+      "canonical_chunk_count": 2,
+      "affected_qdocs": [
+        {
+          "query_id": "68272",
+          "full_doc_rank": 78
+        },
+        {
+          "query_id": "167242",
+          "full_doc_rank": 193
+        }
+      ],
+      "raw_document_mapping_valid": true,
+      "canonical_chunk_source": "data/processed_v3/chunks/198337.jsonl"
+    }
+  ],
+  "root_cause": "HISTORICAL_SCORER_ALREADY_SUPPORTS_SHORT_DOCS",
+  "final_eligible_universe": {
+    "original_qdocs": 598071,
+    "excluded_by_global_rule": 0,
+    "retained_qdocs": 598071,
+    "unique_documents": 8258,
+    "inference_units": 1794208,
+    "mean_units_per_qdoc": 2.999991639788587,
+    "p95_units_per_qdoc": 3,
+    "materialization_failures": 0
+  },
+  "contract_integrity": {
+    "corrected_queries": "5600/5600 (previous label-free audit)",
+    "canonical_chunks": "all retained qdocs have >=1 canonical chunk; short docs use all available chunks",
+    "fallback_text_used": false,
+    "synthetic_chunks_used": false,
+    "labels_used": false
+  },
+  "runtime": {
+    "historical_units_per_second": 36.351306519275624,
+    "projected_a10_seconds": 49357.45566802679,
+    "projected_a10_hours": 13.710404352229665
+  },
+  "safe_next_action": "REQUEST_ONE_EXPLICIT_MODAL_A10_QWEN_TOP200_SCORING_RUN"
+}

@@ -1,0 +1,22 @@
+{
+  "workload": {
+    "frozen_retrieval_rows_streamed": 2800000,
+    "top10_rows_retained": 56000,
+    "baseline_rank5_total": 5600,
+    "baseline_rank5_already_scored": 5222,
+    "baseline_rank5_requiring_recompute": 378,
+    "mapping_failures": 0
+  },
+  "telemetry": {
+    "post_scan_rss": 201191424,
+    "post_tokenization_rss": "not separately sampled",
+    "post_index_rss": 824864768,
+    "peak_rss_during_query_scoring": 862924800,
+    "peak_rss_during_prediction_generation": "not separately sampled",
+    "peak_rss": 862924800,
+    "measurement_note": "Process-level RSS observations captured externally during the run; the runner's ctypes sampler returned zero and is not used as a measurement.",
+    "failure_phase": null
+  },
+  "previous_attempt": "BLOCKED_PREDICTION_ARTIFACT_NOT_MATERIALIZED",
+  "previous_reason": "MEMORY_PRESSURE_BEFORE_FREEZE"
+}

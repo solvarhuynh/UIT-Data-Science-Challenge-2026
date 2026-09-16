@@ -1,0 +1,4 @@
+{"failure_category":"RSS_LIMIT_EXCEEDED","family":"c2_v","job_id":"runtime-check-3SiDFn2X13SfNVss","launcher_pid":8196,"session_id":"runtimecheck-5Yv51acD132WS-xo","stage":"RESOURCE_ABORT","timestamp_utc":"2026-09-14T11:36:09.987354Z"}
+{"failure_category":"RSS_LIMIT_EXCEEDED","family":"c2_v","job_id":"runtime-check-3SiDFn2X13SfNVss","launcher_pid":8196,"session_id":"runtimecheck-5Yv51acD132WS-xo","stage":"CLEANUP_STARTED","timestamp_utc":"2026-09-14T11:36:09.988361Z"}
+{"exit_code":1,"family":"c2_v","job_id":"runtime-check-3SiDFn2X13SfNVss","launcher_pid":8196,"session_id":"runtimecheck-5Yv51acD132WS-xo","stage":"CLEANUP_COMPLETED","timestamp_utc":"2026-09-14T11:36:10.061677Z"}
+{"exit_code":1,"family":"c2_v","job_id":"runtime-check-3SiDFn2X13SfNVss","launcher_pid":8196,"session_id":"runtimecheck-5Yv51acD132WS-xo","stage":"WORKER_EXIT","timestamp_utc":"2026-09-14T11:36:10.062688Z"}

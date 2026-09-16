@@ -1,0 +1,268 @@
+{
+  "schema_version": "workflow-c-c2-preflight-v2",
+  "status": "PASS",
+  "authorization": "PREFLIGHT_ONLY",
+  "contract_governance": "PREFLIGHT_CONTRACT_RESOLVED",
+  "decision": "PREFLIGHT_FREEZE_COMPLETE_DO_NOT_TRAIN_OR_SCORE",
+  "safe_next_action": "SEND_FINAL_C2_PREFLIGHT_FOR_EXECUTION_AUTHORIZATION",
+  "c1_i_lineage": {
+    "classification": "C1I_COMMIT_PINNED",
+    "reviewed_commit": "721903e91c93644e27000f9892e71fd3e5f86854",
+    "current_head": "721903e91c93644e27000f9892e71fd3e5f86854",
+    "origin_task1": "721903e91c93644e27000f9892e71fd3e5f86854",
+    "required_file_git_blob_hashes_match_reviewed_commit": true
+  },
+  "completed_evidence": {
+    "c0_a": "COMPLETE_PASS",
+    "c1_i": "COMPLETE_PASS",
+    "c1_i_endpoint": "UNVERIFIED_ACCEPTED",
+    "c0_v": "DEFERRED"
+  },
+  "execution_environment": {
+    "status": "PINNED",
+    "environment_path": "D:/udsc2026/.venv",
+    "python_executable": "D:/udsc2026/.venv/Scripts/python.exe",
+    "python_version": "3.12.6",
+    "numpy_version": "1.26.4",
+    "scikit_learn_version": "1.7.2",
+    "threadpoolctl_version": "3.6.0",
+    "general_purpose_environment_modified": false,
+    "constructor_only_smoke": {
+      "status": "PASS",
+      "classifier_constructor": "PASS",
+      "regressor_constructor": "PASS",
+      "parameters_round_trip_via_get_params": "PASS",
+      "fit_called": false,
+      "predict_called": false,
+      "predict_proba_called": false,
+      "project_data_loaded": false
+    }
+  },
+  "scientific_population": {
+    "core_universe": "K20_ONLY",
+    "included_folds": [1, 2, 3, 4],
+    "excluded_folds": [0],
+    "query_count": 5600,
+    "queries_per_fold": 1400,
+    "k20_action_count": 172338,
+    "drop_ranks": [4, 5],
+    "public_labels_allowed": false,
+    "fold0_labels_allowed": false
+  },
+  "nested_split_contract": {
+    "status": "FROZEN",
+    "random_fold_creation": false,
+    "fold_reshuffling": false,
+    "outer_splits": {
+      "F1": {"outer_validation_fold": 1, "outer_training_folds": [2, 3, 4]},
+      "F2": {"outer_validation_fold": 2, "outer_training_folds": [1, 3, 4]},
+      "F3": {"outer_validation_fold": 3, "outer_training_folds": [1, 2, 4]},
+      "F4": {"outer_validation_fold": 4, "outer_training_folds": [1, 2, 3]}
+    },
+    "inner_oof_rule": "For each outer-training complement, each of its three listed folds is inner validation exactly once; the other two listed folds are inner training."
+  },
+  "feature_order": {
+    "status": "FROZEN",
+    "feature_count": 58,
+    "source": "reports/task1/workflow_c/tv4/c1i/c1i_action_universe_report.json",
+    "ordered_names": [
+      "diff_bm25_max", "diff_neural_max", "diff_neural_mean", "diff_neural_second", "diff_source_support", "diff_union_rank",
+      "dropped_adaptive_k500_missing", "dropped_adaptive_k500_rank", "dropped_baseline_rank", "dropped_bm25_max", "dropped_bm25_mean", "dropped_bm25_missing", "dropped_bm25_rank", "dropped_has_bge_support", "dropped_is_baseline_top5", "dropped_knn_char_missing", "dropped_knn_char_rank", "dropped_knn_word_missing", "dropped_knn_word_rank", "dropped_min_source_rank", "dropped_neural_max", "dropped_neural_max_minus_mean", "dropped_neural_mean", "dropped_neural_min", "dropped_neural_second", "dropped_neural_std", "dropped_neural_top2_mean", "dropped_question_char_length", "dropped_question_token_length", "dropped_reciprocal_union_rank", "dropped_source_support", "dropped_union_rank",
+      "incoming_adaptive_k500_missing", "incoming_adaptive_k500_rank", "incoming_baseline_rank", "incoming_bm25_max", "incoming_bm25_mean", "incoming_bm25_missing", "incoming_bm25_rank", "incoming_has_bge_support", "incoming_is_baseline_top5", "incoming_knn_char_missing", "incoming_knn_char_rank", "incoming_knn_word_missing", "incoming_knn_word_rank", "incoming_min_source_rank", "incoming_neural_max", "incoming_neural_max_minus_mean", "incoming_neural_mean", "incoming_neural_min", "incoming_neural_second", "incoming_neural_std", "incoming_neural_top2_mean", "incoming_question_char_length", "incoming_question_token_length", "incoming_reciprocal_union_rank", "incoming_source_support", "incoming_union_rank"
+    ]
+  },
+  "c2_v_control": {
+    "name": "C2V_FRESH_HGBC_1_7_2_K20",
+    "status": "FROZEN",
+    "not_historical_v3a": true,
+    "model_class": "sklearn.ensemble.HistGradientBoostingClassifier",
+    "required_comparator_symmetry": ["outer_splits", "inner_splits", "K20_action_universe", "feature_order", "prediction_freeze_boundary", "evaluation_harness"],
+    "target_mapping": {"NEUTRAL": 0, "BENEFIT": 1, "HARM": 2},
+    "target_definition": {"NEUTRAL": "exact_delta_recall == 0", "BENEFIT": "exact_delta_recall > 0", "HARM": "exact_delta_recall < 0"},
+    "query_weighting": "For query q with N valid K20 swap rows, each row weight is 1/N and total query weight is 1.0.",
+    "class_weighting": "NONE",
+    "utility": "P(BENEFIT) - 1.5 * P(HARM)",
+    "keep_score": 0.0,
+    "margin": 0.0,
+    "execution_rule": "Execute only when utility > 0.0; otherwise KEEP.",
+    "random_seed": 2026,
+    "estimator_parameters": {
+      "loss": "log_loss", "learning_rate": 0.06, "max_iter": 100,
+      "max_leaf_nodes": 15, "max_depth": null, "min_samples_leaf": 20,
+      "l2_regularization": 1.0, "max_features": 1.0, "max_bins": 255,
+      "categorical_features": null, "monotonic_cst": null,
+      "interaction_cst": null, "warm_start": false, "early_stopping": false,
+      "scoring": "loss", "validation_fraction": 0.1, "n_iter_no_change": 10,
+      "tol": 1e-7, "verbose": 0, "class_weight": null, "random_state": 2026
+    },
+    "inactive_parameters": ["validation_fraction", "n_iter_no_change"],
+    "inactive_reason": "early_stopping=False",
+    "governance_note": "The historical source remains unrecoverable as an exact identity. Professor governance explicitly approved this newly named fresh control; no historical V3A identity claim is permitted."
+  },
+  "c2_r_challenger": {
+    "status": "FROZEN",
+    "formulation": "SWAP_ONLY_EXACT_DELTA_RECALL_REGRESSION",
+    "model_class": "sklearn.ensemble.HistGradientBoostingRegressor",
+    "training_target": "EXACT_DELTA_RECALL",
+    "loss": "SQUARED_ERROR",
+    "query_weighting": "For a query with N swap rows, each row has weight 1/N; each query totals exactly 1.0.",
+    "synthetic_keep_row": false,
+    "class_reweighting": false,
+    "random_seed": 2027,
+    "estimator_parameters": {
+      "loss": "squared_error", "quantile": null, "learning_rate": 0.06,
+      "max_iter": 100, "max_leaf_nodes": 15, "max_depth": null,
+      "min_samples_leaf": 20, "l2_regularization": 1.0,
+      "max_features": 1.0, "max_bins": 255, "categorical_features": null,
+      "monotonic_cst": null, "interaction_cst": null, "warm_start": false,
+      "early_stopping": false, "scoring": "loss", "validation_fraction": 0.1,
+      "n_iter_no_change": 10, "tol": 1e-7, "verbose": 0,
+      "random_state": 2027
+    },
+    "inactive_parameters": ["validation_fraction", "n_iter_no_change"],
+    "inactive_reason": "early_stopping=False"
+  },
+  "keep_and_margin_contract": {
+    "status": "FROZEN",
+    "keep_contract": "ZERO_REFERENCE_SCORE",
+    "keep_score": 0.0,
+    "execution_rule": "Choose the highest-scoring swap only when its score is strictly greater than max(0, selected_margin); otherwise KEEP.",
+    "score_equal_to_keep": "KEEP",
+    "nonnegative_margin_requirement": "FROZEN",
+    "action_score_tie_break": ["predicted score descending", "drop_rank descending (5 before 4)", "incoming_doc_id ascending by UTF-8 bytewise canonical string"],
+    "duplicate_action_identity": "Duplicate (query_id, drop_rank, incoming_doc_id) is a provenance failure.",
+    "margin_selection": {
+      "applies_to": "C2-R independently within each outer-training complement; C2-V margin is fixed at 0.0",
+      "source": "frozen three-fold inner-OOF per-query best scores; no outer labels",
+      "positive_score_multiset_only": true,
+      "candidates": [0.0, "Q75", "Q90", "Q95"],
+      "maximum_candidate_count": 4,
+      "quantile": "numpy.quantile(method='linear') on float64 values",
+      "exact_duplicate_candidates_removed": true,
+      "precision_admissibility": "pooled inner-OOF macro Precision delta versus no-swap baseline >= -0.001",
+      "objective": "maximize pooled inner-OOF macro Recall",
+      "tie_break": ["higher pooled macro Precision", "higher minimum Recall across the three inner folds", "larger margin"],
+      "failure_behavior": "Select +Infinity, KEEP every query, mark challenger unable to pass the C2 inner gate, and keep C3 closed."
+    }
+  },
+  "action_tie_break_contract": {
+    "status": "FROZEN",
+    "ordering": ["predicted score descending", "drop_rank descending (rank 5 before rank 4)", "incoming_doc_id ascending by UTF-8 bytewise canonical string"],
+    "duplicate_identity": ["query_id", "drop_rank", "incoming_doc_id"],
+    "duplicate_behavior": "PROVENANCE_FAILURE",
+    "python_input_order_allowed": false,
+    "post_tie_rule": "score <= selected margin always yields KEEP"
+  },
+  "comparator_symmetry": {
+    "status": "FROZEN_PASS_REQUIRED",
+    "identical": ["5600 F1-F4 queries", "172338 K20 swap rows", "rank-4/rank-5 action scope", "baseline top5", "58-feature values and order", "scientific label boundaries", "Recall/Precision evaluator", "outer splits", "inner rotations", "prediction-freeze discipline"],
+    "approved_asymmetry": "C2-V is a three-class classifier using P(BENEFIT)-1.5*P(HARM) with fixed margin 0; C2-R is exact-delta regression with bounded inner-OOF margin selection."
+  },
+  "c2_inner_gate": {
+    "status": "FROZEN",
+    "per_outer_training_complement": true,
+    "comparison": "C2-R minus C2-V",
+    "pooled_inner_oof_recall_delta_min": 0.002,
+    "all_three_inner_fold_recall_deltas_min": 0.0,
+    "pooled_inner_precision_delta_min": -0.001,
+    "prediction_and_provenance_required": "PASS",
+    "failure_rule": "Any outer-training complement without a passing challenger makes future C2 FAIL and keeps C3 closed."
+  },
+  "historical_v3a_guards": {
+    "status": "FROZEN_SCALAR_ONLY",
+    "pooled_recall": 0.9296488095238095,
+    "future_absolute_challenger_recall_min": 0.9326488095238095,
+    "fold_recall_scalars": {
+      "F1": 0.9395833333333332,
+      "F2": 0.9346428571428571,
+      "F3": 0.9236904761904761,
+      "F4": 0.9206785714285713
+    },
+    "source": "artifacts/task1/recovery_096/v3_residual/policy/policy_training_report.json selected_config/per_fold",
+    "role": "immutable scalar guards only; never reconstructed historical per-query decisions"
+  },
+  "c3_bootstrap_protocol": {
+    "status": "FROZEN_10000_PAIRED_QUERY_PCG64",
+    "authorized_to_compute_now": false,
+    "resampling_unit": "one paired C3 outer-OOF query delta: challenger Recall(q) - fresh C2-V Recall(q)",
+    "population_size": 5600,
+    "replacement": "WITH_REPLACEMENT",
+    "replicate_sample_size": 5600,
+    "replicate_count": 10000,
+    "seed": 20260911,
+    "rng": "numpy.random.Generator(numpy.random.PCG64(20260911))",
+    "statistic": "arithmetic mean of the 5600 resampled paired Recall deltas",
+    "p10": "numpy.quantile(replicate_means, 0.10, method='linear')",
+    "future_gate": "p10 > 0"
+  },
+  "prediction_freeze_protocol": {
+    "status": "FROZEN",
+    "applies_identically_to": ["C2-V", "C2-R"],
+    "ordered_steps": [
+      "Fix configuration.",
+      "Fit using authorized training folds only.",
+      "Score validation actions without validation labels loaded into the scorer.",
+      "Select deterministic action.",
+      "Write selected-action file.",
+      "Write final top5 file.",
+      "Run structural validation.",
+      "Freeze SHA256.",
+      "Only then load/join validation labels.",
+      "Evaluate Recall and Precision."
+    ],
+    "label_derived_information_may_alter_prediction_bytes": false,
+    "planned_future_output_root": "reports/task1/workflow_c/shared/c2/execution_not_authorized/"
+  },
+  "resource_limits": {
+    "status": "FROZEN",
+    "cpu_only": true,
+    "gpu_fallback": false,
+    "modal_fallback": false,
+    "b1_fallback": false,
+    "qwen_fallback": false,
+    "k77_or_full_pool_fallback": false,
+    "threads_per_fit": 1,
+    "thread_environment_before_sklearn_import": {"OMP_NUM_THREADS": "1", "MKL_NUM_THREADS": "1", "OPENBLAS_NUM_THREADS": "1", "BLIS_NUM_THREADS": "1", "NUMEXPR_NUM_THREADS": "1", "PYTHONHASHSEED": "0"},
+    "threadpoolctl_limit": 1,
+    "maximum_concurrent_fits": 1,
+    "maximum_planned_fits": 32,
+    "fit_breakdown": "16 C2-V plus 16 C2-R; three inner fits plus one final outer-complement fit per model family for each of four outer complements; margin evaluation adds zero fits.",
+    "memory": {"fit_matrices_at_once": 1, "matrix_dtype": "float32", "process_rss_hard_ceiling_gib": 8, "minimum_available_physical_memory_before_fit_gib": 4, "retain_completed_inner_models_or_matrices": false},
+    "timeout": {"hard_wall_minutes_per_fit": 15, "hard_wall_hours_total": 8, "enforcement": "external to fit subprocess"},
+    "failure_behavior": "Abort the entire C2 run on first timeout, nonzero subprocess exit, non-finite prediction, memory breach, provenance mismatch, version mismatch, or determinism mismatch; no retry or fallback."
+  },
+  "roles": {
+    "TV2": "OWNER_C2_PREFLIGHT_CONTRACT_AND_INPUT_FREEZE; future execution owner only if separately authorized",
+    "TV4": "INDEPENDENT_C2_PREFLIGHT_REVIEWER; verifies split isolation, hashes, feature order, weights, symmetry, margin, freeze boundary, bootstrap, and resource bounds; does not train or select another model"
+  },
+  "forbidden_branches": ["Fold0_scientific_use", "public_labels", "public_leaderboard_feedback", "Qwen", "B1_resume", "K77_modeling", "full_pool_modeling", "GPU", "Modal", "C2_training", "C2_scoring", "C2_predictions", "C3_evaluation"],
+  "future_execution_code": {
+    "status": "NOT_CREATED_BY_PREFLIGHT",
+    "intended_canonical_path": "scripts/analysis/workflow_c/workflow_c_c2_nested_oof.py",
+    "rule": "Implementation and SHA256 must be independently reviewed and frozen before separately authorized execution; this preflight does not create or authorize a training script."
+  },
+  "safety_attestation": {
+    "training_performed": false,
+    "estimator_fit_called_on_task1_data": false,
+    "inference_performed": false,
+    "predict_or_predict_proba_called_on_task1_data": false,
+    "c2_predictions_created": false,
+    "c3_evaluation_performed": false,
+    "fold0_labels_used": false,
+    "public_labels_used": false,
+    "qwen_used": false,
+    "b1_resumed": false,
+    "k77_modeled": false,
+    "full_pool_modeled": false,
+    "gpu_used": false,
+    "modal_used": false
+  },
+  "unresolved_blockers": [],
+  "file_lifecycle_review": {
+    "decision": "UPDATE_IN_PLACE",
+    "canonical_path": "reports/task1/workflow_c/shared/c2/c2_preflight_contract.json",
+    "consumer": "Professor/team authorization review and independent TV4 preflight review",
+    "model_score_or_prediction_artifacts_created": false,
+    "files_deleted": []
+  }
+}

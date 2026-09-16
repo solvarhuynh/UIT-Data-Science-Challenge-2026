@@ -1,0 +1,519 @@
+{
+  "frozen_source": {
+    "path": "D:\\udsc2026\\reports\\task1\\full_document_legal_field_retrieval\\full_document_legal_field_retrieval_candidates.jsonl",
+    "sha256": "3519a417cbeed46491e270f11a2b63707856cad594cda6c239e37a4a78204ab0",
+    "queries": 5600,
+    "rows": 2800000
+  },
+  "known66_rank_localization": {
+    "1-5": 0,
+    "6-10": 1,
+    "11-20": 1,
+    "21-50": 1,
+    "51-100": 2,
+    "101-200": 7,
+    "201-500": 7,
+    "not_recovered": 47
+  },
+  "exact_12_recovered_at200": [
+    {
+      "query_id": "123488",
+      "document_id": "122601",
+      "fold": 2,
+      "rank": 165,
+      "score": 35.29106765132597,
+      "gold_n": 2,
+      "pattern": "distributed full-document lexical evidence",
+      "in_top10": false,
+      "slot5_candidate": false,
+      "won_slot5": false,
+      "why_not": "outside TOP10"
+    },
+    {
+      "query_id": "17534",
+      "document_id": "56178",
+      "fold": 4,
+      "rank": 127,
+      "score": 29.762376011850737,
+      "gold_n": 5,
+      "pattern": "distributed full-document lexical evidence",
+      "in_top10": false,
+      "slot5_candidate": false,
+      "won_slot5": false,
+      "why_not": "outside TOP10"
+    },
+    {
+      "query_id": "31586",
+      "document_id": "146481",
+      "fold": 4,
+      "rank": 66,
+      "score": 41.52955929897705,
+      "gold_n": 2,
+      "pattern": "article/section terminology",
+      "in_top10": false,
+      "slot5_candidate": false,
+      "won_slot5": false,
+      "why_not": "outside TOP10"
+    },
+    {
+      "query_id": "43526",
+      "document_id": "42223",
+      "fold": 3,
+      "rank": 47,
+      "score": 47.215816968945276,
+      "gold_n": 3,
+      "pattern": "distributed full-document lexical evidence",
+      "in_top10": false,
+      "slot5_candidate": false,
+      "won_slot5": false,
+      "why_not": "outside TOP10"
+    },
+    {
+      "query_id": "55508",
+      "document_id": "41395",
+      "fold": 4,
+      "rank": 153,
+      "score": 40.35973394449524,
+      "gold_n": 3,
+      "pattern": "distributed full-document lexical evidence",
+      "in_top10": false,
+      "slot5_candidate": false,
+      "won_slot5": false,
+      "why_not": "outside TOP10"
+    },
+    {
+      "query_id": "68342",
+      "document_id": "60683",
+      "fold": 3,
+      "rank": 51,
+      "score": 64.71301032487538,
+      "gold_n": 3,
+      "pattern": "distributed full-document lexical evidence",
+      "in_top10": false,
+      "slot5_candidate": false,
+      "won_slot5": false,
+      "why_not": "outside TOP10"
+    },
+    {
+      "query_id": "71372",
+      "document_id": "94723",
+      "fold": 3,
+      "rank": 194,
+      "score": 49.600568380285175,
+      "gold_n": 1,
+      "pattern": "article/section terminology",
+      "in_top10": false,
+      "slot5_candidate": false,
+      "won_slot5": false,
+      "why_not": "outside TOP10"
+    },
+    {
+      "query_id": "71956",
+      "document_id": "134404",
+      "fold": 3,
+      "rank": 146,
+      "score": 16.25678270524439,
+      "gold_n": 1,
+      "pattern": "distributed full-document lexical evidence",
+      "in_top10": false,
+      "slot5_candidate": false,
+      "won_slot5": false,
+      "why_not": "outside TOP10"
+    },
+    {
+      "query_id": "76638",
+      "document_id": "83127",
+      "fold": 1,
+      "rank": 9,
+      "score": 65.30496379484991,
+      "gold_n": 2,
+      "pattern": "title overlap",
+      "in_top10": true,
+      "slot5_candidate": true,
+      "won_slot5": false,
+      "why_not": "lost BM25 score comparison against baseline rank5"
+    },
+    {
+      "query_id": "88654",
+      "document_id": "17754",
+      "fold": 2,
+      "rank": 123,
+      "score": 16.20015185877056,
+      "gold_n": 3,
+      "pattern": "distributed full-document lexical evidence",
+      "in_top10": false,
+      "slot5_candidate": false,
+      "won_slot5": false,
+      "why_not": "outside TOP10"
+    },
+    {
+      "query_id": "90466",
+      "document_id": "211090",
+      "fold": 3,
+      "rank": 13,
+      "score": 27.598974171582157,
+      "gold_n": 1,
+      "pattern": "distributed full-document lexical evidence",
+      "in_top10": false,
+      "slot5_candidate": false,
+      "won_slot5": false,
+      "why_not": "outside TOP10"
+    },
+    {
+      "query_id": "97344",
+      "document_id": "204396",
+      "fold": 2,
+      "rank": 167,
+      "score": 26.763753250838853,
+      "gold_n": 1,
+      "pattern": "distributed full-document lexical evidence",
+      "in_top10": false,
+      "slot5_candidate": false,
+      "won_slot5": false,
+      "why_not": "outside TOP10"
+    }
+  ],
+  "all_new_relevant_cumulative": {
+    "5": 0,
+    "10": 1,
+    "20": 2,
+    "50": 3,
+    "100": 5,
+    "200": 12,
+    "500": 19
+  },
+  "incremental_rank_bands": [
+    {
+      "band": "1-5",
+      "novel_q_docs": 2509,
+      "new_relevant": 0,
+      "relevance_density": 0.0,
+      "weighted_utility": 0,
+      "folds": []
+    },
+    {
+      "band": "6-10",
+      "novel_q_docs": 4014,
+      "new_relevant": 1,
+      "relevance_density": 0.00024912805181863477,
+      "weighted_utility": 0.5,
+      "folds": [
+        1
+      ]
+    },
+    {
+      "band": "11-20",
+      "novel_q_docs": 11592,
+      "new_relevant": 1,
+      "relevance_density": 8.62663906142167e-05,
+      "weighted_utility": 1.0,
+      "folds": [
+        3
+      ]
+    },
+    {
+      "band": "21-50",
+      "novel_q_docs": 55372,
+      "new_relevant": 1,
+      "relevance_density": 1.805966914686123e-05,
+      "weighted_utility": 0.3333333333333333,
+      "folds": [
+        3
+      ]
+    },
+    {
+      "band": "51-100",
+      "novel_q_docs": 140958,
+      "new_relevant": 2,
+      "relevance_density": 1.4188623561628287e-05,
+      "weighted_utility": 0.8333333333333333,
+      "folds": [
+        3,
+        4
+      ]
+    },
+    {
+      "band": "101-200",
+      "novel_q_docs": 383626,
+      "new_relevant": 7,
+      "relevance_density": 1.8246938424402935e-05,
+      "weighted_utility": 4.366666666666666,
+      "folds": [
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "band": "201-500",
+      "novel_q_docs": 1445657,
+      "new_relevant": 7,
+      "relevance_density": 4.842089098589776e-06,
+      "weighted_utility": 3.4166666666666665,
+      "folds": [
+        1,
+        3,
+        4
+      ]
+    }
+  ],
+  "gold_cardinality_mix": [
+    {
+      "band": "1-5",
+      "1-gold": 0,
+      "2-gold": 0,
+      "3+": 0,
+      "utility_mass": 0
+    },
+    {
+      "band": "6-10",
+      "1-gold": 0,
+      "2-gold": 1,
+      "3+": 0,
+      "utility_mass": 0.5
+    },
+    {
+      "band": "11-20",
+      "1-gold": 1,
+      "2-gold": 0,
+      "3+": 0,
+      "utility_mass": 1.0
+    },
+    {
+      "band": "21-50",
+      "1-gold": 0,
+      "2-gold": 0,
+      "3+": 1,
+      "utility_mass": 0.3333333333333333
+    },
+    {
+      "band": "51-100",
+      "1-gold": 0,
+      "2-gold": 1,
+      "3+": 1,
+      "utility_mass": 0.8333333333333333
+    },
+    {
+      "band": "101-200",
+      "1-gold": 3,
+      "2-gold": 1,
+      "3+": 3,
+      "utility_mass": 4.366666666666666
+    },
+    {
+      "band": "201-500",
+      "1-gold": 2,
+      "2-gold": 0,
+      "3+": 5,
+      "utility_mass": 3.4166666666666665
+    }
+  ],
+  "top10_exposure": {
+    "new_relevant_at200": 12,
+    "included_by_top10": 1,
+    "percentage": 8.333333333333332,
+    "utility_at200": 7.033333333333333,
+    "utility_exposed_top10": 0.5,
+    "utility_percentage": 7.109004739336493
+  },
+  "deeper_budget_diagnostic": [
+    {
+      "budget": "TOP20",
+      "new_relevant_coverage": 2,
+      "utility_coverage": 1.5,
+      "novel_candidate_volume": 18115
+    },
+    {
+      "budget": "TOP50",
+      "new_relevant_coverage": 3,
+      "utility_coverage": 1.8333333333333333,
+      "novel_candidate_volume": 73487
+    },
+    {
+      "budget": "TOP100",
+      "new_relevant_coverage": 5,
+      "utility_coverage": 2.6666666666666665,
+      "novel_candidate_volume": 214445
+    }
+  ],
+  "structural_patterns": {
+    "distributed full-document lexical evidence": 16,
+    "article/section terminology": 2,
+    "title overlap": 1
+  },
+  "diagnosis": "USEFUL_NEW_SIGNAL_IS_PRIMARILY_DEEPER_THAN_TOP10",
+  "safe_next_action": "DESIGN_COMPUTE_FEASIBLE_DEEP_CANDIDATE_SCORING_STRATEGY",
+  "all_new_relevant_rows": [
+    {
+      "query_id": "17534",
+      "document_id": "56178",
+      "fold": 4,
+      "rank": 127,
+      "score": 29.762376011850737,
+      "gold_n": 5,
+      "pattern": "distributed full-document lexical evidence"
+    },
+    {
+      "query_id": "29272",
+      "document_id": "74494",
+      "fold": 3,
+      "rank": 386,
+      "score": 41.29074111731421,
+      "gold_n": 4,
+      "pattern": "distributed full-document lexical evidence"
+    },
+    {
+      "query_id": "31586",
+      "document_id": "146481",
+      "fold": 4,
+      "rank": 66,
+      "score": 41.52955929897705,
+      "gold_n": 2,
+      "pattern": "article/section terminology"
+    },
+    {
+      "query_id": "43526",
+      "document_id": "42223",
+      "fold": 3,
+      "rank": 47,
+      "score": 47.215816968945276,
+      "gold_n": 3,
+      "pattern": "distributed full-document lexical evidence"
+    },
+    {
+      "query_id": "54158",
+      "document_id": "208105",
+      "fold": 3,
+      "rank": 304,
+      "score": 22.049813473018656,
+      "gold_n": 1,
+      "pattern": "distributed full-document lexical evidence"
+    },
+    {
+      "query_id": "55508",
+      "document_id": "41395",
+      "fold": 4,
+      "rank": 153,
+      "score": 40.35973394449524,
+      "gold_n": 3,
+      "pattern": "distributed full-document lexical evidence"
+    },
+    {
+      "query_id": "68342",
+      "document_id": "60683",
+      "fold": 3,
+      "rank": 51,
+      "score": 64.71301032487538,
+      "gold_n": 3,
+      "pattern": "distributed full-document lexical evidence"
+    },
+    {
+      "query_id": "68342",
+      "document_id": "69997",
+      "fold": 3,
+      "rank": 284,
+      "score": 56.77893645816321,
+      "gold_n": 3,
+      "pattern": "distributed full-document lexical evidence"
+    },
+    {
+      "query_id": "71372",
+      "document_id": "94723",
+      "fold": 3,
+      "rank": 194,
+      "score": 49.600568380285175,
+      "gold_n": 1,
+      "pattern": "article/section terminology"
+    },
+    {
+      "query_id": "71956",
+      "document_id": "134404",
+      "fold": 3,
+      "rank": 146,
+      "score": 16.25678270524439,
+      "gold_n": 1,
+      "pattern": "distributed full-document lexical evidence"
+    },
+    {
+      "query_id": "74884",
+      "document_id": "261198",
+      "fold": 1,
+      "rank": 422,
+      "score": 34.147596210322604,
+      "gold_n": 4,
+      "pattern": "distributed full-document lexical evidence"
+    },
+    {
+      "query_id": "76638",
+      "document_id": "83127",
+      "fold": 1,
+      "rank": 9,
+      "score": 65.30496379484991,
+      "gold_n": 2,
+      "pattern": "title overlap"
+    },
+    {
+      "query_id": "88654",
+      "document_id": "17754",
+      "fold": 2,
+      "rank": 123,
+      "score": 16.20015185877056,
+      "gold_n": 3,
+      "pattern": "distributed full-document lexical evidence"
+    },
+    {
+      "query_id": "90466",
+      "document_id": "211090",
+      "fold": 3,
+      "rank": 13,
+      "score": 27.598974171582157,
+      "gold_n": 1,
+      "pattern": "distributed full-document lexical evidence"
+    },
+    {
+      "query_id": "97344",
+      "document_id": "204396",
+      "fold": 2,
+      "rank": 167,
+      "score": 26.763753250838853,
+      "gold_n": 1,
+      "pattern": "distributed full-document lexical evidence"
+    },
+    {
+      "query_id": "102718",
+      "document_id": "42184",
+      "fold": 1,
+      "rank": 381,
+      "score": 31.60153228545515,
+      "gold_n": 4,
+      "pattern": "distributed full-document lexical evidence"
+    },
+    {
+      "query_id": "123488",
+      "document_id": "122601",
+      "fold": 2,
+      "rank": 165,
+      "score": 35.29106765132597,
+      "gold_n": 2,
+      "pattern": "distributed full-document lexical evidence"
+    },
+    {
+      "query_id": "129190",
+      "document_id": "88365",
+      "fold": 4,
+      "rank": 299,
+      "score": 45.0652293465095,
+      "gold_n": 1,
+      "pattern": "distributed full-document lexical evidence"
+    },
+    {
+      "query_id": "140898",
+      "document_id": "259809",
+      "fold": 3,
+      "rank": 490,
+      "score": 24.556783584531054,
+      "gold_n": 3,
+      "pattern": "distributed full-document lexical evidence"
+    }
+  ]
+}

@@ -1,0 +1,73 @@
+{
+  "recovered_hard_golds": [
+    {
+      "query_id": "17534",
+      "document_id": "56178",
+      "rank": 127,
+      "pattern": "full_document_lexical_visibility"
+    },
+    {
+      "query_id": "31586",
+      "document_id": "146481",
+      "rank": 66,
+      "pattern": "full_document_lexical_visibility"
+    },
+    {
+      "query_id": "43526",
+      "document_id": "42223",
+      "rank": 47,
+      "pattern": "full_document_lexical_visibility"
+    },
+    {
+      "query_id": "55508",
+      "document_id": "41395",
+      "rank": 153,
+      "pattern": "full_document_lexical_visibility"
+    },
+    {
+      "query_id": "68342",
+      "document_id": "60683",
+      "rank": 51,
+      "pattern": "full_document_lexical_visibility"
+    },
+    {
+      "query_id": "71372",
+      "document_id": "94723",
+      "rank": 194,
+      "pattern": "full_document_lexical_visibility"
+    },
+    {
+      "query_id": "71956",
+      "document_id": "134404",
+      "rank": 146,
+      "pattern": "full_document_lexical_visibility"
+    },
+    {
+      "query_id": "76638",
+      "document_id": "83127",
+      "rank": 9,
+      "pattern": "full_document_lexical_visibility"
+    },
+    {
+      "query_id": "88654",
+      "document_id": "17754",
+      "rank": 123,
+      "pattern": "full_document_lexical_visibility"
+    },
+    {
+      "query_id": "97344",
+      "document_id": "204396",
+      "rank": 167,
+      "pattern": "full_document_lexical_visibility"
+    },
+    {
+      "query_id": "123488",
+      "document_id": "122601",
+      "rank": 165,
+      "pattern": "full_document_lexical_visibility"
+    }
+  ],
+  "structural_attribution": {
+    "full_document_lexical_visibility": 11
+  }
+}

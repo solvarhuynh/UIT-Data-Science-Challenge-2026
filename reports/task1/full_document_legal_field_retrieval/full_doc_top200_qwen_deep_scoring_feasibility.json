@@ -1,0 +1,120 @@
+{
+  "status": "BLOCKED_QWEN_CANDIDATE_MATERIALIZATION",
+  "target_universe": {
+    "q_docs": 598071,
+    "queries": 5600,
+    "unique_documents": 8258,
+    "ranks1_20": 18115,
+    "ranks21_50": 55372,
+    "ranks51_100": 140958,
+    "ranks101_200": 383626,
+    "reusable_existing_qwen": 0,
+    "require_new_inference": 598071
+  },
+  "contract": {
+    "model": "Qwen/Qwen3-VL-Reranker-2B",
+    "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+    "snapshot_hashes": {
+      "config.json": "82d38a8f803e38e13986fdd622114a6fec12a834adbd3cee9253d757a257d23d",
+      "tokenizer_config.json": "81ec7bb9530159b326c0bef1d0b6c33d392090524014ea3f0123a3c1eb9c2af5",
+      "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+      "model.safetensors": "466ec01961061e9d7f804b4fb1625fb6f406106cd1567e026096d4736fa9d5b9",
+      "1_LogitScore/config.json": "73e3156450564d8a98b7e47bcf5aace0f29600828b51937da545571e84db3ff3"
+    },
+    "processor_tokenizer": "snapshot tokenizer.json/tokenizer_config.json; Transformers processor",
+    "script": "scripts/modal/task1_b2a_qwen3vl2b.py",
+    "input": "Vietnamese corrected query text + each of deterministic top3 within-document BM25 chunks; text-only chat template; MAX_LENGTH=8192",
+    "aggregation": "document MAX over 3 sigmoid direction scores; doc-id deterministic tie",
+    "reproducible": "RECOVERED_EXACTLY via pinned remote snapshot; local bytes unavailable"
+  },
+  "materialization": {
+    "valid_q_docs": 598066,
+    "valid_chunks": 1794198,
+    "documents_with_at_least_3_canonical_chunks": 8255,
+    "documents_without_three_chunks": 3,
+    "missing_document_text": 0,
+    "queries_with_corrected_text": 5600,
+    "materialization_failures": 5,
+    "inference_units": 1794198,
+    "mean_chunks_per_qdoc": 3,
+    "median_chunks_per_qdoc": 3,
+    "p95_chunks_per_qdoc": 3,
+    "max_chunks_per_qdoc": 3
+  },
+  "historical_throughput": {
+    "q_docs": 431200,
+    "inference_units": 1293198,
+    "device": "Modal A10 (runner declaration)",
+    "runtime_seconds": 35575.007443385,
+    "throughput_units_per_second": 36.351306519275624,
+    "batch_size": 1,
+    "environment": "Modal",
+    "source": "run_state.json"
+  },
+  "runtime_projection": [
+    {
+      "depth": "TOP20",
+      "new_q_docs": 18115,
+      "inference_units": 54345,
+      "estimated_seconds_at_historical_rate": 1494.994408830479,
+      "estimated_hours_at_historical_rate": 0.41527622467513303
+    },
+    {
+      "depth": "TOP50",
+      "new_q_docs": 73487,
+      "inference_units": 220461,
+      "estimated_seconds_at_historical_rate": 6064.733873680674,
+      "estimated_hours_at_historical_rate": 1.6846482982446318
+    },
+    {
+      "depth": "TOP100",
+      "new_q_docs": 214445,
+      "inference_units": 643335,
+      "estimated_seconds_at_historical_rate": 17697.713276381568,
+      "estimated_hours_at_historical_rate": 4.916031465661547
+    },
+    {
+      "depth": "TOP200",
+      "new_q_docs": 598071,
+      "inference_units": 1794213,
+      "estimated_seconds_at_historical_rate": 49357.593214664834,
+      "estimated_hours_at_historical_rate": 13.71044255962912
+    }
+  ],
+  "execution_options": [
+    {
+      "environment": "local CPU",
+      "available": true,
+      "setup": "none",
+      "runtime": "not estimated: no historical CPU throughput",
+      "risk": "impractical / unsupported contract performance"
+    },
+    {
+      "environment": "local CUDA",
+      "available": false,
+      "setup": "CUDA-capable hardware/runtime required",
+      "runtime": "unavailable",
+      "risk": "not currently executable"
+    },
+    {
+      "environment": "Modal A10 path",
+      "available": false,
+      "setup": "one explicit remote execution authorization; existing script/image/volume contract",
+      "runtime": "TOP200 projection below",
+      "risk": "remote snapshot/volume availability must be reverified at run time"
+    }
+  ],
+  "prospective_artifact": {
+    "path": "D:\\udsc2026\\reports\\task1\\full_document_legal_field_retrieval\\full_doc_top200_corrected_qwen_scores.jsonl",
+    "schema": [
+      "query_id",
+      "document_id",
+      "full_doc_rank",
+      "qwen_document_score",
+      "chunk_count",
+      "execution_batch_provenance_identifier"
+    ],
+    "freeze_rule": "complete deduplicated target universe, verify coverage and SHA256 before any labels",
+    "provenance": "target-universe SHA256, model revision and snapshot hashes, source script hash, chunk-selection worklist hash, runtime batch identifier"
+  }
+}

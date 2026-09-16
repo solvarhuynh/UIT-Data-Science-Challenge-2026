@@ -1,0 +1,519 @@
+{
+  "schema_version": "full_doc_top200_qwen_future_universe_v1",
+  "status": "FROZEN_NOT_SCORED",
+  "ordering": "natural(query_id), natural(document_id)",
+  "sharding": "32 deterministic contiguous slices using floor(i*N/32)",
+  "q_doc_count": 598192,
+  "inference_unit_count": 1794571,
+  "full_doc_top200_new": 598071,
+  "baseline_top5_qwen_gaps": 122,
+  "overlap": 1,
+  "rank_bands": {
+    "1-20": 18115,
+    "21-50": 55372,
+    "51-100": 140958,
+    "101-200": 383626
+  },
+  "unique_documents": 8261,
+  "canonical_chunk_source_sha256": "f54e8868726caad0bb43cad4bf717068a7be4199a8896388657014547630ff72",
+  "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d",
+  "sources": {
+    "reports/task1/full_document_legal_field_retrieval/full_document_legal_field_retrieval_candidates.jsonl": "3519a417cbeed46491e270f11a2b63707856cad594cda6c239e37a4a78204ab0",
+    "artifacts/task1/recovery_096/inference_matched_reranker_v1/compact/candidate_refs_full.jsonl": "e09a59852b722fc6e33761cce964920e4929cba59f0171dcd85cbe62d96edfa6",
+    "artifacts/task1/recovery_096/baseline_093_oof/predictions.jsonl": "1272cb9e8b465f433c725674081084f084a60cdb9807d6ca6a3aa3d9acc1e7d5",
+    "artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b/predictions.jsonl": "65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f"
+  },
+  "labels_accessed": false,
+  "canary_manifests": {
+    "historical_parity_256": {
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_historical_parity_256.jsonl",
+      "sha256": "11cc2f98e821a0e968d1c73da90c047a350f23a796827fafd4114fd26bd7cbfa"
+    },
+    "current_universe_16": {
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_current_canary_16.jsonl",
+      "sha256": "d70264701534114084c972f83588411c3ad99b40e21a0014f23f5850e235348d"
+    }
+  },
+  "shards": [
+    {
+      "shard_id": 0,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_00.jsonl",
+      "first_identity": [
+        "6",
+        "2505"
+      ],
+      "last_identity": [
+        "5182",
+        "121367"
+      ],
+      "q_doc_count": 18693,
+      "inference_unit_count": 56079,
+      "worklist_sha256": "ca544ce68f46b8a797542a340c972a9aebc75218525818f88ceb77df5ff8d432"
+    },
+    {
+      "shard_id": 1,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_01.jsonl",
+      "first_identity": [
+        "5182",
+        "122862"
+      ],
+      "last_identity": [
+        "10694",
+        "258477"
+      ],
+      "q_doc_count": 18694,
+      "inference_unit_count": 56082,
+      "worklist_sha256": "72e01c86c05044d19b08ddb85c72ef2cff524066d86671ecb0c6792c029c66cc"
+    },
+    {
+      "shard_id": 2,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_02.jsonl",
+      "first_identity": [
+        "10694",
+        "265035"
+      ],
+      "last_identity": [
+        "16008",
+        "74308"
+      ],
+      "q_doc_count": 18693,
+      "inference_unit_count": 56079,
+      "worklist_sha256": "44280618b5d831de8e2134c2ae61161923ca2352fac11216516b305c22fe030f"
+    },
+    {
+      "shard_id": 3,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_03.jsonl",
+      "first_identity": [
+        "16008",
+        "74769"
+      ],
+      "last_identity": [
+        "20178",
+        "8863"
+      ],
+      "q_doc_count": 18694,
+      "inference_unit_count": 56082,
+      "worklist_sha256": "0fce7096ccd0b479c2b6a6da471bc76de80c4678a540a572f7aa27a14a81df6e"
+    },
+    {
+      "shard_id": 4,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_04.jsonl",
+      "first_identity": [
+        "20178",
+        "11713"
+      ],
+      "last_identity": [
+        "26130",
+        "126478"
+      ],
+      "q_doc_count": 18693,
+      "inference_unit_count": 56078,
+      "worklist_sha256": "3f021c62d8ad385658d8f10fb146b33fcebe1301b25c112b5faeda473fcda1f0"
+    },
+    {
+      "shard_id": 5,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_05.jsonl",
+      "first_identity": [
+        "26130",
+        "128471"
+      ],
+      "last_identity": [
+        "31808",
+        "287151"
+      ],
+      "q_doc_count": 18694,
+      "inference_unit_count": 56082,
+      "worklist_sha256": "859d31ab9f31d38753e8ea2d09a50b1b23c9959c95d9cb62dab50a25229f4a82"
+    },
+    {
+      "shard_id": 6,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_06.jsonl",
+      "first_identity": [
+        "31808",
+        "291449"
+      ],
+      "last_identity": [
+        "37454",
+        "40248"
+      ],
+      "q_doc_count": 18693,
+      "inference_unit_count": 56078,
+      "worklist_sha256": "ea4210d1bf13d904a9e59ee3244d180be9fdaadd4a62d534f5a6ad5d99cad188"
+    },
+    {
+      "shard_id": 7,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_07.jsonl",
+      "first_identity": [
+        "37454",
+        "42493"
+      ],
+      "last_identity": [
+        "42928",
+        "294072"
+      ],
+      "q_doc_count": 18694,
+      "inference_unit_count": 56082,
+      "worklist_sha256": "4f6863145d18bbb1e5b77f705939a7b4526d7643b9378786bf094b044ffe6781"
+    },
+    {
+      "shard_id": 8,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_08.jsonl",
+      "first_identity": [
+        "42928",
+        "296904"
+      ],
+      "last_identity": [
+        "49224",
+        "104167"
+      ],
+      "q_doc_count": 18693,
+      "inference_unit_count": 56079,
+      "worklist_sha256": "b0f4cbae7350891070bff1455040b4b860ba17ca63299b87cc0adf1ad6d0e622"
+    },
+    {
+      "shard_id": 9,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_09.jsonl",
+      "first_identity": [
+        "49224",
+        "131581"
+      ],
+      "last_identity": [
+        "54638",
+        "184968"
+      ],
+      "q_doc_count": 18694,
+      "inference_unit_count": 56082,
+      "worklist_sha256": "28cd4bf00ea411cc88da65ecb007a4699280709d464264ead0e89bd7273a7ec4"
+    },
+    {
+      "shard_id": 10,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_10.jsonl",
+      "first_identity": [
+        "54638",
+        "186367"
+      ],
+      "last_identity": [
+        "60146",
+        "204777"
+      ],
+      "q_doc_count": 18693,
+      "inference_unit_count": 56079,
+      "worklist_sha256": "d36b32661edc675776303e7d854f2adbaeb67b7b1846fd04a777306aa8932e8d"
+    },
+    {
+      "shard_id": 11,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_11.jsonl",
+      "first_identity": [
+        "60146",
+        "206456"
+      ],
+      "last_identity": [
+        "65456",
+        "110127"
+      ],
+      "q_doc_count": 18694,
+      "inference_unit_count": 56082,
+      "worklist_sha256": "64d6f2f2d4e127d38c1f7fa73457ac395158fca0a8a943989fd91ed77b2b9d69"
+    },
+    {
+      "shard_id": 12,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_12.jsonl",
+      "first_identity": [
+        "65456",
+        "113131"
+      ],
+      "last_identity": [
+        "69952",
+        "43981"
+      ],
+      "q_doc_count": 18693,
+      "inference_unit_count": 56078,
+      "worklist_sha256": "a20c3e8199bf2b131e3ea301b76f24010bbbb89cc6a5f6c78dc97aa6883cba2b"
+    },
+    {
+      "shard_id": 13,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_13.jsonl",
+      "first_identity": [
+        "69952",
+        "47307"
+      ],
+      "last_identity": [
+        "74820",
+        "168372"
+      ],
+      "q_doc_count": 18694,
+      "inference_unit_count": 56082,
+      "worklist_sha256": "74ee8c8ad4120bf367bd8be217ea963bc8203a995387ff404c9774b7f5c9c2d7"
+    },
+    {
+      "shard_id": 14,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_14.jsonl",
+      "first_identity": [
+        "74820",
+        "169300"
+      ],
+      "last_identity": [
+        "80650",
+        "136705"
+      ],
+      "q_doc_count": 18693,
+      "inference_unit_count": 56079,
+      "worklist_sha256": "690c2cad749ca984b5d0ec8adc61b182402821911aa4a628802ab91db0c58c2c"
+    },
+    {
+      "shard_id": 15,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_15.jsonl",
+      "first_identity": [
+        "80650",
+        "139192"
+      ],
+      "last_identity": [
+        "85510",
+        "286958"
+      ],
+      "q_doc_count": 18694,
+      "inference_unit_count": 56082,
+      "worklist_sha256": "4da98a6050eb5111d748ee025d466a01e6be3b615aaf2178524df68d3ceb38e5"
+    },
+    {
+      "shard_id": 16,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_16.jsonl",
+      "first_identity": [
+        "85510",
+        "298614"
+      ],
+      "last_identity": [
+        "90686",
+        "208565"
+      ],
+      "q_doc_count": 18693,
+      "inference_unit_count": 56079,
+      "worklist_sha256": "d507fa061c41098e1cb55e6dfe3f5d0ce159c6027138a08996e1ad9070146eaa"
+    },
+    {
+      "shard_id": 17,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_17.jsonl",
+      "first_identity": [
+        "90686",
+        "208679"
+      ],
+      "last_identity": [
+        "96500",
+        "198275"
+      ],
+      "q_doc_count": 18694,
+      "inference_unit_count": 56081,
+      "worklist_sha256": "fa1a3331af322d8a9c40d7fef17ec80960b8fdb4bfe40eb0ece592f0770dedd1"
+    },
+    {
+      "shard_id": 18,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_18.jsonl",
+      "first_identity": [
+        "96500",
+        "208153"
+      ],
+      "last_identity": [
+        "101970",
+        "268375"
+      ],
+      "q_doc_count": 18693,
+      "inference_unit_count": 56079,
+      "worklist_sha256": "96d58eab919f61b0b125b46a31e4681672b3eb035cfaf6de57c4baca0d2640fb"
+    },
+    {
+      "shard_id": 19,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_19.jsonl",
+      "first_identity": [
+        "101970",
+        "272553"
+      ],
+      "last_identity": [
+        "108230",
+        "105608"
+      ],
+      "q_doc_count": 18694,
+      "inference_unit_count": 56082,
+      "worklist_sha256": "e20481c01c5e051cc386e5b03c79f08ac754aa13d6baf7fe4924c34313d42be4"
+    },
+    {
+      "shard_id": 20,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_20.jsonl",
+      "first_identity": [
+        "108230",
+        "107412"
+      ],
+      "last_identity": [
+        "113344",
+        "42916"
+      ],
+      "q_doc_count": 18693,
+      "inference_unit_count": 56079,
+      "worklist_sha256": "c241cec9d5cf740000d0725446798f6a55d1418172f24de12ab26487d6294f20"
+    },
+    {
+      "shard_id": 21,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_21.jsonl",
+      "first_identity": [
+        "113344",
+        "44127"
+      ],
+      "last_identity": [
+        "118054",
+        "146050"
+      ],
+      "q_doc_count": 18694,
+      "inference_unit_count": 56082,
+      "worklist_sha256": "6d0572c7c43afbae0daf4d117cdc46f9ec41aa225734a966d5bf759e015fa6dc"
+    },
+    {
+      "shard_id": 22,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_22.jsonl",
+      "first_identity": [
+        "118054",
+        "147993"
+      ],
+      "last_identity": [
+        "123160",
+        "194423"
+      ],
+      "q_doc_count": 18693,
+      "inference_unit_count": 56079,
+      "worklist_sha256": "f7ce3fd03409fe0261f4c400b4b7e388ecfff68938ad6f756ce94f03f75a0ccf"
+    },
+    {
+      "shard_id": 23,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_23.jsonl",
+      "first_identity": [
+        "123160",
+        "194522"
+      ],
+      "last_identity": [
+        "128154",
+        "784"
+      ],
+      "q_doc_count": 18694,
+      "inference_unit_count": 56082,
+      "worklist_sha256": "b6ee5accd7232feb2bec6dec9aa4dceae2a7fd5fa7b47778829337757317da93"
+    },
+    {
+      "shard_id": 24,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_24.jsonl",
+      "first_identity": [
+        "128154",
+        "2933"
+      ],
+      "last_identity": [
+        "133648",
+        "130413"
+      ],
+      "q_doc_count": 18693,
+      "inference_unit_count": 56079,
+      "worklist_sha256": "7944fb968428cd420f6f2748048dc153c02b4095c0250b0b421f1de1343fc36a"
+    },
+    {
+      "shard_id": 25,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_25.jsonl",
+      "first_identity": [
+        "133648",
+        "134200"
+      ],
+      "last_identity": [
+        "138482",
+        "136587"
+      ],
+      "q_doc_count": 18694,
+      "inference_unit_count": 56082,
+      "worklist_sha256": "1446e07e51a278768889e8e4d737256b66fa7b0a059cca46195cc7e8cb1e80ae"
+    },
+    {
+      "shard_id": 26,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_26.jsonl",
+      "first_identity": [
+        "138482",
+        "136982"
+      ],
+      "last_identity": [
+        "144230",
+        "44082"
+      ],
+      "q_doc_count": 18693,
+      "inference_unit_count": 56079,
+      "worklist_sha256": "dd4a20715a5d5f2e20851a36d6fcd7b32936fbe7b62342b09d099859b8fc9004"
+    },
+    {
+      "shard_id": 27,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_27.jsonl",
+      "first_identity": [
+        "144230",
+        "44430"
+      ],
+      "last_identity": [
+        "149154",
+        "110049"
+      ],
+      "q_doc_count": 18694,
+      "inference_unit_count": 56082,
+      "worklist_sha256": "c4e0a778a5144bd690e46d42ebe1ca93579adff5e27606ad3dc5ed0a3f6d5998"
+    },
+    {
+      "shard_id": 28,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_28.jsonl",
+      "first_identity": [
+        "149154",
+        "110305"
+      ],
+      "last_identity": [
+        "154360",
+        "194597"
+      ],
+      "q_doc_count": 18693,
+      "inference_unit_count": 56079,
+      "worklist_sha256": "1099c6d8144eb3a76e356b73adbba21391d9285f14fb41553ab0e0b35a515f48"
+    },
+    {
+      "shard_id": 29,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_29.jsonl",
+      "first_identity": [
+        "154360",
+        "201050"
+      ],
+      "last_identity": [
+        "159026",
+        "291066"
+      ],
+      "q_doc_count": 18694,
+      "inference_unit_count": 56082,
+      "worklist_sha256": "c2098bcac47bf574ea914af6966ad92602ce3b1e6e28a74411791f650eb3cc80"
+    },
+    {
+      "shard_id": 30,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_30.jsonl",
+      "first_identity": [
+        "159026",
+        "297442"
+      ],
+      "last_identity": [
+        "163674",
+        "264709"
+      ],
+      "q_doc_count": 18693,
+      "inference_unit_count": 56079,
+      "worklist_sha256": "e26b53f27bd6aa1fdb5708354941b5f58984e075f4732346f29bbd281e2dcdca"
+    },
+    {
+      "shard_id": 31,
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_worklists/shard_31.jsonl",
+      "first_identity": [
+        "163674",
+        "265884"
+      ],
+      "last_identity": [
+        "168622",
+        "305948"
+      ],
+      "q_doc_count": 18694,
+      "inference_unit_count": 56081,
+      "worklist_sha256": "4fe079a20cf5f53cc5139e0a76f09bb2b5e95b5b8e3fe2706b543e4165d4c4c6"
+    }
+  ]
+}

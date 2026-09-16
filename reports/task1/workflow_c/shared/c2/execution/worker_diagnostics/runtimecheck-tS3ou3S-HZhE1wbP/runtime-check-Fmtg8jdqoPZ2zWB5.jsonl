@@ -1,0 +1,3 @@
+{"failure_category":"WORKER_PROTOCOL_FAILURE","family":"c2_v","job_id":"runtime-check-Fmtg8jdqoPZ2zWB5","session_id":"runtimecheck-tS3ou3S-HZhE1wbP","stage":"PROTOCOL_ABORT","timestamp_utc":"2026-09-14T11:00:52.260395Z"}
+{"failure_category":"WORKER_PROTOCOL_FAILURE","family":"c2_v","job_id":"runtime-check-Fmtg8jdqoPZ2zWB5","session_id":"runtimecheck-tS3ou3S-HZhE1wbP","stage":"CLEANUP_STARTED","timestamp_utc":"2026-09-14T11:00:52.261393Z"}
+{"family":"c2_v","job_id":"runtime-check-Fmtg8jdqoPZ2zWB5","session_id":"runtimecheck-tS3ou3S-HZhE1wbP","stage":"CLEANUP_COMPLETED","timestamp_utc":"2026-09-14T11:00:52.261393Z"}

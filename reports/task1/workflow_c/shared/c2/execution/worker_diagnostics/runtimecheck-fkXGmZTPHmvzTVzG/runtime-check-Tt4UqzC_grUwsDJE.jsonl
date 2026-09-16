@@ -1,0 +1,15 @@
+{"failure_category":"FIT_TIMEOUT","family":"c2_v","job_id":"runtime-check-Tt4UqzC_grUwsDJE","session_id":"runtimecheck-fkXGmZTPHmvzTVzG","stage":"FIT_TIMEOUT","timestamp_utc":"2026-09-14T07:03:39.871656Z"}
+{"failure_category":"FIT_TIMEOUT","family":"c2_v","job_id":"runtime-check-Tt4UqzC_grUwsDJE","session_id":"runtimecheck-fkXGmZTPHmvzTVzG","stage":"CLEANUP_STARTED","timestamp_utc":"2026-09-14T07:03:39.871656Z"}
+{"family":"c2_v","job_id":"runtime-check-Tt4UqzC_grUwsDJE","session_id":"runtimecheck-fkXGmZTPHmvzTVzG","stage":"CLEANUP_COMPLETED","timestamp_utc":"2026-09-14T07:03:39.871656Z"}
+{"family":"c2_v","job_id":"runtime-check-Tt4UqzC_grUwsDJE","session_id":"runtimecheck-fkXGmZTPHmvzTVzG","stage":"WORKER_EXIT","timestamp_utc":"2026-09-14T07:03:39.872809Z"}
+{"failure_category":"WORKER_PROTOCOL_FAILURE","family":"c2_v","job_id":"runtime-check-Tt4UqzC_grUwsDJE","session_id":"runtimecheck-fkXGmZTPHmvzTVzG","stage":"PROTOCOL_ABORT","timestamp_utc":"2026-09-14T07:03:39.872809Z"}
+{"failure_category":"WORKER_PROTOCOL_FAILURE","family":"c2_v","job_id":"runtime-check-Tt4UqzC_grUwsDJE","session_id":"runtimecheck-fkXGmZTPHmvzTVzG","stage":"CLEANUP_STARTED","timestamp_utc":"2026-09-14T07:03:39.873819Z"}
+{"family":"c2_v","job_id":"runtime-check-Tt4UqzC_grUwsDJE","session_id":"runtimecheck-fkXGmZTPHmvzTVzG","stage":"CLEANUP_COMPLETED","timestamp_utc":"2026-09-14T07:03:39.873819Z"}
+{"family":"c2_v","job_id":"runtime-check-Tt4UqzC_grUwsDJE","session_id":"runtimecheck-fkXGmZTPHmvzTVzG","stage":"WORKER_EXIT","timestamp_utc":"2026-09-14T07:03:39.873819Z"}
+{"failure_category":"RSS_LIMIT_EXCEEDED","family":"c2_v","job_id":"runtime-check-Tt4UqzC_grUwsDJE","session_id":"runtimecheck-fkXGmZTPHmvzTVzG","stage":"RESOURCE_ABORT","timestamp_utc":"2026-09-14T07:03:39.873819Z"}
+{"failure_category":"RSS_LIMIT_EXCEEDED","family":"c2_v","job_id":"runtime-check-Tt4UqzC_grUwsDJE","session_id":"runtimecheck-fkXGmZTPHmvzTVzG","stage":"CLEANUP_STARTED","timestamp_utc":"2026-09-14T07:03:39.874815Z"}
+{"family":"c2_v","job_id":"runtime-check-Tt4UqzC_grUwsDJE","session_id":"runtimecheck-fkXGmZTPHmvzTVzG","stage":"CLEANUP_COMPLETED","timestamp_utc":"2026-09-14T07:03:39.874815Z"}
+{"family":"c2_v","job_id":"runtime-check-Tt4UqzC_grUwsDJE","session_id":"runtimecheck-fkXGmZTPHmvzTVzG","stage":"WORKER_EXIT","timestamp_utc":"2026-09-14T07:03:39.875816Z"}
+{"family":"c2_v","job_id":"runtime-check-Tt4UqzC_grUwsDJE","session_id":"runtimecheck-fkXGmZTPHmvzTVzG","stage":"CLEANUP_STARTED","timestamp_utc":"2026-09-14T07:03:39.875816Z"}
+{"failure_category":"C2_WORKER_SURVIVED_TERMINATION","family":"c2_v","job_id":"runtime-check-Tt4UqzC_grUwsDJE","session_id":"runtimecheck-fkXGmZTPHmvzTVzG","stage":"CLEANUP_FAILED","timestamp_utc":"2026-09-14T07:03:39.875816Z"}
+{"failure_category":"C2_WORKER_SURVIVED_TERMINATION","family":"c2_v","job_id":"runtime-check-Tt4UqzC_grUwsDJE","session_id":"runtimecheck-fkXGmZTPHmvzTVzG","stage":"WORKER_EXIT","timestamp_utc":"2026-09-14T07:03:39.876816Z"}

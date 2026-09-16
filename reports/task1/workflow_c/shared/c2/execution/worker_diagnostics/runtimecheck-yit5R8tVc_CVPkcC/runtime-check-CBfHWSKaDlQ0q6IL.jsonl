@@ -1,0 +1,3 @@
+{"failure_category":"FIT_TIMEOUT","family":"c2_v","job_id":"runtime-check-CBfHWSKaDlQ0q6IL","launcher_pid":29928,"session_id":"runtimecheck-yit5R8tVc_CVPkcC","stage":"CLEANUP_STARTED","timestamp_utc":"2026-09-14T10:43:15.806322Z"}
+{"exit_code":1,"family":"c2_v","job_id":"runtime-check-CBfHWSKaDlQ0q6IL","launcher_pid":29928,"session_id":"runtimecheck-yit5R8tVc_CVPkcC","stage":"CLEANUP_COMPLETED","timestamp_utc":"2026-09-14T10:43:15.874005Z"}
+{"exit_code":1,"family":"c2_v","job_id":"runtime-check-CBfHWSKaDlQ0q6IL","launcher_pid":29928,"session_id":"runtimecheck-yit5R8tVc_CVPkcC","stage":"WORKER_EXIT","timestamp_utc":"2026-09-14T10:43:15.874005Z"}

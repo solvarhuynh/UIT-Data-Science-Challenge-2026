@@ -1,0 +1,118 @@
+{
+  "schema_version": "full_doc_top200_qwen_durability_repair_report_v1",
+  "status": "BLOCKED_OUTPUT_PERSISTENCE",
+  "full_paid_campaign_launched": false,
+  "implementation": {
+    "runner": {
+      "path": "scripts/modal/task1_full_doc_top200_qwen3vl2b.py",
+      "sha256": "c49faed5b1ce58e7592ed2d7d8c0e15e2ab4f213f5866af6298f9e0aa0a6905f"
+    },
+    "durability_module": {
+      "path": "scripts/modal/task1_full_doc_top200_durability.py",
+      "sha256": "fec80d52e4fe5590b95f511b945f37a8eb200ca2a6a68ad4d8a7b5d55bfa5540"
+    },
+    "worklist_builder": {
+      "path": "scripts/analysis/task1_build_full_doc_top200_qwen_worklists.py",
+      "sha256": "91748dfc342d95526fcb71e00747598eb245d1a2aa88fe5c1242076e0d349548"
+    },
+    "non_sensitive_volume_probe": {
+      "path": "scripts/modal/task1_full_doc_top200_volume_test.py",
+      "sha256": "5ec0e15f2be6b5ed1814c6b9f0b58a69f7586ee68ee9ffad7d5b8023a91b5bb1"
+    },
+    "historical_runner_modified": false,
+    "new_output_namespace": "/workspace/p13/runtime/full_doc_top200_qwen/"
+  },
+  "scientific_contract": {
+    "query_text_gate": "PASS",
+    "qdoc_mapping": "PASS",
+    "chunk_selector": "select_true_s2_prepared; BM25 descending; chunk_id ascending; ordered[:3]",
+    "model": "Qwen/Qwen3-VL-Reranker-2B",
+    "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+    "batch": 1,
+    "dtype": "torch.bfloat16",
+    "max_length": 8192,
+    "aggregation": "MAX(chunk_scores)",
+    "historical_prompt_scoring_sha256": "60feb6aca921a1f6e87f08dbebb0cef202e49d09daa4e727592b756de042f55a",
+    "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e"
+  },
+  "universe": {
+    "manifest": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_future_universe_manifest.json",
+    "manifest_sha256": "404d5926eb42f4a3c84b77bd96782654e33854a8eb16f2d67234821d3d37d5ce",
+    "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d",
+    "canonical_chunk_source_sha256": "f54e8868726caad0bb43cad4bf717068a7be4199a8896388657014547630ff72",
+    "q_docs": 598192,
+    "inference_units": 1794571,
+    "shards": 32,
+    "ordering": "natural(query_id), natural(document_id)",
+    "shard_definition": "32 deterministic contiguous slices using floor(i*N/32)",
+    "shard_validation_errors": 0
+  },
+  "persistence_contract": {
+    "result_buffer_qdocs": 256,
+    "result_buffer_chunk_rows": 1024,
+    "write_every": "256 q-docs OR 1024 chunk rows",
+    "sqlite_commit_every": "256 q-docs OR 1024 chunk rows",
+    "volume_commit_every": "two-phase at every buffer cycle: results commit, then durable-generation marker commit",
+    "checkpoint_schema": "full_doc_qwen_checkpoint_v1",
+    "durable_path": "/workspace/p13/runtime/full_doc_top200_qwen/",
+    "shard_completion": "exact q-doc and unit coverage, finite scores, unique identities, output SHA, COMPLETE manifest, final Volume commit"
+  },
+  "resume_semantics": {
+    "completed_detection": "document_results generation <= durable_generation",
+    "incomplete_behavior": "delete rows newer than durable_generation and recompute incomplete q-doc",
+    "duplicate_prevention": "SQLite primary keys on q-doc and q-doc-chunk identities plus upsert",
+    "contract_mismatch": "FAIL_CLOSED",
+    "universe_mismatch": "FAIL_CLOSED",
+    "shard_mismatch": "FAIL_CLOSED",
+    "corrupted_checkpoint": "FAIL_CLOSED"
+  },
+  "tests": {
+    "local_interruption_test": "PASS",
+    "durable_commit_boundaries_simulated": 4,
+    "completed_qdocs_skipped": 1,
+    "incomplete_qdocs_resumed": 1,
+    "duplicates": 0,
+    "missing": 0,
+    "wrong_contract_rejected": true,
+    "wrong_universe_rejected": true,
+    "corrupt_checkpoint_rejected": true,
+    "modal_cross_container_volume_test": "NOT_RUN_WORKSPACE_SPEND_LIMIT",
+    "modal_service_error": "Workspace has exceeded its spend limit; function did not execute"
+  },
+  "static_gates": {
+    "QUERY_TEXT_CONTRACT": "PASS",
+    "QDOC_MAPPING": "PASS",
+    "CHUNK_SELECTION": "PASS",
+    "PROMPT_CONTRACT": "PASS",
+    "MODEL_REVISION": "PASS",
+    "PROCESSOR_TOKENIZER": "PASS",
+    "SCORING_AGGREGATION": "PASS",
+    "TARGET_UNIVERSE": "PASS",
+    "NO_LABEL_DEPENDENCY": "PASS",
+    "OUTPUT_PERSISTENCE": "BLOCKED_UNVERIFIED_ON_MODAL_VOLUME",
+    "RESUME_SAFETY": "LOCAL_PASS_MODAL_RESTART_NOT_RUN"
+  },
+  "canaries": {
+    "historical_parity": {
+      "manifest": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_historical_parity_256.jsonl",
+      "sha256": "11cc2f98e821a0e968d1c73da90c047a350f23a796827fafd4114fd26bd7cbfa",
+      "rows": 256,
+      "one_chunk": 32,
+      "two_chunks": 32,
+      "three_chunks": 192,
+      "launched": false,
+      "gate": "NOT_RUN_STATIC_PERSISTENCE_GATE_NOT_PROVEN"
+    },
+    "current_universe": {
+      "manifest": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_current_canary_16.jsonl",
+      "sha256": "d70264701534114084c972f83588411c3ad99b40e21a0014f23f5850e235348d",
+      "rows": 16,
+      "rank_bands": ["1-20", "21-50", "51-100", "101-200"],
+      "short_document_rows": 5,
+      "launched": false,
+      "gate": "NOT_RUN_HISTORICAL_PARITY_NOT_RUN"
+    }
+  },
+  "final_decision": "DO_NOT_RUN_PAID_FULL_CAMPAIGN",
+  "safe_next_action": "RESTORE_MODAL_SPEND_CAPACITY_THEN_RERUN_CPU_VOLUME_TEST_BEFORE_ANY_A10_CANARY"
+}

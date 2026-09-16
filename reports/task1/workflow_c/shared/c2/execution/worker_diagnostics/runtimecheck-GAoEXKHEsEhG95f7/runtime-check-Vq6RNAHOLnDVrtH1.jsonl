@@ -1,0 +1,4 @@
+{"failure_category":"WORKER_PROTOCOL_FAILURE","family":"c2_v","job_id":"runtime-check-Vq6RNAHOLnDVrtH1","launcher_pid":33136,"session_id":"runtimecheck-GAoEXKHEsEhG95f7","stage":"PROTOCOL_ABORT","timestamp_utc":"2026-09-14T11:07:04.855487Z"}
+{"failure_category":"WORKER_PROTOCOL_FAILURE","family":"c2_v","job_id":"runtime-check-Vq6RNAHOLnDVrtH1","launcher_pid":33136,"session_id":"runtimecheck-GAoEXKHEsEhG95f7","stage":"CLEANUP_STARTED","timestamp_utc":"2026-09-14T11:07:04.856491Z"}
+{"exit_code":1,"family":"c2_v","job_id":"runtime-check-Vq6RNAHOLnDVrtH1","launcher_pid":33136,"session_id":"runtimecheck-GAoEXKHEsEhG95f7","stage":"CLEANUP_COMPLETED","timestamp_utc":"2026-09-14T11:07:04.914044Z"}
+{"exit_code":1,"family":"c2_v","job_id":"runtime-check-Vq6RNAHOLnDVrtH1","launcher_pid":33136,"session_id":"runtimecheck-GAoEXKHEsEhG95f7","stage":"WORKER_EXIT","timestamp_utc":"2026-09-14T11:07:04.915044Z"}

@@ -1,0 +1,202 @@
+{
+  "schema_version": "final-modal-qwen-prelaunch-integrity-audit-v1",
+  "created_at": "2026-09-16",
+  "status": "BLOCKED_OUTPUT_PERSISTENCE",
+  "full_modal_run_authorized": false,
+  "canary_launched": false,
+  "blockers": [
+    "No executable FULLDOC_TOP200_NEW worklist/runner exists; the recovered runner is hard-coded to the historical K77 universe (431200 q-docs).",
+    "The historical full runner commits SQLite transactions but never calls Modal Volume.commit during run_remote; an interruption before normal container exit has no source-proven durable checkpoint guarantee.",
+    "The historical full runner rejects any non-empty checkpoint, so its advertised checkpoint data cannot be resumed.",
+    "Required per-shard query-text tripwire and target-universe runtime assertions are not installed in an executable FULLDOC_TOP200_NEW scorer."
+  ],
+  "sources": {
+    "full_document_candidates": {
+      "path": "reports/task1/full_document_legal_field_retrieval/full_document_legal_field_retrieval_candidates.jsonl",
+      "sha256": "3519a417cbeed46491e270f11a2b63707856cad594cda6c239e37a4a78204ab0"
+    },
+    "historical_corrected_predictions": {
+      "path": "artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b/predictions.jsonl",
+      "sha256": "65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f"
+    },
+    "historical_run_state": {
+      "path": "artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b/run_state.json",
+      "sha256": "e949e84ac1902e16c1f2295d50014c613ce2466b166ea6819259039c89852f4d"
+    },
+    "historical_scorer": {
+      "path": "scripts/modal/task1_b2a_qwen3vl2b.py",
+      "sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe"
+    },
+    "historical_worklist_builder": {
+      "path": "scripts/beam/task1_v2/build_b2a_true_s2_missing_pairs.py",
+      "sha256": "ee5e28d3dbde83a6aa241520b17bc2e3d07fd5f33540625e48efab052efb95e9"
+    },
+    "evidence_selector": {
+      "path": "scripts/beam/task1_v2/evidence.py",
+      "sha256": "0a57b5882c4c492050432978a48d24bd8746dca99f25a1622c68a2bcb46e17c0"
+    },
+    "query_source": {
+      "path": "data/raw/btc/LegalIR/train.json",
+      "sha256": "c39cde9e74977e350f1456e7d487aafe67d2bcbaa4fa26fcabd557fe635635b7",
+      "query_key": "top-level object key",
+      "query_text_field": "question",
+      "loader": "scripts/modal/task1_b2a_qwen3vl2b.py::load_questions"
+    },
+    "canonical_pool200": {
+      "path": "artifacts/task1/recovery_096/inference_matched_reranker_v1/compact/candidate_refs_full.jsonl",
+      "sha256": "e09a59852b722fc6e33761cce964920e4929cba59f0171dcd85cbe62d96edfa6"
+    },
+    "baseline_oof": {
+      "path": "artifacts/task1/recovery_096/baseline_093_oof/predictions.jsonl",
+      "sha256": "1272cb9e8b465f433c725674081084f084a60cdb9807d6ca6a3aa3d9acc1e7d5"
+    },
+    "historical_worklist": {
+      "path": "reports/task1/workflow_b/tv2/b2a/manifests/b2a_qwen_true_s2_top3_worklist.jsonl",
+      "sha256": "a935e356cf8fe62a000e56c3817fd31dfc5ebbc079c4eef849803a7552c3c25a"
+    },
+    "canonical_chunks": {
+      "path": "data/processed_v3/chunks/<document_id>.jsonl",
+      "documents_audited": 8258
+    }
+  },
+  "query_contract": {
+    "queries_expected": 5600,
+    "queries_resolved": 5600,
+    "empty": 0,
+    "missing": 0,
+    "query_text_equals_query_id": 0,
+    "query_text_equals_raw_qid": 0,
+    "fallback_field_uses": 0,
+    "runtime_lineage": "WORKLIST row query_id -> load_questions(query_ids)[query_id].question -> questions[query] -> query_text -> score_batch([query_text], [raw_chunk_text]) -> tokenized_pair_inputs -> format_pair -> processor.apply_chat_template -> processor.tokenizer -> model.model",
+    "normalization": "str(record['question']); non-empty strip validation only; scorer text bytes otherwise unchanged"
+  },
+  "chunk_contract": {
+    "document_source": "data/processed_v3/chunks/<document_id>.jsonl",
+    "selector": "scripts/beam/task1_v2/evidence.py::select_true_s2_prepared",
+    "selector_rule": "BM25 descending, chunk_id ascending, ordered[:3], omit empty text",
+    "short_document_semantics": "TOP3_UP_TO_AVAILABLE",
+    "full_document_text_directly_fed_to_qwen": false,
+    "target_document_mapping_failures": 0,
+    "missing_chunk_files": 0,
+    "duplicate_chunk_identities": 0,
+    "cross_document_chunk_identities": 0,
+    "empty_chunk_texts": 0,
+    "fallback_document_text_used": false,
+    "synthetic_or_repeated_chunks": false
+  },
+  "prompt_and_scoring_contract": {
+    "normalized_prompt_tokenization_scoring_contract_sha256": "60feb6aca921a1f6e87f08dbebb0cef202e49d09daa4e727592b756de042f55a",
+    "normalization_method": "SHA256 of Python ast.unparse for INSTRUCTION, QWEN_SYSTEM, MAX_LENGTH, format_pair, tokenized_pair_inputs, and score_batch",
+    "prompt_builder": "scripts/modal/task1_b2a_qwen3vl2b.py::format_pair",
+    "chat_template": "processor.apply_chat_template(..., tokenize=False, add_generation_prompt=True)",
+    "max_length": 8192,
+    "padding_side": "left",
+    "truncation": "model-snapshot-compatible special-token-preserving prefix truncation plus final five generation-template tokens",
+    "model_output": "model.model(**encoded).last_hidden_state[:, -1]",
+    "score_direction": "lm_head.weight[yes_token_id=9693] - lm_head.weight[no_token_id=2152]",
+    "chunk_score": "sigmoid(last_hidden_state @ score_direction), converted to Python float",
+    "nonfinite_guard": true,
+    "document_aggregation": "MAX(chunk_scores)",
+    "document_tie_order": "score descending, historical canonical rank ascending, natural document_id ascending"
+  },
+  "model_contract": {
+    "model": "Qwen/Qwen3-VL-Reranker-2B",
+    "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+    "processor": "transformers.AutoProcessor.from_pretrained(local snapshot, local_files_only=True, trust_remote_code=True, padding_side='left')",
+    "tokenizer": "processor.tokenizer from same pinned snapshot",
+    "model_class": "transformers.Qwen3VLForConditionalGeneration",
+    "trust_remote_code": true,
+    "dtype": "torch.bfloat16",
+    "device_map": "auto",
+    "autocast": "NOT_IMPLEMENTED",
+    "attention_implementation": "NOT_EXPLICITLY_CONFIGURED",
+    "snapshot_sha256": {
+      "config.json": "82d38a8f803e38e13986fdd622114a6fec12a834adbd3cee9253d757a257d23d",
+      "tokenizer_config.json": "81ec7bb9530159b326c0bef1d0b6c33d392090524014ea3f0123a3c1eb9c2af5",
+      "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+      "model.safetensors": "466ec01961061e9d7f804b4fb1625fb6f406106cd1567e026096d4736fa9d5b9",
+      "1_LogitScore/config.json": "73e3156450564d8a98b7e47bcf5aace0f29600828b51937da545571e84db3ff3"
+    }
+  },
+  "target_universe": {
+    "definition": "full-document rank <= 200 minus canonical pool200 identity pairs",
+    "canonical_serialization": "source-order JSONL of sort-key-ordered keys {document_id,query_id,rank} using compact separators",
+    "sha256": "432dbe5989c39a2812a53991a21122e28490fa7653475226ca88d35e545d9beb",
+    "q_docs": 598071,
+    "queries": 5600,
+    "unique_documents": 8258,
+    "ranks_1_20": 18115,
+    "ranks_21_50": 55372,
+    "ranks_51_100": 140958,
+    "ranks_101_200": 383626,
+    "inference_units": 1794208,
+    "duplicate_q_docs": 0,
+    "materialization_failures": 0
+  },
+  "baseline_qwen_gaps": {
+    "baseline_top5_identities": 28000,
+    "already_scored": 27878,
+    "missing": 122,
+    "prospective_extra_inference_units": 366,
+    "overlap_with_fulldoc_top200_new": 1,
+    "final_deduplicated_q_docs": 598192,
+    "final_deduplicated_inference_units": 1794571
+  },
+  "historical_modal_environment": {
+    "gpu": "A10 (runtime evidence: NVIDIA A10)",
+    "image": "modal.Image.debian_slim(python_version='3.12')",
+    "python": "3.12",
+    "torch": "2.8.0",
+    "torchvision": "0.23.0",
+    "transformers": ">=4.57.0,<5.0 (exact installed patch version not preserved)",
+    "accelerate": ">=1.1,<2.0",
+    "huggingface_hub": ">=0.30",
+    "qwen_vl_utils": ">=0.0.14",
+    "safetensors": ">=0.5,<1.0",
+    "cpu": 8,
+    "memory_mib": 32768,
+    "concurrency": "NOT_EXPLICITLY_CONFIGURED",
+    "timeout_seconds": 86400,
+    "retries": "NOT_IMPLEMENTED",
+    "model_cache": "/tmp/hf-cache",
+    "volume": "udsc-p13 mounted at /workspace/p13"
+  },
+  "historical_io_behavior": {
+    "batch_size": 1,
+    "result_buffer": "256 q-doc groups or 1024 chunk rows, whichever occurs first",
+    "write_every": "same as result_buffer threshold via SQLite executemany",
+    "flush_every": "same as result_buffer threshold via SQLite transaction commit",
+    "checkpoint_every": "same as result_buffer threshold inside container",
+    "volume_commit_every": "NOT_IMPLEMENTED in run_remote",
+    "ephemeral_model_cache": "/tmp/hf-cache",
+    "checkpoint_path": "/workspace/p13/runtime/artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b-batch1-full-querytext-fixed/chunk_scores.sqlite3",
+    "final_output_path": "/workspace/p13/runtime/artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b-batch1-full-querytext-fixed/predictions.jsonl",
+    "resume_semantics": "UNSAFE: inspect_checkpoint reads rows, but run_remote raises if any completed rows/pairs exist",
+    "historical_overwrite_guard": "existing checkpoint/predictions/run_state block a fresh run",
+    "new_namespace_defined": false
+  },
+  "label_isolation": {
+    "label_dependency": false,
+    "relevance_fields_accessed": [],
+    "fold0_or_public_data_accessed": false,
+    "note": "The canonical query source train.json is label-bearing, and load_questions decodes each selected record before reading only its question field; answer is not accessed or used. A query-only frozen projection would be required if zero parsing of label-bearing records is interpreted literally."
+  },
+  "static_gates": {
+    "QUERY_TEXT_CONTRACT_PASS": true,
+    "QDOC_MAPPING_PASS": true,
+    "CHUNK_SELECTION_PASS": true,
+    "PROMPT_CONTRACT_PASS": true,
+    "MODEL_REVISION_PASS": true,
+    "PROCESSOR_TOKENIZER_PASS": true,
+    "SCORING_AGGREGATION_PASS": true,
+    "TARGET_UNIVERSE_PASS": true,
+    "NO_LABEL_DEPENDENCY_PASS": true,
+    "OUTPUT_PERSISTENCE_PASS": false,
+    "RESUME_SAFETY_PASS": false
+  },
+  "canary": {
+    "historical_parity": "NOT_LAUNCHED_STATIC_GATE_FAILED",
+    "current_universe": "NOT_LAUNCHED_STATIC_GATE_FAILED"
+  },
+  "safe_next_action": "FIX_ONLY_THE_IDENTIFIED_BLOCKER_AND_REPEAT_PRELAUNCH_AUDIT"
+}

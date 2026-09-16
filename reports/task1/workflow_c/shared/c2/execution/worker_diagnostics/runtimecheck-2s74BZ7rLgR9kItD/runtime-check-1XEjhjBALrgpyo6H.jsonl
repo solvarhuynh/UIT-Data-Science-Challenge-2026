@@ -1,0 +1,4 @@
+{"failure_category":"RSS_LIMIT_EXCEEDED","family":"c2_v","job_id":"runtime-check-1XEjhjBALrgpyo6H","launcher_pid":17076,"session_id":"runtimecheck-2s74BZ7rLgR9kItD","stage":"RESOURCE_ABORT","timestamp_utc":"2026-09-14T07:09:56.252704Z"}
+{"failure_category":"RSS_LIMIT_EXCEEDED","family":"c2_v","job_id":"runtime-check-1XEjhjBALrgpyo6H","launcher_pid":17076,"session_id":"runtimecheck-2s74BZ7rLgR9kItD","stage":"CLEANUP_STARTED","timestamp_utc":"2026-09-14T07:09:56.253717Z"}
+{"exit_code":1,"family":"c2_v","job_id":"runtime-check-1XEjhjBALrgpyo6H","launcher_pid":17076,"session_id":"runtimecheck-2s74BZ7rLgR9kItD","stage":"CLEANUP_COMPLETED","timestamp_utc":"2026-09-14T07:09:56.303497Z"}
+{"exit_code":1,"family":"c2_v","job_id":"runtime-check-1XEjhjBALrgpyo6H","launcher_pid":17076,"session_id":"runtimecheck-2s74BZ7rLgR9kItD","stage":"WORKER_EXIT","timestamp_utc":"2026-09-14T07:09:56.304508Z"}

@@ -1,0 +1,11 @@
+{
+  "post_freeze_evaluation": true,
+  "candidate_sha256": "3519a417cbeed46491e270f11a2b63707856cad594cda6c239e37a4a78204ab0",
+  "candidate_rows": 2800000,
+  "script_sha256": "1a08a4cf8d0f876fd3c4243b96cfe2686b0bbbc3ccf1f4dfe46bca07b14441b3",
+  "inputs": {
+    "train": "c39cde9e74977e350f1456e7d487aafe67d2bcbaa4fa26fcabd557fe635635b7",
+    "candidate_union": "e09a59852b722fc6e33761cce964920e4929cba59f0171dcd85cbe62d96edfa6",
+    "bge": "7286ec481d26fc134711ecb03ceac2afe1a03bf0dabd842e1ed29ffb074e85c8"
+  }
+}

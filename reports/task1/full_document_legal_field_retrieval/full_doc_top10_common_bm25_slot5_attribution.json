@@ -1,0 +1,48 @@
+{
+  "known66": {
+    "count": 66,
+    "recovered_at_200": 12,
+    "present_in_top10": 1,
+    "selected_as_final_slot5": 0,
+    "beneficial_final_slot5": 0
+  },
+  "novel_information": {
+    "executed_new_candidate_outside_fulldoc_top200": 0,
+    "beneficial": 0,
+    "harmful": 0,
+    "recall_contribution": 0
+  },
+  "structural_attribution": {
+    "winner_frozen_rank": {
+      "1": {
+        "executed": 2190,
+        "neutral": 2112,
+        "harmful": 65,
+        "beneficial": 13
+      },
+      "2": {
+        "executed": 1328,
+        "neutral": 1307,
+        "beneficial": 5,
+        "harmful": 16
+      },
+      "3": {
+        "executed": 886,
+        "neutral": 882,
+        "harmful": 3,
+        "beneficial": 1
+      },
+      "4": {
+        "executed": 461,
+        "neutral": 455,
+        "harmful": 6
+      },
+      "5": {
+        "executed": 174,
+        "neutral": 172,
+        "harmful": 1,
+        "beneficial": 1
+      }
+    }
+  }
+}

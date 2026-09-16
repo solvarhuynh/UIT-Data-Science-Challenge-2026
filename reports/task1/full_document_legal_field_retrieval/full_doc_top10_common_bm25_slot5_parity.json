@@ -1,0 +1,9 @@
+{
+  "rows": 256,
+  "exact_matches": 256,
+  "max_abs_diff": 0.0,
+  "mean_abs_diff": 0.0,
+  "median_abs_diff": 0.0,
+  "ordering_mismatches": 0,
+  "gate": "PASS"
+}

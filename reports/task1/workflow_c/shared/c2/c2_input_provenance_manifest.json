@@ -1,0 +1,60 @@
+{
+  "schema_version": "workflow-c-c2-input-provenance-v2",
+  "status": "PASS_COMPLETE_LINEAGE_AND_ENVIRONMENT_FROZEN",
+  "core_universe": "K20_ONLY",
+  "c1_i_lineage": {
+    "classification": "C1I_COMMIT_PINNED",
+    "commit": "721903e91c93644e27000f9892e71fd3e5f86854",
+    "origin_task1": "721903e91c93644e27000f9892e71fd3e5f86854"
+  },
+  "inputs": [
+    {"path": "artifacts/task1/evaluation/strict_cv_v2/folds.json", "sha256": "acc4792f1b067d9c58cbfa16789c4c0bd47b71cad081443fbb37eb6017803a0a", "file_size": 607797, "row_or_query_count": 7000, "schema": "folds array; folds 0-4; 1400 validation IDs per fold", "label_bearing": false, "allowed_scientific_role": "deterministic F1-F4 population and nested-split membership", "forbidden_role": "Fold0 selection/evaluation"},
+    {"path": "data/raw/btc/LegalIR/train.json", "sha256": "c39cde9e74977e350f1456e7d487aafe67d2bcbaa4fa26fcabd557fe635635b7", "file_size": 1526741, "row_or_query_count": 7000, "schema": "question/answer records", "label_bearing": true, "allowed_scientific_role": "future F1-F4 training-target construction and post-freeze validation evaluation only", "forbidden_role": "Fold0 use; scorer/inference input; public-label substitution"},
+    {"path": "artifacts/task1/recovery_096/baseline_093_oof/predictions.jsonl", "sha256": "1272cb9e8b465f433c725674081084f084a60cdb9807d6ca6a3aa3d9acc1e7d5", "file_size": 854218, "row_or_query_count": 7000, "schema": "query_id, fold, top5; embedded gold_documents must be structurally skipped", "label_bearing": true, "allowed_scientific_role": "canonical baseline top5 identity", "forbidden_role": "decoding embedded gold payloads for prediction selection"},
+    {"path": "artifacts/task1/recovery_096/v3_residual/policy/actions.jsonl", "sha256": "7b7acbdd5c26c1e7b21cba42c84900f7894b8fc3dff1475941534345a140eb3a", "file_size": 499381219, "row_or_query_count": 215422, "schema": "K20 swap actions; 58 ordered features; F1-F4 rows=172338; Fold0 rows=43084 structurally excluded", "label_bearing": true, "allowed_scientific_role": "future F1-F4 training labels/targets and frozen feature vectors only", "forbidden_role": "Fold0 scientific training; action regeneration; label access in scorer"},
+    {"path": "reports/task1/workflow_c/tv2/c0a/c0a_integrity_manifest.json", "sha256": "85e7118d72ab143948e6026ff8ccfde88ab3166036cbfe682d8c2f959539f791", "file_size": 15293, "row_or_query_count": 5600, "schema": "C0-A PASS integrity manifest", "label_bearing": false, "allowed_scientific_role": "input integrity/fold-isolation evidence", "forbidden_role": "model target or score input"},
+    {"path": "reports/task1/workflow_c/tv2/c0a/c0a_oracle_opportunity_report.json", "sha256": "4e764a7d6658db3fdbc4b20ee137efe56a15ac19d352ee4436ec22b70ca012da", "file_size": 1445363, "row_or_query_count": 5600, "schema": "C0-A PASS oracle/opportunity report", "label_bearing": true, "allowed_scientific_role": "diagnostic ceiling context only", "forbidden_role": "training target, threshold tuning, or learned-score input"},
+    {"path": "reports/task1/workflow_c/tv4/c1i/c1i_canonical_input_materialization.json", "sha256": "d1c5158e23b379613e67176d7b8d7b38e0257884d04a16e983ae5a9bfbce4463", "file_size": 3391, "row_or_query_count": 4, "schema": "4/4 canonical artifact materialization hashes", "label_bearing": false, "allowed_scientific_role": "canonical-byte provenance", "forbidden_role": "scientific model input"},
+    {"path": "reports/task1/workflow_c/tv4/c1i/c1i_structural_identity_report.json", "sha256": "d4f8bcc247022d29e78a686a73b44ddc9686e3f951dfbb58c620d46a804fb0cc", "file_size": 2074, "row_or_query_count": 5600, "schema": "C1-I PASS identity report", "label_bearing": false, "allowed_scientific_role": "identity and schema evidence", "forbidden_role": "model input"},
+    {"path": "reports/task1/workflow_c/tv4/c1i/c1i_action_universe_report.json", "sha256": "0eac5c2853b2228c147261574cf676315b16071feba7abc1b88ec002dfaf1890", "file_size": 7187, "row_or_query_count": 172338, "schema": "C1-I PASS K20 action-universe report", "label_bearing": false, "allowed_scientific_role": "K20 population, action count, and feature-order provenance", "forbidden_role": "K77/full-pool expansion"},
+    {"path": "reports/task1/workflow_c/tv4/c1i/c1i_feature_schema_report.json", "sha256": "30485ff17679bba119f4f821514705968d57d8aa6f3db27de0761c5673a2c29d", "file_size": 3303, "row_or_query_count": 58, "schema": "C1-I PASS 58-feature K20 schema", "label_bearing": false, "allowed_scientific_role": "exact K20 feature order provenance", "forbidden_role": "schema recomputation or K77 feature merge"},
+    {"path": "artifacts/task1/recovery_096/v3_residual/policy/policy_training_report.json", "sha256": "8d00525e596683eafc8d300d8646de2378afa6966d162f63bee1e6446217025d", "file_size": 143349, "row_or_query_count": 5600, "schema": "historical selected V3A aggregate/per-fold report", "label_bearing": true, "allowed_scientific_role": "immutable pooled/fold scalar guards and partial V3A-style configuration evidence", "forbidden_role": "historical per-query reconstruction or paired historical comparator"},
+    {"path": "artifacts/task1/recovery_096/v3_residual/policy/v3a_final_fit_manifest.json", "sha256": "13c54888d375e1417cee45343a8bdb3b2ae001f41d318eff143814c3dadb7c10", "file_size": 3452, "row_or_query_count": 7000, "schema": "historical all-fold deployment final-fit manifest", "label_bearing": false, "allowed_scientific_role": "partial configuration provenance only", "forbidden_role": "C2 scientific model/control or Fold0-trained deployment model reuse"},
+    {"path": "scripts/beam/task1_v3_residual/train_residual_policy.py", "sha256": "9378ec3ead1bab174bc8cec0c50d137c98090ffb5d7d7f0e8be6826383f6b570", "file_size": 32936, "row_or_query_count": null, "schema": "current V3 residual implementation source", "label_bearing": false, "allowed_scientific_role": "configuration inspection only", "forbidden_role": "proof of exact historical V3A source; direct C2 execution until separately frozen"},
+    {"path": ".venv/pyvenv.cfg", "sha256": "4c662d3e7fd4c50108384bf8813e27183a44bceaf9d6e2dd0594973782b80171", "file_size": 315, "row_or_query_count": null, "schema": "Python virtual-environment configuration", "label_bearing": false, "allowed_scientific_role": "C2 execution-environment identity", "forbidden_role": "model or metric input"},
+    {"path": ".venv/Scripts/python.exe", "sha256": "3470f7919170d235d7e6079691462c4b217745ec67ee612e745730e46d98f238", "file_size": 270104, "row_or_query_count": null, "schema": "CPython 3.12.6 executable", "label_bearing": false, "allowed_scientific_role": "C2 pinned interpreter", "forbidden_role": "model or metric input"},
+    {"path": ".venv/Lib/site-packages/numpy-1.26.4.dist-info/METADATA", "sha256": "5a27a0e272b1f6e597acbbf58e8da39ae350b2318db8df4cf49d72518e62eebc", "file_size": 61040, "row_or_query_count": null, "schema": "NumPy wheel metadata", "label_bearing": false, "allowed_scientific_role": "verify numpy==1.26.4", "forbidden_role": "model or metric input"},
+    {"path": ".venv/Lib/site-packages/scikit_learn-1.7.2.dist-info/METADATA", "sha256": "a301770d816e5ef5e2a262886115f1e6002637324f3bfe73f92378897dea8c63", "file_size": 11784, "row_or_query_count": null, "schema": "scikit-learn wheel metadata", "label_bearing": false, "allowed_scientific_role": "verify scikit-learn==1.7.2", "forbidden_role": "model or metric input"},
+    {"path": ".venv/Lib/site-packages/threadpoolctl-3.6.0.dist-info/METADATA", "sha256": "a45df8d07ea1883d772183a501d7d526076aa70dfcfddb276a2cbdc04def5341", "file_size": 13843, "row_or_query_count": null, "schema": "threadpoolctl wheel metadata", "label_bearing": false, "allowed_scientific_role": "verify threadpoolctl==3.6.0", "forbidden_role": "model or metric input"}
+  ],
+  "execution_environment": {
+    "status": "PINNED",
+    "environment_path": "D:/udsc2026/.venv",
+    "python_executable": "D:/udsc2026/.venv/Scripts/python.exe",
+    "python_version": "3.12.6",
+    "numpy_version": "1.26.4",
+    "scikit_learn_version": "1.7.2",
+    "threadpoolctl_version": "3.6.0",
+    "constructor_only_smoke": "PASS",
+    "fit_called": false,
+    "predict_called": false,
+    "predict_proba_called": false,
+    "environment_created_or_modified": false
+  },
+  "historical_source_mismatch": {
+    "historical_source_sha256_recorded_in_final_fit_manifest": "b43068882837f96320d67ea66fd98b4c96bee702083cb1fbe82a3d2dbaf10f0d",
+    "current_source_sha256": "9378ec3ead1bab174bc8cec0c50d137c98090ffb5d7d7f0e8be6826383f6b570",
+    "exact_historical_source_proven": false
+  },
+  "historical_source_governance_resolution": "Mismatch is retained as evidence. C2-V is the newly named C2V_FRESH_HGBC_1_7_2_K20 and makes no historical V3A identity claim.",
+  "future_execution_code": {
+    "intended_canonical_path": "scripts/analysis/workflow_c/workflow_c_c2_nested_oof.py",
+    "status": "NOT_CREATED_BY_THIS_PREFLIGHT",
+    "sha256": null,
+    "pre_execution_requirement": "Implementation must be independently reviewed and hash-frozen before separately authorized C2 execution."
+  },
+  "forbidden_artifact_classes": ["Fold0-trained deployment V3A model", "public artifacts", "Qwen scores", "B1 artifacts", "K77 model inputs", "full-pool model inputs"],
+  "preflight_safety": {"training_performed": false, "inference_performed": false, "c2_predictions_created": false, "c3_evaluation_performed": false, "fold0_labels_used": false, "public_labels_used": false, "qwen_used": false, "b1_resumed": false, "k77_or_full_pool_modeled": false, "gpu_used": false, "modal_used": false},
+  "unresolved_blockers": [],
+  "file_lifecycle_review": {"decision": "UPDATE_IN_PLACE", "canonical_path": "reports/task1/workflow_c/shared/c2/c2_input_provenance_manifest.json", "consumer": "C2 authorization review and future execution provenance", "version_duplicate_created": false, "files_deleted": []}
+}

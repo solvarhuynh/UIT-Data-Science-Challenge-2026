@@ -1,0 +1,3 @@
+{"failure_category":"FIT_TIMEOUT","family":"c2_v","job_id":"runtime-check-KT01U6kC2Yeinl6O","session_id":"runtimecheck-6nlZm2oPlMsKWXSC","stage":"FIT_TIMEOUT","timestamp_utc":"2026-09-14T10:37:01.735489Z"}
+{"failure_category":"FIT_TIMEOUT","family":"c2_v","job_id":"runtime-check-KT01U6kC2Yeinl6O","session_id":"runtimecheck-6nlZm2oPlMsKWXSC","stage":"CLEANUP_STARTED","timestamp_utc":"2026-09-14T10:37:01.736490Z"}
+{"family":"c2_v","job_id":"runtime-check-KT01U6kC2Yeinl6O","session_id":"runtimecheck-6nlZm2oPlMsKWXSC","stage":"CLEANUP_COMPLETED","timestamp_utc":"2026-09-14T10:37:01.736490Z"}

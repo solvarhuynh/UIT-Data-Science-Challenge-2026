@@ -1,0 +1,6 @@
+{"family":"c2_v","job_id":"integrated-job-saFzf7cN7_2ZeEA3","session_id":"integrated-QxCDnbgfLcQ5UYMV","stage":"WORKER_PROCESS_LAUNCHING","timestamp_utc":"2026-09-14T11:01:33.164642Z"}
+{"family":"c2_v","job_id":"integrated-job-saFzf7cN7_2ZeEA3","pid":10848,"session_id":"integrated-QxCDnbgfLcQ5UYMV","stage":"WORKER_PROCESS_LAUNCHED","timestamp_utc":"2026-09-14T11:01:33.187292Z"}
+{"family":"c2_v","job_id":"integrated-job-saFzf7cN7_2ZeEA3","pid":10848,"session_id":"integrated-QxCDnbgfLcQ5UYMV","stage":"WORKER_IDENTITY_RECEIVED","timestamp_utc":"2026-09-14T11:01:33.315546Z"}
+{"family":"c2_v","job_id":"integrated-job-saFzf7cN7_2ZeEA3","pid":10848,"session_id":"integrated-QxCDnbgfLcQ5UYMV","stage":"CAPABILITY_SENT","timestamp_utc":"2026-09-14T11:01:33.323522Z"}
+{"family":"c2_v","job_id":"integrated-job-saFzf7cN7_2ZeEA3","launcher_pid":10848,"session_id":"integrated-QxCDnbgfLcQ5UYMV","stage":"RESULT_RECEIVED","timestamp_utc":"2026-09-14T11:01:33.324535Z","worker_pid":26636}
+{"family":"c2_v","job_id":"integrated-job-saFzf7cN7_2ZeEA3","launcher_pid":10848,"session_id":"integrated-QxCDnbgfLcQ5UYMV","stage":"RESULT_VALIDATED","timestamp_utc":"2026-09-14T11:01:33.325541Z","worker_pid":26636}

@@ -1,0 +1,13 @@
+{
+  "status": "BLOCKED_EXECUTION_CONTRACT",
+  "rank_bm25": {
+    "installed": true,
+    "version": "0.2.2",
+    "import_sanity": "BM25_IMPORT_OK",
+    "python_executable": "C:\\Users\\Nghia\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+    "import_path": "C:\\Users\\Nghia\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\site-packages\\rank_bm25.py"
+  },
+  "blocker": "The frozen repository legal tokenizer imports pyvi.ViTokenizer, but pyvi is unavailable in the active Python environment. The authorization permits installing only rank-bm25; no additional dependency or alternate tokenizer was used.",
+  "retrieval_execution": "Not started; no BM25 index was built, no query was retrieved, and no labels were opened for this experiment.",
+  "preserved_prior_blocked_artifacts": true
+}

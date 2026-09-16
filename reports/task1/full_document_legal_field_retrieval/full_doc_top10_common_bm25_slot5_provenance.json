@@ -1,0 +1,7 @@
+{
+  "prediction_sha256": "ba4e8b551674fe003a25935b2cb5e60045aab4587d80dd9bf90087e6ecf2c6d6",
+  "baseline_sha256": "1272cb9e8b465f433c725674081084f084a60cdb9807d6ca6a3aa3d9acc1e7d5",
+  "frozen_candidates_sha256": "3519a417cbeed46491e270f11a2b63707856cad594cda6c239e37a4a78204ab0",
+  "train_sha256": "c39cde9e74977e350f1456e7d487aafe67d2bcbaa4fa26fcabd557fe635635b7",
+  "labels_opened_after_prediction_freeze": true
+}

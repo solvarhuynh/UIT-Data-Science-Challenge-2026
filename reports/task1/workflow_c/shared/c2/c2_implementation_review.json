@@ -1,0 +1,181 @@
+{
+  "schema_version": "workflow-c-c2-implementation-review-v2",
+  "status": "IMPLEMENTATION_FIX_REQUIRED",
+  "reviewer_role": "INDEPENDENT_SENIOR_REVIEWER",
+  "reviewer_independence": {
+    "implemented_reviewed_source": false,
+    "edited_reviewed_source": false,
+    "scientific_contract_modified": false,
+    "preflight_contract_modified": false,
+    "provenance_manifest_modified": false
+  },
+  "scientific_preflight": "PASS",
+  "implementation_authorization": "IMPLEMENTATION_ONLY",
+  "reviewed_script": "scripts/analysis/workflow_c/workflow_c_c2_nested_oof.py",
+  "previous_rejected_sha256": "aebe62c4b6ca6926f5ce6db2e7c4c5c75139c735dc16d7eed3dfae01b6924c8e",
+  "implementer_reported_sha256": "038d71425fd8724b896c26893e582e026ee9f16fa9305b03677ad2c555e5b1ba",
+  "reviewer_recomputed_sha256": "038d71425fd8724b896c26893e582e026ee9f16fa9305b03677ad2c555e5b1ba",
+  "reviewed_source_size_bytes": 92017,
+  "sha_identity": "MATCH",
+  "frozen_implementation_sha256": null,
+  "freeze_decision": "NOT_FROZEN_SOURCE_MODIFICATION_REQUIRED",
+  "contract_identities": {
+    "preflight_contract_path": "reports/task1/workflow_c/shared/c2/c2_preflight_contract.json",
+    "preflight_contract_sha256": "9c49acbb3c90630861b9fadd759a66bf964f8d8466fe74d6e6c2038bc303265f",
+    "provenance_manifest_path": "reports/task1/workflow_c/shared/c2/c2_input_provenance_manifest.json",
+    "provenance_manifest_sha256": "ec131ea6e3ef2ab9665814abd9d5b867b4bf873140106f24f05be31b049a6943",
+    "raw_byte_hashes_hard_pinned_in_source": true,
+    "hash_mismatch_aborts_before_review_or_execute": true
+  },
+  "non_scientific_validation": {
+    "py_compile": "PASS",
+    "help": "PASS",
+    "review_only": "PASS",
+    "review_only_verified_input_count": 18,
+    "constructor_checks": "PASS",
+    "pure_helper_checks": "PASS",
+    "resource_monitor_capability": "PASS",
+    "task1_data_parsed_by_review_only": false,
+    "fit_called": false,
+    "predict_called": false,
+    "predict_proba_called": false
+  },
+  "review_checklist": {
+    "contract_hash_enforcement": "PASS",
+    "input_provenance_enforcement": "PASS",
+    "environment_gate": "PASS",
+    "worker_environment_handshake": "FAIL",
+    "fold0_isolation": "FAIL",
+    "validation_scoring_label_isolation": "PASS",
+    "execution_orchestration": "FAIL",
+    "feature_order_58": "PASS",
+    "nested_split_implementation": "PASS",
+    "exact_delta_target": "PASS",
+    "query_weighting": "PASS",
+    "c2_v_implementation": "PASS",
+    "c2_r_implementation": "PASS",
+    "margin_selection": "FAIL",
+    "action_tie_break": "PASS",
+    "keep_rule": "PASS",
+    "inner_prediction_freeze_boundary": "FAIL",
+    "c2_inner_gate": "PASS",
+    "outer_c2_c3_boundary": "PASS",
+    "top5_one_swap_policy": "PASS",
+    "serialization_order": "PASS",
+    "execution_output_root": "PASS",
+    "future_scientific_metadata": "PASS",
+    "per_fit_timeout": "PASS",
+    "total_run_timeout": "PASS",
+    "available_memory_guard": "PASS",
+    "worker_rss_enforcement": "PASS",
+    "maximum_fit_enforcement": "FAIL",
+    "automatic_retries_found": false,
+    "fallbacks_found": false,
+    "review_only_safety": "PASS",
+    "self_identity_runtime_sha": "PASS"
+  },
+  "serialization_order_decision": {
+    "classification": "PASS",
+    "approved_root": "reports/task1/workflow_c/shared/c2/execution/",
+    "exact_rule": [
+      "Serialize outer folds in order F1, F2, F3, F4.",
+      "Within an outer complement, serialize inner-validation folds in the exact outer_training_folds order recorded in c2_preflight_contract.json.",
+      "Within every validation fold, serialize query rows in the exact validation_ids sequence stored in artifacts/task1/evaluation/strict_cv_v2/folds.json.",
+      "Within one query, serialize multiple action rows by drop_rank descending and incoming_doc_id ascending by UTF-8 bytes.",
+      "Serialize JSON keys lexicographically with ensure_ascii=true, compact separators, UTF-8, and exactly one LF per JSONL object.",
+      "Concatenate pooled outer artifacts in F1, F2, F3, F4 order."
+    ]
+  },
+  "output_root_decision": {
+    "classification": "PASS",
+    "approved_root": "reports/task1/workflow_c/shared/c2/execution/",
+    "deterministic_layout": true,
+    "wrong_root_rejected": true,
+    "frozen_overwrite_rejected": true,
+    "atomic_staging_and_promotion": true
+  },
+  "findings": [
+    {
+      "severity": "BLOCKING",
+      "code": "AUTHORIZED_EXECUTION_PATH_UNREACHABLE",
+      "source_locations": [
+        "workflow_c_c2_nested_oof.py:1511-1551",
+        "workflow_c_c2_nested_oof.py:1752-1774"
+      ],
+      "detail": "main() sends every --execute invocation to execute_is_not_authorized(), which raises for both PREFLIGHT_ONLY and every other authorization value. It never calls load_future_execution_data() or run_future_c2_execution(). The latter also requires label_loader and evaluator callbacks, but the canonical script supplies no concrete implementations. Consequently a separately authorized contract cannot execute the reviewed 32-fit lifecycle without another source change, so this SHA is not execution-ready."
+    },
+    {
+      "severity": "BLOCKING",
+      "code": "FIT_WORKER_AUTHORIZATION_BYPASS",
+      "source_locations": [
+        "workflow_c_c2_nested_oof.py:856-895",
+        "workflow_c_c2_nested_oof.py:1185-1240",
+        "workflow_c_c2_nested_oof.py:1764-1769"
+      ],
+      "detail": "The hidden --fit-worker entry point is dispatched before the --execute authorization gate. Its only approval is the literal stdin line APPROVE_FIT; it has no unforgeable parent/session token and does not require contract authorization. A caller can place a conforming job under the approved root, set the pinned environment, send APPROVE_FIT, and cause Task1 fitting while the contract remains PREFLIGHT_ONLY."
+    },
+    {
+      "severity": "BLOCKING",
+      "code": "WORKER_PID_NOT_BOUND_TO_PARENT_LAUNCH",
+      "source_locations": [
+        "workflow_c_c2_nested_oof.py:241-257",
+        "workflow_c_c2_nested_oof.py:868-875"
+      ],
+      "detail": "validate_worker_identity() checks only that pid is an integer; launch_fit_worker() never requires the reported PID to equal process.pid. The required parent-worker PID handshake is therefore reported but not validated."
+    },
+    {
+      "severity": "BLOCKING",
+      "code": "FOLD0_ACTION_PAYLOAD_DECODED_BEFORE_STRUCTURAL_EXCLUSION",
+      "source_locations": [
+        "workflow_c_c2_nested_oof.py:1554-1580"
+      ],
+      "detail": "load_future_execution_data() calls _read_jsonl_rows(actions_path), which json.loads() every complete action row, including Fold0 gain/label/features, and only then passes the resulting labelled dictionaries to structural_filter_f1_f4(). Fold0 is thus ignored after its scientific payload has already been decoded into in-memory structures, contrary to the mandated hard structural isolation boundary."
+    },
+    {
+      "severity": "BLOCKING",
+      "code": "MARGIN_CANDIDATE_ACTIONS_NOT_FROZEN_BEFORE_LABEL_ACCESS",
+      "source_locations": [
+        "workflow_c_c2_nested_oof.py:1093-1121",
+        "workflow_c_c2_nested_oof.py:1410-1455"
+      ],
+      "detail": "For C2-R margin selection, select_c2r_margin() validates a frozen label-free score artifact and then invokes label_loader/evaluator with that score artifact plus a mutable candidate margin. Candidate-specific selected-action and top5 bytes are not constructed, structurally validated, or SHA-frozen until after the winning margin has already been chosen using labels. This does not enforce the required score/action-bytes -> validate -> SHA freeze -> truth join lifecycle for each evaluated candidate."
+    },
+    {
+      "severity": "BLOCKING",
+      "code": "FIT_BUDGET_NOT_ENFORCED_PER_FAMILY",
+      "source_locations": [
+        "workflow_c_c2_nested_oof.py:773-789",
+        "workflow_c_c2_nested_oof.py:856-861",
+        "workflow_c_c2_nested_oof.py:1546-1548"
+      ],
+      "detail": "C2RunBudget tracks only one aggregate fits_started counter and reserve_fit() receives no model family. The final check proves only 32 aggregate launches, not exactly 16 C2-V and 16 C2-R launches. Failed launch attempts consume the aggregate budget correctly, but the frozen per-family budget invariant is not fail-closed."
+    }
+  ],
+  "scientific_execution_attestation": {
+    "task1_fit_during_review": false,
+    "task1_inference_during_review": false,
+    "task1_scores_or_predictions_created": false,
+    "task1_scientific_metrics_computed": false,
+    "c3_run": false,
+    "fold0_scientific_use": false,
+    "public_labels_used": false,
+    "qwen_used": false,
+    "b1_resumed": false,
+    "k77_or_full_pool_used": false,
+    "gpu_used": false,
+    "modal_used": false
+  },
+  "execution_authorized": false,
+  "source_modification_required": true,
+  "safe_next_action": "RETURN_TO_TERA_FOR_EXACT_IMPLEMENTATION_FIX",
+  "file_lifecycle_review": {
+    "duplicate_check": "Canonical review record already existed; no duplicate was created.",
+    "decision": "UPDATE_IN_PLACE",
+    "canonical_path": "reports/task1/workflow_c/shared/c2/c2_implementation_review.json",
+    "consumer": "Implementation repair and subsequent independent SHA-freeze re-review",
+    "reviewed_script_modified": false,
+    "contracts_modified": false,
+    "files_created": [],
+    "files_deleted": []
+  }
+}

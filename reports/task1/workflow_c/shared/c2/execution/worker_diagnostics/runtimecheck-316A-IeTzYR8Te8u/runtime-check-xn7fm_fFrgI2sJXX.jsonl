@@ -1,0 +1,3 @@
+{"failure_category":"FIT_TIMEOUT","family":"c2_v","job_id":"runtime-check-xn7fm_fFrgI2sJXX","launcher_pid":6648,"session_id":"runtimecheck-316A-IeTzYR8Te8u","stage":"CLEANUP_STARTED","timestamp_utc":"2026-09-14T11:01:31.827597Z"}
+{"failure_category":"C2_WORKER_SURVIVED_TERMINATION","family":"c2_v","job_id":"runtime-check-xn7fm_fFrgI2sJXX","launcher_pid":6648,"session_id":"runtimecheck-316A-IeTzYR8Te8u","stage":"CLEANUP_FAILED","timestamp_utc":"2026-09-14T11:01:31.827597Z"}
+{"failure_category":"C2_WORKER_SURVIVED_TERMINATION","family":"c2_v","job_id":"runtime-check-xn7fm_fFrgI2sJXX","launcher_pid":6648,"session_id":"runtimecheck-316A-IeTzYR8Te8u","stage":"WORKER_EXIT_UNCONFIRMED","timestamp_utc":"2026-09-14T11:01:31.828602Z"}

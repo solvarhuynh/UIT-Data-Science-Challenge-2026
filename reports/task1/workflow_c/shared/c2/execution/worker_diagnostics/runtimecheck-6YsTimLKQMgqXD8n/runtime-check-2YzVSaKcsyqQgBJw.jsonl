@@ -1,0 +1,15 @@
+{"failure_category":"FIT_TIMEOUT","family":"c2_v","job_id":"runtime-check-2YzVSaKcsyqQgBJw","session_id":"runtimecheck-6YsTimLKQMgqXD8n","stage":"FIT_TIMEOUT","timestamp_utc":"2026-09-14T07:07:21.777094Z"}
+{"failure_category":"FIT_TIMEOUT","family":"c2_v","job_id":"runtime-check-2YzVSaKcsyqQgBJw","session_id":"runtimecheck-6YsTimLKQMgqXD8n","stage":"CLEANUP_STARTED","timestamp_utc":"2026-09-14T07:07:21.777094Z"}
+{"family":"c2_v","job_id":"runtime-check-2YzVSaKcsyqQgBJw","session_id":"runtimecheck-6YsTimLKQMgqXD8n","stage":"CLEANUP_COMPLETED","timestamp_utc":"2026-09-14T07:07:21.777094Z"}
+{"family":"c2_v","job_id":"runtime-check-2YzVSaKcsyqQgBJw","session_id":"runtimecheck-6YsTimLKQMgqXD8n","stage":"WORKER_EXIT","timestamp_utc":"2026-09-14T07:07:21.778103Z"}
+{"failure_category":"WORKER_PROTOCOL_FAILURE","family":"c2_v","job_id":"runtime-check-2YzVSaKcsyqQgBJw","session_id":"runtimecheck-6YsTimLKQMgqXD8n","stage":"PROTOCOL_ABORT","timestamp_utc":"2026-09-14T07:07:21.778103Z"}
+{"failure_category":"WORKER_PROTOCOL_FAILURE","family":"c2_v","job_id":"runtime-check-2YzVSaKcsyqQgBJw","session_id":"runtimecheck-6YsTimLKQMgqXD8n","stage":"CLEANUP_STARTED","timestamp_utc":"2026-09-14T07:07:21.779094Z"}
+{"family":"c2_v","job_id":"runtime-check-2YzVSaKcsyqQgBJw","session_id":"runtimecheck-6YsTimLKQMgqXD8n","stage":"CLEANUP_COMPLETED","timestamp_utc":"2026-09-14T07:07:21.779094Z"}
+{"family":"c2_v","job_id":"runtime-check-2YzVSaKcsyqQgBJw","session_id":"runtimecheck-6YsTimLKQMgqXD8n","stage":"WORKER_EXIT","timestamp_utc":"2026-09-14T07:07:21.779094Z"}
+{"failure_category":"RSS_LIMIT_EXCEEDED","family":"c2_v","job_id":"runtime-check-2YzVSaKcsyqQgBJw","session_id":"runtimecheck-6YsTimLKQMgqXD8n","stage":"RESOURCE_ABORT","timestamp_utc":"2026-09-14T07:07:21.779094Z"}
+{"failure_category":"RSS_LIMIT_EXCEEDED","family":"c2_v","job_id":"runtime-check-2YzVSaKcsyqQgBJw","session_id":"runtimecheck-6YsTimLKQMgqXD8n","stage":"CLEANUP_STARTED","timestamp_utc":"2026-09-14T07:07:21.780095Z"}
+{"family":"c2_v","job_id":"runtime-check-2YzVSaKcsyqQgBJw","session_id":"runtimecheck-6YsTimLKQMgqXD8n","stage":"CLEANUP_COMPLETED","timestamp_utc":"2026-09-14T07:07:21.780095Z"}
+{"family":"c2_v","job_id":"runtime-check-2YzVSaKcsyqQgBJw","session_id":"runtimecheck-6YsTimLKQMgqXD8n","stage":"WORKER_EXIT","timestamp_utc":"2026-09-14T07:07:21.780095Z"}
+{"family":"c2_v","job_id":"runtime-check-2YzVSaKcsyqQgBJw","session_id":"runtimecheck-6YsTimLKQMgqXD8n","stage":"CLEANUP_STARTED","timestamp_utc":"2026-09-14T07:07:21.780095Z"}
+{"failure_category":"C2_WORKER_SURVIVED_TERMINATION","family":"c2_v","job_id":"runtime-check-2YzVSaKcsyqQgBJw","session_id":"runtimecheck-6YsTimLKQMgqXD8n","stage":"CLEANUP_FAILED","timestamp_utc":"2026-09-14T07:07:21.781094Z"}
+{"failure_category":"C2_WORKER_SURVIVED_TERMINATION","family":"c2_v","job_id":"runtime-check-2YzVSaKcsyqQgBJw","session_id":"runtimecheck-6YsTimLKQMgqXD8n","stage":"WORKER_EXIT","timestamp_utc":"2026-09-14T07:07:21.781094Z"}

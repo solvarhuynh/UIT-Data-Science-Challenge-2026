@@ -1,0 +1,4 @@
+{"family":"c2_v","job_id":"integrated-job-IFZTH3uiDPbvMCHu","session_id":"integrated-wMt1n5tsqaRqKhRX","stage":"WORKER_PROCESS_LAUNCHING","timestamp_utc":"2026-09-14T11:37:08.367434Z"}
+{"failure_category":"WORKER_PROTOCOL_FAILURE","family":"c2_v","job_id":"integrated-job-IFZTH3uiDPbvMCHu","session_id":"integrated-wMt1n5tsqaRqKhRX","stage":"PROTOCOL_ABORT","timestamp_utc":"2026-09-14T11:37:08.373988Z"}
+{"failure_category":"WORKER_PROTOCOL_FAILURE","family":"c2_v","job_id":"integrated-job-IFZTH3uiDPbvMCHu","session_id":"integrated-wMt1n5tsqaRqKhRX","stage":"CLEANUP_STARTED","timestamp_utc":"2026-09-14T11:37:08.373988Z"}
+{"family":"c2_v","job_id":"integrated-job-IFZTH3uiDPbvMCHu","session_id":"integrated-wMt1n5tsqaRqKhRX","stage":"CLEANUP_COMPLETED","timestamp_utc":"2026-09-14T11:37:08.373988Z"}
