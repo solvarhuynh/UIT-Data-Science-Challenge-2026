@@ -1,0 +1,18 @@
+{
+  "status": "PAIRWISE_DOCUMENT_PREFERENCE_FAIL",
+  "interpretation": "PAIRWISE_SIGNAL_EXISTS_BUT_TOP5_SELECTION_REMAINS_FRAGILE",
+  "damage": {
+    "preserved": 5468,
+    "displaced_by_nonrelevant": 42,
+    "displaced_by_relevant": 17
+  },
+  "actionable": {
+    "total": 320,
+    "moved": 54,
+    "both_recovery": 52,
+    "qwen_only_recovery": 2,
+    "band_1_5": 130,
+    "band_11_20": 133,
+    "band_6_10": 57
+  }
+}

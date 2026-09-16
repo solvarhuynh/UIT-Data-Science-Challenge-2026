@@ -1,0 +1,47 @@
+{
+  "status": "SAFE",
+  "candidate_membership": "baseline_top5 union canonical K20; candidate report proves no_gold_used_in_construction",
+  "candidate_report_sha256": "b3f6b019e0b164847818803bddcb5adf68d58b710dc3cf2997eedff8c87ad304",
+  "feature_list": [
+    "bm25_max",
+    "bm25_mean",
+    "bm25_rank",
+    "bm25_missing",
+    "knn_char_rank",
+    "knn_char_missing",
+    "knn_word_rank",
+    "knn_word_missing",
+    "is_baseline_top5",
+    "baseline_rank",
+    "question_token_length",
+    "question_char_length"
+  ],
+  "feature_classification": {
+    "bm25_max": "SAFE_LABEL_FREE",
+    "bm25_mean": "SAFE_LABEL_FREE",
+    "bm25_rank": "SAFE_LABEL_FREE",
+    "bm25_missing": "SAFE_LABEL_FREE",
+    "knn_char_rank": "SAFE_LABEL_FREE",
+    "knn_char_missing": "SAFE_LABEL_FREE",
+    "knn_word_rank": "SAFE_LABEL_FREE",
+    "knn_word_missing": "SAFE_LABEL_FREE",
+    "is_baseline_top5": "SAFE_OUTER_CROSSFIT",
+    "baseline_rank": "SAFE_OUTER_CROSSFIT",
+    "question_token_length": "SAFE_LABEL_FREE",
+    "question_char_length": "SAFE_LABEL_FREE"
+  },
+  "excluded": [
+    "union_rank",
+    "reciprocal_union_rank",
+    "source_support",
+    "min_source_rank",
+    "adaptive_k500_rank",
+    "adaptive_k500_missing",
+    "has_bge_support",
+    "all V3 action features",
+    "BENEFIT/HARM labels",
+    "neural reranker features"
+  ],
+  "fold0_used": false,
+  "public_labels_used": false
+}

@@ -1,0 +1,40 @@
+{
+  "score_distribution": {
+    "1": {
+      "count": 5847,
+      "mean": 0.8386623938489192,
+      "median": 0.9762461737579041,
+      "p05": 0.1325449590477025,
+      "p95": 0.9895285592244654
+    },
+    "0": {
+      "count": 108322,
+      "mean": 0.12495707534844007,
+      "median": 0.04318577685997828,
+      "p05": 0.005028555905036588,
+      "p95": 0.6547097801296557
+    }
+  },
+  "missed_gold_rank_distribution": {
+    "7": 43,
+    "outside_candidate": 253,
+    "13": 18,
+    "8": 37,
+    "9": 29,
+    "14": 18,
+    "6": 66,
+    "10": 21,
+    "16": 17,
+    "15": 13,
+    "18": 7,
+    "22": 1,
+    "12": 21,
+    "21": 4,
+    "17": 12,
+    "19": 6,
+    "20": 5,
+    "11": 16
+  },
+  "feature_importance": "NOT_EXPOSED_BY_HistGradientBoostingClassifier",
+  "dominant_failure_cluster": "computed from final OOF metrics only; no post-hoc tuning performed"
+}

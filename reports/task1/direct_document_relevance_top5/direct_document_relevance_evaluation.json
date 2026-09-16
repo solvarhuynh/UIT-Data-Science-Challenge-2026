@@ -1,0 +1,91 @@
+{
+  "status": "DIRECT_DOCUMENT_RELEVANCE_FAIL",
+  "baseline": {
+    "recall": 0.9259285714285714,
+    "precision": 0.19739285714285712,
+    "query_count": 5600
+  },
+  "baseline_by_fold": {
+    "1": {
+      "recall": 0.9363690476190475,
+      "precision": 0.1984285714285714,
+      "query_count": 1400
+    },
+    "2": {
+      "recall": 0.9283333333333333,
+      "precision": 0.19771428571428568,
+      "query_count": 1400
+    },
+    "3": {
+      "recall": 0.919404761904762,
+      "precision": 0.19499999999999995,
+      "query_count": 1400
+    },
+    "4": {
+      "recall": 0.9196071428571427,
+      "precision": 0.19842857142857143,
+      "query_count": 1400
+    }
+  },
+  "result": {
+    "recall": 0.924157738095238,
+    "precision": 0.19689285714285712,
+    "query_count": 5600
+  },
+  "result_by_fold": {
+    "1": {
+      "recall": 0.9341071428571428,
+      "precision": 0.19785714285714287,
+      "query_count": 1400
+    },
+    "2": {
+      "recall": 0.9275,
+      "precision": 0.19771428571428568,
+      "query_count": 1400
+    },
+    "3": {
+      "recall": 0.9155952380952382,
+      "precision": 0.19385714285714284,
+      "query_count": 1400
+    },
+    "4": {
+      "recall": 0.9194285714285713,
+      "precision": 0.19814285714285712,
+      "query_count": 1400
+    }
+  },
+  "deltas": {
+    "recall": -0.001770833333333388,
+    "precision": -0.0005000000000000004
+  },
+  "fold_recall_deltas": {
+    "1": -0.0022619047619046873,
+    "2": -0.0008333333333333526,
+    "3": -0.003809523809523707,
+    "4": -0.00017857142857147235
+  },
+  "query_outcomes": {
+    "changed": 2701,
+    "improved": 34,
+    "harmed": 48,
+    "neutral": 2619,
+    "zero_hit_rescues": 27,
+    "previously_correct_broken": 34,
+    "net_relevant_document_change": -14
+  },
+  "replacement_depth": {
+    "0": 2899,
+    "2": 219,
+    "1": 2477,
+    "3+": 5
+  },
+  "materiality": "NEGATIVE_OR_ZERO",
+  "scientific_gate": {
+    "recall_positive": false,
+    "every_fold_nonnegative": false,
+    "precision_guard": true,
+    "complete_oof": true,
+    "leakage_free": true,
+    "overall": false
+  }
+}

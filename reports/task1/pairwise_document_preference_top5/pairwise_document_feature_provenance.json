@@ -1,0 +1,27 @@
+{
+  "features": [
+    "qwen_rank_percentile",
+    "qwen_missing",
+    "bge_rank_percentile",
+    "bge_missing",
+    "bm25_rank_percentile",
+    "bm25_missing",
+    "dense_rank_percentile",
+    "dense_missing",
+    "is_baseline_top5",
+    "baseline_rank_quality"
+  ],
+  "BGE": {
+    "path": "artifacts\\task1\\recovery_096\\baseline_093_oof\\sources\\f1to4_original_bge_chunk200_compact.jsonl",
+    "sha256": "7286ec481d26fc134711ecb03ceac2afe1a03bf0dabd842e1ed29ffb074e85c8",
+    "aggregation": "per-query/doc maximum for BGE and dense scores"
+  },
+  "Qwen": {
+    "path": "artifacts\\task1\\workflow_b\\tv2\\b2a\\qwen3-vl-reranker-2b\\predictions.jsonl",
+    "sha256": "65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f"
+  },
+  "excluded_features": [],
+  "normalization": "within-query rank percentile; labels not used",
+  "fold0_used": false,
+  "public_labels_used": false
+}

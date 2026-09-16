@@ -1,0 +1,100 @@
+{
+  "experiment": "DIRECT_DOCUMENT_NEURAL_SIGNAL_TOP5",
+  "status": "DIRECT_NEURAL_FAIL",
+  "estimator": "HistGradientBoostingClassifier",
+  "sklearn_version": "1.9.0",
+  "parameters": {
+    "loss": "log_loss",
+    "learning_rate": 0.05,
+    "max_iter": 200,
+    "max_leaf_nodes": 31,
+    "l2_regularization": 1.0,
+    "early_stopping": false,
+    "random_state": 2026
+  },
+  "weighting": "deterministic inverse-frequency outer-training sample_weight",
+  "seed": 2026,
+  "outer_folds": {
+    "1": [
+      2,
+      3,
+      4
+    ],
+    "2": [
+      1,
+      3,
+      4
+    ],
+    "3": [
+      1,
+      2,
+      4
+    ],
+    "4": [
+      1,
+      2,
+      3
+    ]
+  },
+  "models": {
+    "1": {
+      "training_queries": 4200,
+      "training_rows": 85649,
+      "class_counts": {
+        "0": 81264,
+        "1": 4385
+      },
+      "weights": {
+        "0": 0.5269799665288443,
+        "1": 9.766134549600912
+      }
+    },
+    "2": {
+      "training_queries": 4200,
+      "training_rows": 85614,
+      "class_counts": {
+        "0": 81229,
+        "1": 4385
+      },
+      "weights": {
+        "0": 0.5269915916729246,
+        "1": 9.762143671607754
+      }
+    },
+    "3": {
+      "training_queries": 4200,
+      "training_rows": 85633,
+      "class_counts": {
+        "0": 81234,
+        "1": 4399
+      },
+      "weights": {
+        "0": 0.5270761011399168,
+        "1": 9.73323482609684
+      }
+    },
+    "4": {
+      "training_queries": 4200,
+      "training_rows": 85611,
+      "class_counts": {
+        "0": 81239,
+        "1": 4372
+      },
+      "weights": {
+        "0": 0.5269082583488226,
+        "1": 9.790827996340347
+      }
+    }
+  },
+  "inputs": {
+    "artifacts\\task1\\recovery_096\\v3_residual\\shortlist_evidence.jsonl": "4bd031710f7c26c728d7b57fcf26967a5bed87539496b0c7566083fb8f28d689",
+    "artifacts\\task1\\recovery_096\\inference_matched_reranker_v1\\compact\\candidate_refs_full.jsonl": "e09a59852b722fc6e33761cce964920e4929cba59f0171dcd85cbe62d96edfa6",
+    "artifacts\\task1\\recovery_096\\inference_matched_reranker_v1\\compact\\candidate_refs_full_report.json": "b3f6b019e0b164847818803bddcb5adf68d58b710dc3cf2997eedff8c87ad304",
+    "artifacts\\task1\\recovery_096\\baseline_093_oof\\predictions.jsonl": "1272cb9e8b465f433c725674081084f084a60cdb9807d6ca6a3aa3d9acc1e7d5",
+    "artifacts\\task1\\recovery_096\\baseline_093_oof\\sources\\f1to4_original_bge_chunk200_compact.jsonl": "7286ec481d26fc134711ecb03ceac2afe1a03bf0dabd842e1ed29ffb074e85c8",
+    "artifacts\\task1\\workflow_b\\tv2\\b2a\\qwen3-vl-reranker-2b\\predictions.jsonl": "65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f",
+    "artifacts\\task1\\evaluation\\strict_cv_v2\\folds.json": "acc4792f1b067d9c58cbfa16789c4c0bd47b71cad081443fbb37eb6017803a0a",
+    "data\\raw\\btc\\LegalIR\\train.json": "c39cde9e74977e350f1456e7d487aafe67d2bcbaa4fa26fcabd557fe635635b7",
+    "reports\\task1\\direct_document_relevance_top5\\direct_document_relevance_evaluation.json": "0158e25b0fffae21372dbb2a6f00fd388013e506b28a3cbf466c514ec7f85506"
+  }
+}

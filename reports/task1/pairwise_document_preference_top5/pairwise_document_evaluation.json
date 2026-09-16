@@ -1,0 +1,151 @@
+{
+  "status": "PAIRWISE_DOCUMENT_PREFERENCE_FAIL",
+  "baseline": {
+    "recall": 0.9259285714285715,
+    "precision": 0.19739285714285715,
+    "query_count": 5600
+  },
+  "baseline_by_fold": {
+    "1": {
+      "recall": 0.9363690476190475,
+      "precision": 0.1984285714285714,
+      "query_count": 1400
+    },
+    "2": {
+      "recall": 0.9283333333333332,
+      "precision": 0.19771428571428568,
+      "query_count": 1400
+    },
+    "3": {
+      "recall": 0.9194047619047618,
+      "precision": 0.195,
+      "query_count": 1400
+    },
+    "4": {
+      "recall": 0.9196071428571428,
+      "precision": 0.1984285714285714,
+      "query_count": 1400
+    }
+  },
+  "result": {
+    "recall": 0.9250803571428571,
+    "precision": 0.1972142857142857,
+    "query_count": 5600
+  },
+  "result_by_fold": {
+    "1": {
+      "recall": 0.9335119047619046,
+      "precision": 0.19771428571428573,
+      "query_count": 1400
+    },
+    "2": {
+      "recall": 0.9308928571428572,
+      "precision": 0.1984285714285714,
+      "query_count": 1400
+    },
+    "3": {
+      "recall": 0.9130952380952381,
+      "precision": 0.19357142857142856,
+      "query_count": 1400
+    },
+    "4": {
+      "recall": 0.9228214285714286,
+      "precision": 0.19914285714285712,
+      "query_count": 1400
+    }
+  },
+  "delta_vs_baseline": {
+    "recall": -0.0008482142857144659,
+    "precision": -0.0001785714285714446
+  },
+  "fold_recall_deltas": {
+    "1": -0.0028571428571428914,
+    "2": 0.002559523809523956,
+    "3": -0.006309523809523765,
+    "4": 0.003214285714285725
+  },
+  "pairwise_concordance": {
+    "pooled": 0.9551691741697003,
+    "by_fold": {
+      "1": 0.9556867487018992,
+      "2": 0.9583348133413846,
+      "3": 0.9511152616644517,
+      "4": 0.9555398729710657
+    }
+  },
+  "query_outcomes": {
+    "changed": 2720,
+    "improved": 53,
+    "harmed": 58,
+    "neutral": 2609,
+    "zero_hit_rescues": 39,
+    "previously_correct_broken": 42,
+    "net_relevant_document_change": -5
+  },
+  "actionable_320": {
+    "total": 320,
+    "moved": 54,
+    "both_recovery": 52,
+    "qwen_only_recovery": 2,
+    "band_1_5": 130,
+    "band_11_20": 133,
+    "band_6_10": 57,
+    "remained_outside": 266
+  },
+  "baseline_damage": {
+    "preserved": 5468,
+    "displaced_by_nonrelevant": 42,
+    "displaced_by_relevant": 17
+  },
+  "learned_rank_positions": {
+    "1": {
+      "1": 1001,
+      "3": 97,
+      "4": 45,
+      "11-20": 25,
+      "2": 218,
+      "6-10": 51,
+      "5": 23,
+      "21+": 2
+    },
+    "2": {
+      "1": 1007,
+      "2": 226,
+      "3": 81,
+      "4": 49,
+      "6-10": 47,
+      "5": 26,
+      "11-20": 26
+    },
+    "3": {
+      "1": 969,
+      "2": 232,
+      "3": 81,
+      "4": 48,
+      "11-20": 30,
+      "6-10": 62,
+      "5": 25,
+      "21+": 1
+    },
+    "4": {
+      "1": 1002,
+      "11-20": 25,
+      "4": 55,
+      "2": 222,
+      "3": 89,
+      "6-10": 55,
+      "5": 26,
+      "21+": 1
+    }
+  },
+  "interpretation": "PAIRWISE_SIGNAL_EXISTS_BUT_TOP5_SELECTION_REMAINS_FRAGILE",
+  "materiality": "NEGATIVE_OR_ZERO",
+  "scientific_gate": {
+    "pooled_positive": false,
+    "every_fold_nonnegative": false,
+    "precision_guard": true,
+    "complete_oof": true,
+    "provenance_clean": true,
+    "overall": false
+  }
+}

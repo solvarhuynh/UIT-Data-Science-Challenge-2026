@@ -1,0 +1,46 @@
+{
+  "BGE": {
+    "artifact": "artifacts\\task1\\recovery_096\\baseline_093_oof\\sources\\f1to4_original_bge_chunk200_compact.jsonl",
+    "sha256": "7286ec481d26fc134711ecb03ceac2afe1a03bf0dabd842e1ed29ffb074e85c8",
+    "aggregation": "MAX(bge_score) per query/document",
+    "coverage": {
+      "queries": 5600,
+      "candidate_rows": 114169,
+      "present": 73848,
+      "missing": 40321
+    },
+    "label_free": true,
+    "heldout_safe": true
+  },
+  "Qwen": {
+    "artifact": "artifacts\\task1\\workflow_b\\tv2\\b2a\\qwen3-vl-reranker-2b\\predictions.jsonl",
+    "sha256": "65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f",
+    "coverage": {
+      "queries": 5600,
+      "candidate_rows": 114169,
+      "present": 114047,
+      "missing": 122
+    },
+    "label_free": true,
+    "heldout_safe": true
+  },
+  "feature_list": [
+    "bge_document_max",
+    "bge_missing",
+    "qwen_document_score",
+    "qwen_missing",
+    "is_baseline_top5",
+    "baseline_rank"
+  ],
+  "excluded": [
+    "union_rank",
+    "source_support",
+    "adaptive-k500 fields",
+    "V3 action features",
+    "BENEFIT/HARM features",
+    "label-derived statistics",
+    "word/char-KNN"
+  ],
+  "fold0_used": false,
+  "public_labels_used": false
+}

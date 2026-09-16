@@ -1,0 +1,103 @@
+{
+  "experiment": "PAIRWISE_DOCUMENT_PREFERENCE_TOP5",
+  "estimator": "sklearn.linear_model.LogisticRegression",
+  "sklearn_version": "1.9.0",
+  "parameters": {
+    "penalty": "l2",
+    "C": 1.0,
+    "fit_intercept": false,
+    "solver": "lbfgs",
+    "max_iter": 1000,
+    "random_state": 2026
+  },
+  "random_state_note": "lbfgs determinism does not use random_state materially",
+  "pairs": {
+    "1": {
+      "training_queries": 4200,
+      "relevant_candidates": 4385,
+      "nonrelevant_candidates": 81264,
+      "preference_relations": 84334,
+      "mirrored_rows": 168668
+    },
+    "2": {
+      "training_queries": 4200,
+      "relevant_candidates": 4385,
+      "nonrelevant_candidates": 81229,
+      "preference_relations": 84299,
+      "mirrored_rows": 168598
+    },
+    "3": {
+      "training_queries": 4200,
+      "relevant_candidates": 4399,
+      "nonrelevant_candidates": 81234,
+      "preference_relations": 84611,
+      "mirrored_rows": 169222
+    },
+    "4": {
+      "training_queries": 4200,
+      "relevant_candidates": 4372,
+      "nonrelevant_candidates": 81239,
+      "preference_relations": 84112,
+      "mirrored_rows": 168224
+    }
+  },
+  "coefficients": {
+    "1": [
+      2.0895393449824065,
+      0.062310759190487036,
+      0.46216333113050717,
+      0.04493840163432392,
+      1.506647618298503,
+      0.38178068658276815,
+      0.9552700404591118,
+      0.04493840163432392,
+      -0.36016760098795847,
+      3.2876491332660938
+    ],
+    "2": [
+      2.183267483000276,
+      1.1281321635858594,
+      0.6596610175574901,
+      0.1418613211329476,
+      1.4410073440147237,
+      0.5076394398197097,
+      0.6790450291654351,
+      0.1418613211329476,
+      -0.3373104591217083,
+      3.315029722950739
+    ],
+    "3": [
+      2.3525488941343142,
+      2.146223998085653,
+      0.5229509903990336,
+      0.08674214103238638,
+      1.5450652337078483,
+      0.5743373558484126,
+      0.8446789214211392,
+      0.08674214103238638,
+      -0.46636285113327924,
+      3.4068342882068365
+    ],
+    "4": [
+      2.02492820242833,
+      2.0584158391194514,
+      0.6398464852624304,
+      0.07641661128708457,
+      1.367766555031808,
+      0.36061978209558015,
+      0.8547376888072766,
+      0.07641661128708457,
+      -0.32578125651190654,
+      3.3159464611472664
+    ]
+  },
+  "primary_rows": 114169,
+  "baseline_overlap_insertions": 25831,
+  "inputs": {
+    "artifacts\\task1\\recovery_096\\inference_matched_reranker_v1\\compact\\candidate_refs_full.jsonl": "e09a59852b722fc6e33761cce964920e4929cba59f0171dcd85cbe62d96edfa6",
+    "artifacts\\task1\\recovery_096\\baseline_093_oof\\predictions.jsonl": "1272cb9e8b465f433c725674081084f084a60cdb9807d6ca6a3aa3d9acc1e7d5",
+    "artifacts\\task1\\recovery_096\\baseline_093_oof\\sources\\f1to4_original_bge_chunk200_compact.jsonl": "7286ec481d26fc134711ecb03ceac2afe1a03bf0dabd842e1ed29ffb074e85c8",
+    "artifacts\\task1\\workflow_b\\tv2\\b2a\\qwen3-vl-reranker-2b\\predictions.jsonl": "65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f",
+    "data\\raw\\btc\\LegalIR\\train.json": "c39cde9e74977e350f1456e7d487aafe67d2bcbaa4fa26fcabd557fe635635b7"
+  }
+}
