@@ -116,6 +116,14 @@
 - Full production worklist references 8,261 canonical documents (1,802,587,393 bytes); canary parity/current samples require 214 documents (89,960,215 bytes). Train and run-state hashes were recorded in the audit report.
 - Status: `BLOCKED_DEPENDENCY_AMBIGUOUS` because the local Modal CLI and Python module are absent, preventing verified account/profile and current upload-command syntax. No guessed commands were executed.
 
+## 2026-09-16 — REPAIR_MODAL_LOCAL_PYTHON_SOURCE_PACKAGING
+
+- Repaired the Modal 1.5.5 local-source packaging defect in `scripts/modal/task1_full_doc_top200_qwen3vl2b.py`: explicitly package the unchanged historical scorer and durability sibling modules at `/root`, plus `scripts/beam/task1_v2/evidence.py` at its import-compatible package path.
+- Added only a CPU-only remote import smoke endpoint; it imports modules, hashes the historical scorer, and checks image-embedded artifacts. It does not mount/read the Volume, load Qwen, download weights, use GPU, or infer.
+- Local import validation passed for all three required import names. Historical scorer SHA remained `e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe`; scientific constants were unchanged.
+- Remote execution could not be verified: sandboxed network failed with Modal gRPC connection error 10013, and the subsequent escalated CPU-smoke request was rejected because it would export local source and embedded legal-retrieval artifacts to the Modal account. No remote import smoke or Volume test executed.
+- Status remains `BLOCKED_REMOTE_IMPORT_PACKAGING` pending explicit user approval to transmit the stated local payload to Modal.
+
 ## 2026-09-16 — FINAL_MODAL_QWEN_PRELAUNCH_INTEGRITY_AUDIT
 
 - Verified the two major frozen SHA256 values exactly and reconstructed the corrected query/chunk/prompt/model/scoring lineage without running inference or using labels.
