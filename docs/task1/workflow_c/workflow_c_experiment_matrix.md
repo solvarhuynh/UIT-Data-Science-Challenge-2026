@@ -7,11 +7,24 @@ vẫn được kế thừa từ `docs/task1/workflow_b/workflow_B_execution_rule
 được lên kế hoạch được liệt kê trong kế hoạch nghiên cứu và tài liệu phân định trách nhiệm;
 không có tệp nào tự động tồn tại chỉ vì chúng được đặt tên ở đó.
 
+## Cập nhật C2-PREFLIGHT cuối cùng — 2026-09-12
+
+C0-A/C1-I `COMPLETE_PASS`, C1-I `C1I_COMMIT_PINNED`, C0-V `DEFERRED`.
+Governance đã resolved và C2 preflight rerun `PASS` dưới `PREFLIGHT_ONLY`;
+C2-V/C2-R training/scoring và C3 vẫn `NOT_AUTHORIZED`. Môi trường pin là
+Python 3.12.6, NumPy 1.26.4, sklearn 1.7.2. C2-V là fresh classifier
+`C2V_FRESH_HGBC_1_7_2_K20` seed 2026, margin 0; C2-R là exact-delta
+`HistGradientBoostingRegressor` seed 2027 với margin `{0,Q75,Q90,Q95}`.
+Bootstrap là 10.000 paired queries/PCG64 seed 20260911. Giới hạn CPU: 1
+thread, 1 fit đồng thời, 32 fits, RSS 8 GiB/available 4 GiB, 15 phút/fit và
+8 giờ tổng. TV2 là future execution owner; TV4 independent reviewer.
+
 | ID | Mục đích / Công thức | Phụ trách | Tính toán | Phụ thuộc bắt buộc hoặc cổng tương lai | Ủy quyền hiện tại |
 |---|---|---|---|---|---|
 | C0-A | Giải phẫu oracle/cơ hội độc lập với policy lịch sử; trạng thái toàn vẹn riêng biệt cho K20, K77, toàn tập | TV2 | CPU | Đóng băng 6 tài liệu; cổng 5.600 truy vấn/không sai lệch/mã hash/đối soát; tái lập baseline và cả 3 mức trần trong sai số `1e-12` | `AUTHORIZED_AFTER_DOC_FREEZE` |
 | C0-V | Tái dựng nguồn gốc xuất xứ chuyên biệt cho V3A có giới hạn | TV2 | CPU | Preflight dạng văn bản trước khi replay; chỉ phân loại là replay nguồn chính xác, tái dựng tương đương tổng hợp, hoặc sai lệch replay | `BOUNDED_CONDITIONAL_PROVENANCE_RECONSTRUCTION` |
 | C1-I | Kiểm toán định danh/không gian/nguồn/schema không nhãn, sau đó xác minh điểm mút F1–F4 với danh tính đã đóng băng | TV4 | CPU | Đóng băng 6 tài liệu; không phụ thuộc C0-V | `AUTHORIZED_IN_PARALLEL_AFTER_DOC_FREEZE` |
+| C2-PREFLIGHT | Đóng băng contract, environment, lineage, split, guards; không train/score/infer | TV2 / TV4 bình duyệt | CPU | `C1I_COMMIT_PINNED`; exact C2-V/C2-R và constructor smoke đã frozen/PASS | `PREFLIGHT_ONLY`; final rerun `PASS` |
 | C2-R | `SWAP_ONLY_EXACT_DELTA_RECALL_REGRESSION`; squared error, cân bằng truy vấn, chỉ hoán đổi (swap-only), KEEP làm mốc tham chiếu 0 | TV2 | CPU | Lõi K20 và ủy quyền tương lai; trong mọi phần bù ngoài: delta Recall >= +0.002, 3/3 fold trong không âm, delta Precision >= -0.001, tính toàn vẹn PASS | `NOT_AUTHORIZED` |
 | C2-V | Đối chứng phong cách V3A cấu hình cố định mới trên cùng phép chia/đóng băng; bắt buộc cho đối chứng so sánh theo cặp tương lai | TV2 cùng TV4 kiểm toán | CPU | Kiểm tra các chốt chặn vô hướng/fold lịch sử trong sai số `1e-12`; không bao giờ đổi nhãn thành V3A lịch sử | `NOT_AUTHORIZED` |
 | C2-B1 | Đối chứng học được tùy chọn có giới hạn; job Workflow B vẫn tiếp tục đóng băng | TV4 kiểm toán / TV2 đánh giá | CPU | Ủy quyền riêng, tái hiện thực hóa chính xác, chạy khói 1 fold có mã thoát, giới hạn tài nguyên/lần fit cố định, cùng quy trình lồng nhau | `NOT_AUTHORIZED` |
@@ -31,8 +44,9 @@ không có tệp nào tự động tồn tại chỉ vì chúng được đặt 
 - Mỗi truy vấn đóng góp tổng trọng số huấn luyện hoán đổi là 1.0; các lớp kết quả không được đánh lại trọng số.
 - Khoa học theo cặp C2/C3 sử dụng đối chứng mới trên cùng phép chia. Recall 0.9296488095238095
   của V3A lịch sử và các chỉ số fold của nó là các chốt chặn vô hướng/fold bất biến, không phải dữ liệu theo cặp ở cấp độ hàng.
-- `C3_BOOTSTRAP_PROTOCOL_PENDING_PRE_C2_FREEZE` phải được giáo sư/nhóm giải quyết
-  trước khi đóng băng lựa chọn C2 và trước khi tạo dự đoán C3.
+- Bootstrap C3 tương lai đã frozen: 10.000 paired-query resamples có hoàn lại,
+  cỡ mẫu 5.600, PCG64 seed 20260911, arithmetic mean và p10 dùng
+  `numpy.quantile(..., method="linear")`; chưa được phép tính trong preflight.
 - Tất cả các byte dự đoán và danh tính tương lai phải đóng băng trước khi join nhãn.
 - F1–F4 chứa 5.600 truy vấn khoa học; Recall là chính, Precision là phụ, và kết quả đầu ra
   chứa tối đa 5 tài liệu duy nhất/truy vấn.

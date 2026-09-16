@@ -6,6 +6,23 @@ Workflow B vẫn bị đóng băng. Hợp đồng phân định trách nhiệm n
 C0-V có giới hạn trong khi TV4 thực hiện độc lập C1-I. Không có phân công vai trò nào dưới đây
 ủy quyền cho C2 hoặc bất kỳ giai đoạn nào sau đó.
 
+## Cập nhật C2-PREFLIGHT cuối cùng — 2026-09-12
+
+TV2 xác nhận C0-A `COMPLETE_PASS`; TV4 xác nhận C1-I `COMPLETE_PASS`, lineage
+`C1I_COMMIT_PINNED`; C0-V `DEFERRED`. Governance C2 đã resolved và final
+preflight rerun `PASS` dưới `PREFLIGHT_ONLY`; C2 training/scoring/inference
+và C3 vẫn `NOT_AUTHORIZED`. TV2 là `FUTURE_C2_EXECUTION_OWNER` nếu được cấp
+quyền riêng; TV4 là `INDEPENDENT_C2_REVIEWER` và không train/chọn model khác.
+
+Môi trường pin là `.venv`: Python 3.12.6, NumPy 1.26.4, sklearn 1.7.2,
+threadpoolctl 3.6.0. C2-V là fresh classifier
+`C2V_FRESH_HGBC_1_7_2_K20`, seed 2026, margin 0; C2-R là exact-delta
+`HistGradientBoostingRegressor`, seed 2027, margin `{0,Q75,Q90,Q95}`.
+Bootstrap là 10.000 paired-query PCG64 seed 20260911. Resource limits là
+1 thread/fit, 1 fit đồng thời, 32 fits, RSS 8 GiB/available 4 GiB và timeout
+15 phút/fit, 8 giờ tổng. K20 core; K77/full-pool deferred; Qwen frozen signal
+only; B1 frozen optional comparator.
+
 ## Phân quyền hiện tại theo người phụ trách
 
 | Phụ trách | Công việc | Phân quyền hiện tại | Phụ thuộc |
@@ -13,7 +30,9 @@ C0-V có giới hạn trong khi TV4 thực hiện độc lập C1-I. Không có 
 | TV2 | C0-A: Giải phẫu oracle/cơ hội độc lập với policy lịch sử | `AUTHORIZED_AFTER_DOC_FREEZE` | Đóng băng hợp đồng 6 tài liệu |
 | TV2 | C0-V: Tái dựng chuyên biệt cho V3A | `BOUNDED_CONDITIONAL_PROVENANCE_RECONSTRUCTION` | Preflight dạng văn bản/chỉ đọc trước khi replay CPU tất định |
 | TV4 | C1-I: Kiểm toán định danh/không gian hành động/nguồn gốc xuất xứ | `AUTHORIZED_IN_PARALLEL_AFTER_DOC_FREEZE` | Đóng băng hợp đồng 6 tài liệu; không phụ thuộc C0-V |
-| TV2 / TV4 | C2 và các công việc mô hình/đánh giá sau này | `NOT_AUTHORIZED` | Phân quyền riêng trong tương lai và các cổng điều kiện trước đó áp dụng |
+| TV2 | C2-PREFLIGHT contract/input freeze | `PREFLIGHT_ONLY`; final rerun `PASS` | Contract/environment/provenance frozen; no training/scoring/inference |
+| TV4 | Independent C2 preflight review | `PREFLIGHT_ONLY`; ready for final review | Verifies contract only; does not train/select another model |
+| TV2 / TV4 | C2 training/scoring/inference and later evaluation | `NOT_AUTHORIZED` | Phân quyền riêng trong tương lai và các cổng điều kiện trước đó áp dụng |
 
 ## Trạng thái bàn giao từ Workflow B
 
@@ -197,8 +216,9 @@ không bắt buộc cho đối chứng mới trên cùng phép chia.
   mục tiêu lựa chọn khoa học hay đối chứng sạch.
 - Không còn tập kiểm tra giữ lại độc lập (holdout) nào ở cấp dự án chưa từng chạm tới;
   bằng chứng C3 trong tương lai mang tính chất khám phá (exploratory).
-- `C3_BOOTSTRAP_PROTOCOL_PENDING_PRE_C2_FREEZE` phải được giáo sư/nhóm giải quyết
-  trước khi đóng băng lựa chọn C2 và trước khi tạo dự đoán C3.
+- Bootstrap C3 tương lai đã frozen thành 10.000 paired-query resamples có hoàn
+  lại, cỡ mẫu 5.600, PCG64 seed 20260911, mean statistic và linear p10; preflight
+  không được phép tính bootstrap.
 - C2–C6, GPU/Modal, Fold0, nhãn công khai, và triển khai vẫn chưa được ủy quyền.
 - Vấn đề bộ chấm điểm CodaBench đang hoạt động chỉ chặn C6/triển khai.
 - Không ai phụ trách được phép sửa đổi các artifact của Workflow A/B hoặc các sổ cái TV2 hiện có

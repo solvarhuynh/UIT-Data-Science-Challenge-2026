@@ -11,6 +11,24 @@ Tệp này lưu giữ lại bản bình duyệt đối kháng trước đó và 
 giáo sư/nhóm nghiên cứu. Quyết nghị này là hợp đồng chuẩn tắc hiện tại ở bất kỳ điểm nào
 nó khác với khuyến nghị tạm thời ban đầu của bản bình duyệt.
 
+## Cập nhật C2-PREFLIGHT cuối cùng — 2026-09-12
+
+C0-A/C1-I `COMPLETE_PASS`, C1-I `C1I_COMMIT_PINNED`, C0-V `DEFERRED`.
+Professor governance đã giải quyết exact configuration và final C2 preflight
+rerun đạt `PASS` dưới `PREFLIGHT_ONLY`; không có C2 training, inference,
+score, prediction hay C3 evaluation. Môi trường `.venv` được pin ở Python
+3.12.6, NumPy 1.26.4, sklearn 1.7.2 và threadpoolctl 3.6.0; constructor-only
+smoke đạt `PASS` mà không gọi fit/predict.
+
+C2-V là control mới `C2V_FRESH_HGBC_1_7_2_K20`, classifier ba lớp seed 2026,
+utility `P(B)-1.5P(H)` và margin 0; nó không phải historical V3A. C2-R là
+`HistGradientBoostingRegressor` squared-error exact-delta seed 2027 với margin
+inner-OOF `{0,Q75,Q90,Q95}`. Bootstrap được frozen ở 10.000 paired-query
+replicates/PCG64 seed 20260911. Resource contract là 1 thread/fit, 1 fit đồng
+thời, 32 fits, RSS 8 GiB/available 4 GiB, timeout 15 phút/fit và 8 giờ tổng.
+TV2 là future execution owner nếu được cấp quyền riêng; TV4 là independent
+reviewer. K20 core, K77/full-pool deferred, Qwen/B1 giữ frozen status.
+
 Quần thể khoa học đã được quyết nghị là chính xác 5.600 truy vấn F1–F4. Recall là chính,
 Precision là phụ, và mỗi kết quả đầu ra có tối đa 5 tài liệu duy nhất/truy vấn.
 Fold0 và nhãn công khai bị loại trừ; điểm công khai 0.9391 chỉ là bằng chứng triển khai.
@@ -204,9 +222,10 @@ C3 trong tương lai yêu cầu delta Recall theo cặp gộp ít nhất +0.003,
 không có fold nào thấp hơn giá trị vô hướng fold V3A lịch sử, và toàn bộ tính toàn vẹn PASS.
 Kết quả vẫn là `EXPLORATORY SCIENTIFIC EVIDENCE`.
 
-Phương pháp bootstrap, seed, số lần lấy mẫu lại, và đầu vào theo cặp vẫn ở trạng thái
-`C3_BOOTSTRAP_PROTOCOL_PENDING_PRE_C2_FREEZE`. Giáo sư/nhóm phải đóng băng chúng trước khi đóng băng lựa chọn C2
-và trước khi tạo dự đoán C3. Hạng mục đang chờ xử lý này không chặn C0-A/C1-I.
+Bootstrap C3 tương lai đã frozen trước scoring: resampling unit là một paired
+outer-OOF query delta C2-R trừ fresh C2-V; lấy 10.000 mẫu có hoàn lại, mỗi mẫu
+5.600 query, PCG64 seed 20260911, statistic là mean và p10 là
+`numpy.quantile(..., 0.10, method="linear")`. Protocol chưa được phép tính lúc preflight.
 
 ### Quyết nghị về các nhánh tùy chọn
 

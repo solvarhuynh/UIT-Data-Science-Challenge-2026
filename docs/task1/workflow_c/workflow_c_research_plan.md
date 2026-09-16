@@ -10,6 +10,25 @@ suy luận mới, GPU/Modal, Fold0, nhãn công khai, hay triển khai. Các quy
 được kế thừa từ `docs/task1/workflow_b/workflow_B_execution_rules.md`; không cần tài liệu quy tắc thực thi
 Workflow C riêng biệt nào.
 
+## Cập nhật C2-PREFLIGHT cuối cùng — 2026-09-12
+
+C0-A/C1-I `COMPLETE_PASS`, lineage C1-I `C1I_COMMIT_PINNED`, C0-V
+`DEFERRED`. Governance C2 đã được giải quyết và preflight rerun đạt `PASS`,
+nhưng chỉ dưới `PREFLIGHT_ONLY`; C2 training/scoring/inference và C3 vẫn
+`NOT_AUTHORIZED`. `.venv` hiện hữu được pin ở Python 3.12.6, NumPy 1.26.4,
+scikit-learn 1.7.2, threadpoolctl 3.6.0; constructor-only smoke đạt `PASS`
+không gọi fit/predict.
+
+C2-V là control mới `C2V_FRESH_HGBC_1_7_2_K20`, classifier ba lớp seed 2026,
+utility `P(B)-1.5P(H)`, margin cố định 0 và không phải historical V3A. C2-R là
+`HistGradientBoostingRegressor` squared-error exact-delta seed 2027 với
+margin inner-OOF `{0,Q75,Q90,Q95}`. Bootstrap tương lai là 10.000 paired-query
+replicates bằng PCG64 seed 20260911. Resource contract: 1 thread/fit, 1 fit
+đồng thời, tối đa 32 fits, RSS 8 GiB và yêu cầu 4 GiB available, timeout
+15 phút/fit và 8 giờ tổng. TV2 là future execution owner nếu được ủy quyền
+riêng; TV4 là independent reviewer; K20 core, K77/full-pool deferred, Qwen/B1
+giữ nguyên trạng thái frozen.
+
 ## Phạm vi khoa học
 
 - Quần thể: chính xác 5.600 truy vấn trong F1–F4.
@@ -31,7 +50,8 @@ Workflow C riêng biệt nào.
 | TV2 C0-A | `AUTHORIZED_AFTER_DOC_FREEZE` |
 | TV2 C0-V | `BOUNDED_CONDITIONAL_PROVENANCE_RECONSTRUCTION`; chỉ replay sau khi có preflight dạng văn bản |
 | TV4 C1-I | `AUTHORIZED_IN_PARALLEL_AFTER_DOC_FREEZE` |
-| C2 | `NOT_AUTHORIZED` |
+| C2-PREFLIGHT contract/provenance | `PREFLIGHT_ONLY`; final governance rerun `PASS` |
+| C2 training/scoring/inference | `NOT_AUTHORIZED` |
 | C3 | `NOT_AUTHORIZED` |
 | C4 | `NOT_AUTHORIZED` |
 | C5 | `NOT_AUTHORIZED` |
@@ -352,13 +372,11 @@ Việc gộp (pooling) chỉ diễn ra sau khi toàn bộ 4 bundle ngoài đã �
 
 Kết quả phải được dán nhãn `EXPLORATORY SCIENTIFIC EVIDENCE` vì không còn tập holdout cấp dự án độc lập nào chưa từng chạm tới.
 
-Phương pháp bootstrap, seed, số lần lấy mẫu lại, và đầu vào theo cặp từng truy vấn là:
-
-`C3_BOOTSTRAP_PROTOCOL_PENDING_PRE_C2_FREEZE`
-
-Không tìm thấy giao thức bootstrap ở cấp độ truy vấn chuẩn tắc tương thích nào cho Task1 trong các quy ước Workflow-A đã kiểm tra.
-Giáo sư/nhóm phải ấn định giao thức trước khi đóng băng lựa chọn C2 và trước khi tạo dự đoán C3.
-Hợp đồng đang chờ xử lý này không chặn C0-A hay C1-I.
+Bootstrap C3 tương lai đã frozen trước scoring. Resampling unit là một paired
+outer-OOF query delta challenger trừ fresh C2-V; 10.000 replicate có hoàn lại,
+mỗi replicate 5.600 query, PCG64 seed 20260911, statistic là arithmetic mean,
+và p10 là `numpy.quantile(..., 0.10, method="linear")`. Không tính protocol này
+trong preflight và C3 vẫn `NOT_AUTHORIZED`.
 
 ## Các giai đoạn sau
 

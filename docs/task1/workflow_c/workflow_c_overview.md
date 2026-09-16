@@ -4,6 +4,26 @@ Trạng thái hợp đồng: **GO_WITH_CONDITIONS**
 
 Định hướng nghiên cứu: **WORKFLOW_C_RESIDUAL_RECOVERY_IS_BEST_NEXT_PATH**
 
+## Cập nhật C2-PREFLIGHT cuối cùng — 2026-09-12
+
+`C0-A` và `C1-I` là `COMPLETE_PASS`, lineage C1-I là `C1I_COMMIT_PINNED`,
+còn C0-V `DEFERRED`. Governance đã giải quyết toàn bộ lựa chọn C2 và lần
+preflight cuối đạt `PASS` với ủy quyền chỉ là `PREFLIGHT_ONLY`; C2 training,
+scoring, inference và C3 vẫn `NOT_AUTHORIZED`. Môi trường hiện hữu `.venv` đã
+được pin và constructor-smoke thành công, không fit, tại Python 3.12.6,
+NumPy 1.26.4, scikit-learn 1.7.2 và threadpoolctl 3.6.0.
+
+C2-V được đóng băng dưới danh tính mới `C2V_FRESH_HGBC_1_7_2_K20`, là
+`HistGradientBoostingClassifier` ba lớp với utility `P(B)-1.5P(H)`, seed 2026
+và margin cố định 0; nó không phải historical V3A. C2-R là
+`HistGradientBoostingRegressor` squared-error cho exact delta Recall, seed
+2027, với margin inner-OOF tối đa `{0,Q75,Q90,Q95}`. Bootstrap C3 tương lai
+đã đóng băng ở 10.000 paired-query replicates, PCG64 seed 20260911. CPU là
+1 thread/fit, 1 fit đồng thời, tối đa 32 fits, RSS 8 GiB/available 4 GiB,
+timeout 15 phút/fit và 8 giờ tổng. TV2 là future execution owner nếu được cấp
+quyền riêng; TV4 là independent reviewer. K20 `CORE`; K77/full-pool deferred;
+Qwen `FROZEN_SIGNAL_ONLY`; B1 `FROZEN_OPTIONAL_COMPARATOR`.
+
 Đây là điểm truy cập chuẩn tắc cho Workflow C sau khi được giáo sư/nhóm bình duyệt.
 Đây là một hợp đồng tài liệu và ủy quyền, không phải là sự ủy quyền cho bất kỳ thực nghiệm nào
 vượt quá các giai đoạn được đánh dấu rõ ràng là đã được ủy quyền dưới đây. Các quy tắc thực thi
@@ -16,7 +36,8 @@ và vòng đời chung vẫn được kế thừa từ `docs/task1/workflow_b/wo
 | TV2 C0-A | `AUTHORIZED_AFTER_DOC_FREEZE` |
 | TV2 C0-V | `BOUNDED_CONDITIONAL_PROVENANCE_RECONSTRUCTION`; replay CPU tất định yêu cầu preflight dạng văn bản trước tiên |
 | TV4 C1-I | `AUTHORIZED_IN_PARALLEL_AFTER_DOC_FREEZE` |
-| C2, C3, C4, C5 | `NOT_AUTHORIZED` |
+| C2-PREFLIGHT contract/provenance | `PREFLIGHT_ONLY`; final governance rerun `PASS` |
+| C2 training/scoring/inference, C3, C4, C5 | `NOT_AUTHORIZED` |
 | C6 / Triển khai công khai | `NOT_AUTHORIZED` |
 | Tiếp tục Workflow B B1 | `NOT_AUTHORIZED` |
 | Suy luận Qwen mới | `NOT_AUTHORIZED` |
@@ -180,10 +201,11 @@ việc thăng cấp trong tương lai đòi hỏi tất cả các điều kiện
 - không có fold nào thấp hơn giá trị vô hướng fold V3A lịch sử bất biến của nó;
 - tính toàn vẹn và nguồn gốc xuất xứ đầy đủ đạt PASS.
 
-Phương pháp bootstrap, random seed, số lượng lấy mẫu lại, và đầu vào theo cặp từng truy vấn
-vẫn ở trạng thái `C3_BOOTSTRAP_PROTOCOL_PENDING_PRE_C2_FREEZE`. Giáo sư/nhóm phải đóng băng chúng
-trước khi lựa chọn C2 bị đóng băng và trước khi bất kỳ dự đoán C3 nào được tạo ra.
-Hạng mục đang chờ xử lý này không chặn C0-A hay C1-I.
+Bootstrap C3 tương lai đã frozen trước scoring: một paired outer-OOF query
+delta C2-R trừ fresh C2-V là resampling unit; 10.000 replicate có hoàn lại,
+mỗi replicate 5.600 query, PCG64 seed 20260911, statistic là arithmetic mean,
+và p10 dùng `numpy.quantile(..., 0.10, method="linear")`. Không tính bootstrap
+trong preflight này.
 
 ## Chính sách nhánh
 

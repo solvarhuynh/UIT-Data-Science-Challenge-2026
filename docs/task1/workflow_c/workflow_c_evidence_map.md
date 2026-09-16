@@ -2,6 +2,24 @@
 
 Trạng thái hợp đồng: **GO_WITH_CONDITIONS**
 
+## Cập nhật C2-PREFLIGHT cuối cùng — 2026-09-12
+
+C0-A/C1-I `COMPLETE_PASS`, C1-I `C1I_COMMIT_PINNED`, C0-V `DEFERRED`.
+Governance C2 đã `PREFLIGHT_CONTRACT_RESOLVED` và rerun preflight đạt `PASS`
+dưới `PREFLIGHT_ONLY`; không training, scoring, prediction hay C3 evaluation.
+Môi trường `.venv` được pin ở Python 3.12.6, NumPy 1.26.4, scikit-learn 1.7.2,
+threadpoolctl 3.6.0 và constructor-only smoke `PASS`.
+
+Control mới `C2V_FRESH_HGBC_1_7_2_K20` là classifier ba lớp seed 2026,
+utility `P(B)-1.5P(H)` và margin 0; không có claim historical V3A. Challenger
+là `HistGradientBoostingRegressor` squared-error exact-delta seed 2027, margin
+inner-OOF `{0,Q75,Q90,Q95}`. Bootstrap đã frozen ở 10.000 paired-query PCG64
+seed 20260911; resource limit là 1 thread, 1 fit đồng thời, 32 fits tối đa,
+8 GiB RSS/4 GiB available và 15 phút/fit, 8 giờ tổng. TV2 là future execution
+owner nếu có ủy quyền riêng; TV4 là independent reviewer. Hai artifact
+canonical vẫn là `reports/task1/workflow_c/shared/c2/c2_preflight_contract.json`
+và `c2_input_provenance_manifest.json`.
+
 Bản đồ này phân biệt bằng chứng có thể sử dụng bởi C0-A và C1-I độc lập với policy lịch sử
 với bằng chứng cần thiết cho các tuyên bố cấp truy vấn V3A lịch sử chính xác trong C0-V.
 Các đường dẫn dưới đây là bằng chứng hiện có; không có kết quả đầu ra dự kiến nào của Workflow C
@@ -20,9 +38,10 @@ TV4 mới có thể join nhãn F1–F4 để xác minh điểm mút oracle độ
 Hợp đồng C2 cố định trong tương lai, nếu được ủy quyền riêng, là
 `SWAP_ONLY_EXACT_DELTA_RECALL_REGRESSION` với KEEP `ZERO_REFERENCE_SCORE`,
 không có hàng/vector KEEP tổng hợp, khối lượng hoán đổi cân bằng truy vấn là 1.0/truy vấn,
-và bắt buộc phải có đối chứng phong cách V3A mới trên cùng phép chia. V3A lịch sử vẫn là một
-chốt chặn vô hướng/fold bất biến. Hợp đồng bootstrap tương lai vẫn là
-`C3_BOOTSTRAP_PROTOCOL_PENDING_PRE_C2_FREEZE`.
+và bắt buộc phải có đối chứng mới trên cùng phép chia. V3A lịch sử vẫn chỉ là
+chốt chặn vô hướng/fold bất biến. Bootstrap tương lai đã được đóng băng thành
+10.000 paired-query resamples with replacement, PCG64 seed 20260911 và p10
+dùng `numpy.quantile(..., method="linear")`.
 
 Thứ tự ưu tiên của bằng chứng vẫn là:
 

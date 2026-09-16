@@ -217,5 +217,8 @@ task1_large_outputs.zip
 # Canonical True-S2 worklist is retained locally; GitHub rejects files >100 MB.
 reports/task1/workflow_b/tv2/b2a/manifests/b2a_qwen_true_s2_top3_worklist.jsonl
 
-
+# Large Task 1 outputs and archives outside GitHub's 100MB limit
+reports/task1/full_document_legal_field_retrieval/full_document_legal_field_retrieval_candidates.jsonl
+reports/task1/workflow_c/shared/c2/execution/.worker_jobs/
 .cline_pytest_tmp/
+task1_large_files.zip

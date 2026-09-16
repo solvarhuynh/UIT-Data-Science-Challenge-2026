@@ -1,0 +1,229 @@
+{
+  "workflow": "TASK1 C1-I CANONICAL ARTIFACT HANDOFF PREPARATION",
+  "status": "READY_FOR_TV4_TRANSFER",
+  "created_utc": "2026-09-11T04:57:31.159955+00:00",
+  "source_search_scope": {
+    "canonical_repository_root": "D:\\udsc2026",
+    "evidence_map": "D:\\udsc2026\\docs\\task1\\workflow_c\\workflow_c_evidence_map.md",
+    "candidate_sources_considered": [
+      "D:\\udsc2026\\artifacts\\task1\\evaluation\\strict_cv_v2\\folds.json",
+      "D:\\udsc2026\\artifacts\\task1\\recovery_096\\baseline_093_oof\\predictions.jsonl",
+      "D:\\udsc2026\\artifacts\\task1\\recovery_096\\v3_residual\\policy\\actions.jsonl",
+      "D:\\udsc2026\\artifacts\\task1\\recovery_096\\inference_matched_reranker_v1\\compact\\candidate_refs_full.jsonl"
+    ],
+    "unrelated_same_named_files_accepted": false
+  },
+  "verification_scope": {
+    "cpu_only": true,
+    "gpu": false,
+    "modal": false,
+    "artifacts_regenerated": false,
+    "original_artifacts_modified": false,
+    "fold0_labels_used": false,
+    "public_labels_used": false,
+    "label_payloads_in_manifest": false,
+    "label_bearing_payload_fields_decoded": false,
+    "structural_identity_frozen_before_copy": true
+  },
+  "environment": {
+    "python": "3.12.6 (tags/v3.12.6:a4a2d2b, Sep  6 2024, 20:11:23) [MSC v.1940 64 bit (AMD64)]",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "implementation": "CPython"
+  },
+  "artifacts": {
+    "artifacts/task1/evaluation/strict_cv_v2/folds.json": {
+      "canonical_relative_path": "artifacts/task1/evaluation/strict_cv_v2/folds.json",
+      "source_absolute_path": "D:\\udsc2026\\artifacts\\task1\\evaluation\\strict_cv_v2\\folds.json",
+      "handoff_absolute_path": "D:\\udsc2026\\handoff\\task1_workflow_c_c1i_inputs\\artifacts\\task1\\evaluation\\strict_cv_v2\\folds.json",
+      "source_SHA256": "acc4792f1b067d9c58cbfa16789c4c0bd47b71cad081443fbb37eb6017803a0a",
+      "handoff_SHA256": "acc4792f1b067d9c58cbfa16789c4c0bd47b71cad081443fbb37eb6017803a0a",
+      "byte_identical": true,
+      "file_size": 607797,
+      "row_or_query_count": 7000,
+      "schema_summary": {
+        "kind": "JSON object containing folds array",
+        "root_keys": [
+          "fold_count",
+          "folds",
+          "input",
+          "input_sha256",
+          "normalization",
+          "schema_version",
+          "seed"
+        ],
+        "fold_record_keys": [
+          "fold",
+          "training_ids",
+          "validation_ids"
+        ],
+        "validation_id_type": "stringified query IDs"
+      },
+      "canonical_evidence_reference": "docs/task1/workflow_c/workflow_c_evidence_map.md",
+      "fold0_count": 1400,
+      "fold1_count": 1400,
+      "fold2_count": 1400,
+      "fold3_count": 1400,
+      "fold4_count": 1400
+    },
+    "artifacts/task1/recovery_096/baseline_093_oof/predictions.jsonl": {
+      "canonical_relative_path": "artifacts/task1/recovery_096/baseline_093_oof/predictions.jsonl",
+      "source_absolute_path": "D:\\udsc2026\\artifacts\\task1\\recovery_096\\baseline_093_oof\\predictions.jsonl",
+      "handoff_absolute_path": "D:\\udsc2026\\handoff\\task1_workflow_c_c1i_inputs\\artifacts\\task1\\recovery_096\\baseline_093_oof\\predictions.jsonl",
+      "source_SHA256": "1272cb9e8b465f433c725674081084f084a60cdb9807d6ca6a3aa3d9acc1e7d5",
+      "handoff_SHA256": "1272cb9e8b465f433c725674081084f084a60cdb9807d6ca6a3aa3d9acc1e7d5",
+      "byte_identical": true,
+      "file_size": 854218,
+      "row_or_query_count": 7000,
+      "schema_summary": {
+        "kind": "JSONL object",
+        "selected_fields": [
+          "query_id",
+          "fold",
+          "top5"
+        ],
+        "required_fields": [
+          "query_id",
+          "fold",
+          "top5"
+        ],
+        "skipped_label_bearing_fields": [
+          "gold_documents"
+        ],
+        "top5_length_distribution": {
+          "5": 7000
+        },
+        "observed_top_level_keys": [
+          "fold",
+          "gold_documents",
+          "query_id",
+          "top5"
+        ]
+      },
+      "canonical_evidence_reference": "docs/task1/workflow_c/workflow_c_evidence_map.md"
+    },
+    "artifacts/task1/recovery_096/v3_residual/policy/actions.jsonl": {
+      "canonical_relative_path": "artifacts/task1/recovery_096/v3_residual/policy/actions.jsonl",
+      "source_absolute_path": "D:\\udsc2026\\artifacts\\task1\\recovery_096\\v3_residual\\policy\\actions.jsonl",
+      "handoff_absolute_path": "D:\\udsc2026\\handoff\\task1_workflow_c_c1i_inputs\\artifacts\\task1\\recovery_096\\v3_residual\\policy\\actions.jsonl",
+      "source_SHA256": "7b7acbdd5c26c1e7b21cba42c84900f7894b8fc3dff1475941534345a140eb3a",
+      "handoff_SHA256": "7b7acbdd5c26c1e7b21cba42c84900f7894b8fc3dff1475941534345a140eb3a",
+      "byte_identical": true,
+      "file_size": 499381219,
+      "row_or_query_count": 215422,
+      "schema_summary": {
+        "kind": "JSONL object",
+        "selected_fields": [
+          "query_id",
+          "fold",
+          "incoming_doc_id",
+          "dropped_doc_id",
+          "drop_rank",
+          "baseline_top5",
+          "features"
+        ],
+        "required_fields": [
+          "query_id",
+          "fold",
+          "incoming_doc_id",
+          "dropped_doc_id",
+          "drop_rank",
+          "baseline_top5",
+          "features"
+        ],
+        "skipped_label_bearing_fields": [
+          "baseline_recall",
+          "gain",
+          "label"
+        ],
+        "feature_size_distribution": {
+          "58": 215422
+        },
+        "drop_rank_distribution": {
+          "4": 107711,
+          "5": 107711
+        },
+        "observed_top_level_keys": [
+          "baseline_recall",
+          "baseline_top5",
+          "drop_rank",
+          "dropped_doc_id",
+          "features",
+          "fold",
+          "gain",
+          "incoming_doc_id",
+          "label",
+          "query_id"
+        ]
+      },
+      "canonical_evidence_reference": "docs/task1/workflow_c/workflow_c_evidence_map.md"
+    },
+    "artifacts/task1/recovery_096/inference_matched_reranker_v1/compact/candidate_refs_full.jsonl": {
+      "canonical_relative_path": "artifacts/task1/recovery_096/inference_matched_reranker_v1/compact/candidate_refs_full.jsonl",
+      "source_absolute_path": "D:\\udsc2026\\artifacts\\task1\\recovery_096\\inference_matched_reranker_v1\\compact\\candidate_refs_full.jsonl",
+      "handoff_absolute_path": "D:\\udsc2026\\handoff\\task1_workflow_c_c1i_inputs\\artifacts\\task1\\recovery_096\\inference_matched_reranker_v1\\compact\\candidate_refs_full.jsonl",
+      "source_SHA256": "e09a59852b722fc6e33761cce964920e4929cba59f0171dcd85cbe62d96edfa6",
+      "handoff_SHA256": "e09a59852b722fc6e33761cce964920e4929cba59f0171dcd85cbe62d96edfa6",
+      "byte_identical": true,
+      "file_size": 138477283,
+      "row_or_query_count": 7000,
+      "schema_summary": {
+        "kind": "JSONL object with nested candidates array",
+        "selected_fields": [
+          "query_id",
+          "fold",
+          "candidates[].doc_id",
+          "candidates[].union_rank",
+          "candidates[].source_support",
+          "candidates[].source_ranks"
+        ],
+        "required_fields": [
+          "query_id",
+          "fold",
+          "candidates"
+        ],
+        "candidate_cap": 200,
+        "candidate_length_distribution": {
+          "200": 7000
+        },
+        "source_support_distribution": {
+          "1": 1056711,
+          "2": 291545,
+          "3": 28486,
+          "4": 23258
+        },
+        "allowed_source_rank_keys": [
+          "adaptive_k500",
+          "bm25",
+          "knn_char",
+          "knn_word"
+        ],
+        "observed_top_level_keys": [
+          "candidates",
+          "fold",
+          "query_id"
+        ]
+      },
+      "canonical_evidence_reference": "docs/task1/workflow_c/workflow_c_evidence_map.md"
+    }
+  },
+  "fold_contract": {
+    "total_query_ids": 7000,
+    "folds": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "per_fold_count": 1400,
+    "duplicate_query_id_count": 0
+  },
+  "file_lifecycle_review": {
+    "handoff_directory": "D:/udsc2026/handoff/task1_workflow_c_c1i_inputs",
+    "decision": "VERSIONED_NEW_FILE",
+    "reason": "single temporary byte-identical C1-I transfer tree requested by the contract",
+    "canonical_sources_modified": false,
+    "files_deleted": [],
+    "consumer": "TV4 C1-I structural identity audit"
+  }
+}
