@@ -1,0 +1,95 @@
+{
+  "status": "PRIVATE_RRF_K20_CPU_PREPARED",
+  "policy": {
+    "name": "RETRIEVAL_RRF_NO_LABEL",
+    "weights": {
+      "dense": 0.2,
+      "bge": 0.3,
+      "knn_word": 0.2,
+      "bm25": 0.3
+    },
+    "rrf_k": 2,
+    "formula": "sum(weight/(2+rank)); absent source contributes 0"
+  },
+  "population": {
+    "queries": 2080,
+    "candidate_k": 20,
+    "candidate_min": 20,
+    "candidate_median": 20.0,
+    "candidate_max": 20,
+    "qdocs": 41600,
+    "unique_documents": 6514
+  },
+  "sources": {
+    "dense": {
+      "path": "private_task1/retrieval/candidates/private_dense_predictions.jsonl",
+      "reused": true,
+      "depth": 200
+    },
+    "bm25": {
+      "producer": "udsc2026.evaluation.legal_ir_lexical.build_bm25f_rankings",
+      "top_k": 200,
+      "title_weight": 0.0
+    },
+    "knn_word": {
+      "producer": "udsc2026.evaluation.legal_ir_lexical.build_knn_rankings",
+      "analyzer": "word",
+      "ngram_range": [
+        1,
+        2
+      ],
+      "neighbors": 20,
+      "label_pool": "train.json only"
+    }
+  },
+  "contract": {
+    "base_model": "BAAI/bge-reranker-v2-m3",
+    "base_revision": "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e",
+    "selector": "true_s2_bm25_within_document_v2",
+    "aggregation": "MAX",
+    "max_length": 512,
+    "batch_size": 16,
+    "checkpoint_every": 256
+  },
+  "artifacts": {
+    "candidate_path": "private_task1/retrieval/candidates/private_rrf_k20_candidates.jsonl",
+    "candidate_sha256": "f8bdbcaa319036557b7baa5f2085ca31b06fae51ec28195b774170302a79868a",
+    "worklist_path": "private_task1/rerank/worklists/private_rrf_k20_bge_worklist.jsonl",
+    "worklist_sha256": "cf3554e9dfa9e753896e7b5332275e12aa030269c747a59222a072ad4d6a5f86"
+  },
+  "worklist": {
+    "expected_inference_units": 124798,
+    "duplicate_qdocs": 0,
+    "unresolved_qdocs": 0,
+    "unresolved_chunks": 0
+  },
+  "remote_chunk_coverage": {
+    "volume": "udsc-p13",
+    "path": "/runtime/data/processed_v3/chunks",
+    "required_documents": 6514,
+    "present": 6514,
+    "uploaded_this_task": 119,
+    "missing": 0,
+    "nested_staging_entries": 0
+  },
+  "runtime_estimate": {
+    "reference_manifest": "private_task1/experiments/private_safe_baseline/validation_download/manifests/production.json",
+    "reference_inference_units_per_second": 39.22940761943672,
+    "reference_total_wall_units_per_second": 28.550325863735576,
+    "estimated_pure_inference_seconds": 3181.23590370422,
+    "estimated_pure_inference_minutes": 53.02059839507034,
+    "estimated_total_wall_seconds": 4371.158514814626,
+    "estimated_total_wall_minutes": 72.8526419135771,
+    "assumption": "scale validation inference and checkpoint overhead by exact Private q-doc/unit workload; estimate only, not a guarantee"
+  },
+  "remote_run": {
+    "profile": "nan928904",
+    "namespace": "runtime/task1_private_rrf_k20",
+    "gpu": "L4",
+    "runner": "scripts/modal/task1_bge_subset_gpu.py",
+    "gpu_launched": false
+  },
+  "private_answers_read": false,
+  "gpu_runs": 0,
+  "modal_inference_runs": 0
+}

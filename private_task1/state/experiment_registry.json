@@ -1,0 +1,56 @@
+{
+  "schema_version": "task1-private-experiment-registry-v2",
+  "offline_ab_research": "CLOSED",
+  "used_for_private_production": "NO",
+  "historical_experiments": [
+    "FINAL_OFFLINE_DECISION",
+    "A_BASELINE",
+    "A_NO_OVERLAY",
+    "B_FT_ONLY",
+    "PRIVATE_SAFE_BASELINE",
+    "slot4_slot5_comparison",
+    "F1_F4_model_selection",
+    "Qwen_comparison",
+    "baseline_093_oof"
+  ],
+  "historical_experiments_status": "CLOSED_NOT_USED_FOR_PRIVATE",
+  "public_production_recovery": {
+    "status": "BLOCKED",
+    "reference": "artifacts/task1/submission.zip",
+    "exact_reproduction": "artifacts/task1/recovery_096/public_anchor_093/submission_093.zip",
+    "producer_manifest": "artifacts/task1/recovery_096/public_anchor_093/producer_manifest.json",
+    "producer_builder": "scripts/submission/build_legal_ir_ensemble.py",
+    "submission_writer": "scripts/submission/write_legal_ir_submission.py",
+    "uses_query_answer_at_inference": true,
+    "evidence": {
+      "labeled_inputs": [
+        "data/raw/btc/LegalIR/train.json",
+        "data/task1/warmup.json"
+      ],
+      "exact_label_overlay": true,
+      "normalized_exact_matches": 57,
+      "documents_added_by_overlay": 5
+    },
+    "step4_is_independent_private_pipeline": false,
+    "reason": "Step4 calibrated consumes an anchor/baseline whose provenance is label-overlay; it is not a verified label-free private pipeline."
+  },
+  "private_status": {
+    "input": "READY",
+    "retrieval": "READY",
+    "candidates": "READY",
+    "rerank": "BLOCKED",
+    "top5": "MISSING",
+    "submission": "MISSING",
+    "queries": 2080,
+    "candidate_qdocs": 132376,
+    "unique_documents": 8180,
+    "production_worklist": "N/A_NOT_CREATED"
+  },
+  "policy": [
+    "Do not run A/B or F1-F4 model selection.",
+    "Do not use labels, Fold0, Qwen, baseline_093_oof, or historical unproven BGE scores.",
+    "Do not run GPU/Modal, upload Volume, create worklist, or create submission while blocked.",
+    "Do not delete historical artifacts."
+  ],
+  "next_action": "Obtain or authorize a verified label-free production pipeline."
+}

@@ -1,0 +1,12 @@
+{
+  "schema_version": "task1-document-candidates-v1",
+  "raw_predictions": "private_task1\\retrieval\\candidates\\private_dense_predictions.jsonl",
+  "raw_predictions_sha256": "6e3dbc729df6d101ee88400399caa76998f99d148a590d07f0c2eca14779c813",
+  "output": "private_task1\\retrieval\\candidates\\private_candidate_union.jsonl",
+  "document_depth": 200,
+  "evidence_limit": 2,
+  "query_count": 2080,
+  "record_count": 2080,
+  "collapse_version": "task1-document-collapse-v1",
+  "complete": true
+}

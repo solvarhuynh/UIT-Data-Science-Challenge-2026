@@ -1,0 +1,112 @@
+{
+  "schema_version": "task1-private-asset-registry-v1",
+  "registry_policy": "Only assets listed here may be reused by the private pipeline.",
+  "assets": [
+    {
+      "logical_name": "private_input",
+      "exact_path": "D:\\udsc2026\\private_task1\\input\\private-official.json",
+      "sha256": "9da4e0cb84204fed924251c35744c93879556e67a440332015ea3b62f3c355bc",
+      "status": "CANONICAL_REUSABLE",
+      "provenance": "Official private input copied from artifacts2 without modification.",
+      "intended_use": "Private query source and exact submission-ID validation.",
+      "forbidden_use": "Reading answer labels; answers are null."
+    },
+    {
+      "logical_name": "processed_corpus",
+      "exact_path": "D:\\udsc2026\\data\\processed_v3",
+      "sha256": "80fb33ff1133ce2583097cc5a98ddc9739240a60bfe11c979892d5412dcda647",
+      "status": "CANONICAL_REUSABLE_WITH_QUALITY_CAVEAT",
+      "provenance": "data/processed_v3/metadata/processing_manifest.json; integrity gate passed; quality and semantic-completeness gates are recorded false.",
+      "intended_use": "Document and chunk resolution for a frozen private worklist.",
+      "forbidden_use": "Treating the quality gate as passed."
+    },
+    {
+      "logical_name": "processed_chunks",
+      "exact_path": "D:\\udsc2026\\data\\processed_v3\\chunks",
+      "sha256": null,
+      "status": "CANONICAL_REUSABLE_WITH_QUALITY_CAVEAT",
+      "provenance": "Same processing manifest as the canonical processed corpus; 1,270,356 chunks and zero duplicate/orphan/invalid chunk IDs recorded.",
+      "intended_use": "Selector evidence and BGE scoring input.",
+      "forbidden_use": "Using unverified alternate chunk stores."
+    },
+    {
+      "logical_name": "bge_base",
+      "exact_path": "D:\\udsc2026\\models\\reranker",
+      "sha256": "13dcd6c31d9fec9d1d8e158702072f62d7fa7d312a64b9fe057bec9a08cfe41a",
+      "status": "CANONICAL_REUSABLE",
+      "provenance": "BAAI/bge-reranker-v2-m3 contract; local Hugging Face tree metadata pins revision 953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e.",
+      "intended_use": "Base BGE reranking only.",
+      "forbidden_use": "Replacing the pinned revision or using an unverified persisted score cache as equivalent."
+    },
+    {
+      "logical_name": "bge_ft",
+      "exact_path": "D:\\udsc2026\\outputs\\task1\\bge_ft_model\\bge_m3_finetuned",
+      "sha256": "sha256:68bc6d16a5b898a3ff2a89d8171fc8e6b3a20d3ea7c78a15c7340b1a3f02a89c",
+      "status": "CANONICAL_REUSABLE",
+      "provenance": "Frozen Step4 Model A artifact; weight and config hashes verified in BGE readiness report.",
+      "intended_use": "Fine-tuned BGE scoring paired with the pinned base model.",
+      "forbidden_use": "Changing weights/config or treating the model as a new tuned private model."
+    },
+    {
+      "logical_name": "public_retrieval_union",
+      "exact_path": "D:\\udsc2026\\artifacts\\task1\\handoff\\step4_bge_handoff\\candidates\\public_candidate_union.jsonl",
+      "sha256": "c23605b28d634cc4e0df6cc313eabcf4a6a9122a036e652691666570b54559ce",
+      "status": "HISTORICAL_ONLY",
+      "provenance": "Step4 public 1,000-query candidate union; not a private-query retrieval artifact.",
+      "intended_use": "Public provenance/reference only.",
+      "forbidden_use": "Applying public query IDs or candidates to private without a validated retrieval join."
+    },
+    {
+      "logical_name": "qwen_full_document_discovery",
+      "exact_path": "D:\\udsc2026\\artifacts\\task1\\full_doc_qwen_optimized_merged\\full_doc_top200_qwen_optimized_32shards.jsonl",
+      "sha256": "25cc4b7dfb5919a47f927c545927e775c11997790984b519e2b74a71abce0415",
+      "status": "EXPERIMENT_ONLY",
+      "provenance": "Complete 32-shard F1-F4 artifact, 598,192 q-doc rows; separate query population.",
+      "intended_use": "Offline candidate-discovery research if a private-specific run is later authorized.",
+      "forbidden_use": "Final ranking score, private submission reuse, or standalone Qwen submission."
+    },
+    {
+      "logical_name": "current_bge_top5_experiment",
+      "exact_path": "D:\\udsc2026\\artifacts\\task1\\qwen_to_bge_minimal\\bge_top5_production_canonical.jsonl",
+      "sha256": "a72b243e9895b2973b63bc16a48c150982346cc1ba384b77ebf82453f61c5fd7",
+      "status": "EXPERIMENT_ONLY_INCONCLUSIVE",
+      "provenance": "F1-F4 current BGE TOP5 score artifact; prior validation returned to incumbent and did not establish a private policy.",
+      "intended_use": "Offline validation/reference only.",
+      "forbidden_use": "Assuming private coverage or deploying without a private worklist and frozen policy."
+    },
+    {
+      "logical_name": "f1_f4_baseline",
+      "exact_path": "D:\\udsc2026\\artifacts\\task1\\recovery_096\\baseline_093_oof\\predictions.jsonl",
+      "sha256": "1272cb9e8b465f433c725674081084f084a60cdb9807d6ca6a3aa3d9acc1e7d5",
+      "status": "CANONICAL_REUSABLE_OFFLINE_ONLY",
+      "provenance": "Reproducible F1-F4 comparator; 5,600 queries; recall 0.9259285714285714 and precision 0.19739285714285715.",
+      "intended_use": "Offline scientific comparison only.",
+      "forbidden_use": "Treating F1-F4 labels or IDs as private labels/IDs."
+    },
+    {
+      "logical_name": "public_incumbent_reference",
+      "exact_path": "D:\\udsc2026\\artifacts\\task1\\handoff\\step4_bge_handoff\\public\\submission_step4_calibrated.json",
+      "sha256": "b655fdf5444f1809e71a9f643c065e3ccf0c5e5bd1870113fd7c4e727ad1a8ff",
+      "status": "HISTORICAL_ONLY",
+      "provenance": "Public Step4 calibrated reference, approximately 0.9411 external score; not a private prediction.",
+      "intended_use": "Reference and format/provenance comparison.",
+      "forbidden_use": "Assuming the public score transfers to private or copying by query ID."
+    },
+    {
+      "logical_name": "old_persisted_bge_cache",
+      "exact_path": "D:\\udsc2026\\artifacts\\task1\\recovery_096\\baseline_093_oof\\sources\\f1to4_original_bge_chunk200_compact.jsonl",
+      "sha256": "7286ec481d26fc134711ecb03ceac2afe1a03bf0dabd842e1ed29ffb074e85c8",
+      "status": "DO_NOT_USE",
+      "provenance": "Persisted score artifact is explicitly marked MODEL_REVISION_UNPROVEN_FOR_PERSISTED_SCORE_ARTIFACT.",
+      "intended_use": "None until provenance is independently resolved.",
+      "forbidden_use": "Private production scoring or claiming exact current-model equivalence."
+    }
+  ],
+  "code_assets": {
+    "orchestration": "D:\\udsc2026\\scripts\\task1\\run_legal_ir_pipeline.py",
+    "bge_cpu_reference": "D:\\udsc2026\\scripts\\evaluation\\score_task1_bge_subset.py",
+    "bge_modal_runner": "D:\\udsc2026\\scripts\\modal\\task1_bge_subset_gpu.py",
+    "submission_writer": "D:\\udsc2026\\scripts\\submission\\write_legal_ir_submission.py",
+    "submission_validator": "D:\\udsc2026\\scripts\\submission\\validate_legal_ir_submission.py"
+  }
+}

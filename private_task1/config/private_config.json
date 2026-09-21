@@ -1,0 +1,55 @@
+{
+  "schema_version": "task1-private-config-v1",
+  "phase": "PRIVATE_TEST",
+  "competition": {
+    "starts": "2026-09-19",
+    "ends": "2026-09-23",
+    "submissions_per_day": 3,
+    "submission_format": "same_as_public"
+  },
+  "input": {
+    "path": "private_task1/input/private-official.json",
+    "query_count": 2080,
+    "answers_available": false
+  },
+  "frozen_production_contract": {
+    "top_k": 5,
+    "bge_base_model": "BAAI/bge-reranker-v2-m3",
+    "bge_base_revision": "953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e",
+    "bge_ft_weight_sha256": "68bc6d16a5b898a3ff2a89d8171fc8e6b3a20d3ea7c78a15c7340b1a3f02a89c",
+    "bge_ft_config_sha256": "16f6e0bece36db2318601cbf5119f5f9eb616857eed068ddb73cb482f104524b",
+    "selector": "true_s2_bm25_within_document_v2",
+    "aggregation": "MAX",
+    "max_length": 512,
+    "qwen_role": "candidate_discovery_only"
+  },
+  "frozen_fusion_policy": {
+    "name": "RETRIEVAL_RRF_NO_LABEL",
+    "weights": {
+      "dense": 0.2,
+      "bge": 0.3,
+      "knn_word": 0.2,
+      "bm25": 0.3
+    },
+    "rrf_k": 2,
+    "formula": "sum(weight/(2+rank)); absent source contributes 0",
+    "final_sort": "weighted_rrf_descending_then_canonical_deterministic_tiebreak",
+    "ft_only_final_ranking": "REJECTED",
+    "label_overlay": false
+  },
+  "stage_status": {
+    "retrieval": "READY_PRIVATE_DENSE_BM25_KNN",
+    "candidate_generation": "READY_PRIVATE_RRF_K20",
+    "bge_scoring": "READY_AFTER_CPU_WORKLIST_PREP",
+    "fusion_policy": "FROZEN_RETRIEVAL_RRF_NO_LABEL",
+    "submission_builder": "CODE_READY_NO_PRIVATE_PREDICTIONS",
+    "submission_validator": "CODE_READY"
+  },
+  "execution_policy": {
+    "gpu_runs_authorized_in_this_organization_task": 0,
+    "modal_runs_authorized_in_this_organization_task": 0,
+    "private_labels_may_be_used": false,
+    "historical_artifacts_are_read_only": true,
+    "private_prediction_may_be_created_in_this_task": false
+  }
+}
