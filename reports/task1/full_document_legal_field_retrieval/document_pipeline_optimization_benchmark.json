@@ -1,0 +1,68 @@
+{
+  "schema_version": "task1_document_pipeline_optimization_benchmark_v1",
+  "scope": {
+    "worklist": "full_doc_top200_qwen_worklists/shard_00.jsonl",
+    "probe_rows": 256,
+    "probe_unique_documents": 252,
+    "workers": 8,
+    "model_loaded": false,
+    "gpu_runs": 0,
+    "modal_volume_mutations": 0,
+    "labels_used": false
+  },
+  "recorded_modal_probe_before": {
+    "document_index_seconds": 53.67223893,
+    "document_preparation_seconds": 50.419358211,
+    "total_document_handling_seconds": 104.091597141,
+    "source": "user-provided production-probe timing"
+  },
+  "local_cpu_after": {
+    "document_index_seconds": 0.0004878000036114827,
+    "document_preparation_seconds": 14.760293699990143,
+    "total_document_handling_seconds": 14.760781499993755,
+    "document_path_resolution_seconds": 0.0004878000036114827,
+    "document_pipeline_seconds": 14.760293699990143,
+    "worker_load_seconds_sum": 1.7450525999738602,
+    "worker_prepare_seconds_sum": 102.29913090006448,
+    "files_opened": 252,
+    "filesystem_scans": 0,
+    "cache_hits": 256,
+    "cache_misses": 252,
+    "prepare_document_calls": 252,
+    "prepared_content_mismatches": 0
+  },
+  "structural_parity": {
+    "historical_parity_rows": 256,
+    "historical_parity_mismatches": 0,
+    "current_canary_rows": 16,
+    "current_canary_mismatches": 0,
+    "production_probe_rows": 256,
+    "production_probe_mismatches": 0,
+    "exact_input_parity": true
+  },
+  "speedups": {
+    "same_host_controlled_old_vs_new": 4.368729040549128,
+    "recorded_modal_before_vs_local_cpu_after": 7.05190285087846,
+    "cross_environment_comparison_warning": true
+  },
+  "shard00_estimate_extrapolation": {
+    "qdocs": 18693,
+    "inference_units": 56079,
+    "unique_documents": 5308,
+    "scorer_rate_units_per_second": 38.2346115061,
+    "scorer_minutes": 24.445128724555882,
+    "document_handling_minutes": 5.181893399600982,
+    "selector_minutes": 1.219012361672461,
+    "durability_minutes": 3.522406855733203,
+    "model_startup_minutes": 0.59282057755,
+    "central_minutes": 34.96126191911253,
+    "low_high_minutes": [
+      29.0,
+      45.0
+    ],
+    "low_high_assumptions": "scorer +/-15%, measured document cost scaled 0.75x-1.5x, selector/durability +/-20%, startup 0.5-1.0 minutes; extrapolation only",
+    "full_32_shard_central_a10_hours": 18.646006356860017
+  },
+  "scientific_scorer_changed": false,
+  "production_authorized": false
+}

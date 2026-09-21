@@ -1,0 +1,30 @@
+{
+  "completed_timestamp": "2026-09-16T14:05:38Z",
+  "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+  "first_identity": [
+    "6",
+    "3689"
+  ],
+  "inference_unit_count": 672,
+  "last_identity": [
+    "158022",
+    "125611"
+  ],
+  "model": "Qwen/Qwen3-VL-Reranker-2B",
+  "output_sha256": "90a82615b318b3b7b6a80950be8e5c0f72e0d3654dcb5a60642c1c232b21d0aa",
+  "q_doc_count": 256,
+  "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+  "schema_version": "full_doc_qwen_shard_manifest_v1",
+  "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+  "shard_id": "00",
+  "shard_worklist_sha256": "11cc2f98e821a0e968d1c73da90c047a350f23a796827fafd4114fd26bd7cbfa",
+  "snapshot_provenance_sha256": {
+    "1_LogitScore/config.json": "73e3156450564d8a98b7e47bcf5aace0f29600828b51937da545571e84db3ff3",
+    "config.json": "82d38a8f803e38e13986fdd622114a6fec12a834adbd3cee9253d757a257d23d",
+    "model.safetensors": "466ec01961061e9d7f804b4fb1625fb6f406106cd1567e026096d4736fa9d5b9",
+    "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+    "tokenizer_config.json": "81ec7bb9530159b326c0bef1d0b6c33d392090524014ea3f0123a3c1eb9c2af5"
+  },
+  "status": "COMPLETE",
+  "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+}

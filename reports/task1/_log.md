@@ -240,3 +240,280 @@
 - Changed only the `optimized_current_canary` Modal function timeout from `3600` to `600` seconds. The `optimized_production_shard` timeout remains `3600` seconds.
 - No scorer, model, revision, prompt, selector, max-length, batching, preprocessing/cache, aggregation, or durability code changed. No GPU run, Modal run, or Volume mutation occurred.
 - Batch8 canary remains isolated under `optimized_current_canary_b8`; comparison reference is the existing old current-canary output SHA256 `fa2dca9d9753701300381955fa972b09cfcb0ff8a17dff57cc8b0e4a401b21cc`.
+
+## 2026-09-18 — BGE_RUNTIME_RESTORE_AND_ACTIVE_NORMALIZATION
+
+- Added BGE downloader support: `BAAI/bge-reranker-v2-m3` -> `models/reranker`.
+- Active downloader profiles `task1`, `task1-baseline`, `task1-top1`, and
+  `task1-bge` now select HCMUTE embedding + BGE. Historical Qwen reproduction
+  remains available explicitly as `task1-qwen`.
+- Confirmed local BGE provenance: revision
+  `953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e`; architecture
+  `XLMRobertaForSequenceClassification`; model weights SHA256
+  `d9e3e081faff1eefb84019509b2f5558fd74c1a05a2c7db22f74174fcedb5286`.
+- Fixed Task1 config alias resolution in
+  `src/udsc2026/infrastructure/reranker/config.py`: `model_path` maps to
+  `model_name_or_path` without changing Qwen historical artifacts.
+- Normalized active defaults to `models/reranker` in `configs/base.yaml`,
+  `RerankerSettings`, benchmark CLI defaults, and the GPU pipeline script.
+- Updated the historical Qwen model-card command to use explicit profile
+  `task1-qwen`; Qwen Modal scripts, checkpoints, reports, and FULLDOC outputs
+  were preserved unchanged.
+- Three bounded CPU regression smokes passed, each limited to at most 5
+  queries/25 pairs: explicit `task1_top1` config, benchmark CLI default with
+  no model argument, and generic `base.yaml` default. All resolved to BGE,
+  scores were finite, output schema was valid, and Qwen runtime was not entered.
+- Validation: Python compile PASS; PowerShell parse PASS; no full inference,
+  GPU run, Modal run, Qwen inference, training, fusion, or submission.
+- Reports: `reports/task1/bge_runtime_restore_audit.md`,
+  `reports/task1/bge_task1_bounded_smoke.md`, and
+  `reports/task1/bge_active_runtime_normalization.md`.
+
+## 2026-09-18 — QWEN_TO_BGE_HANDOFF_JOIN_AUDIT
+
+- Verified Step4 calibrated public anchor from the handoff: 1000/1000 rows,
+  SHA256 `b655fdf5444f1809e71a9f643c065e3ccf0c5e5bd1870113fd7c4e727ad1a8ff`,
+  claimed Macro Recall 0.9411 / Macro Precision 0.2022.
+- Verified the immutable FULLDOC Qwen merged artifact SHA256 equals the expected
+  `25cc4b7dfb5919a47f927c545927e775c11997790984b519e2b74a71abce0415`;
+  598,192 unique q-doc rows, 5,600 queries, 8,261 documents, no duplicates,
+  and no non-finite scores.
+- CPU-only exact identity join found **0 query-ID overlap** between the 1,000
+  Step4 public query IDs and the 5,600 Qwen query IDs. This is classified as
+  `QUERY_NAMESPACE_MISMATCH_ZERO_INTERSECTION`; TOP5/TOP10/TOP20 novelty and
+  missing-BGE workload are not computable until the namespace mapping or the
+  matching Qwen artifact is identified.
+- Created an intentionally empty worklist (0 rows) to prevent unsafe scoring:
+  `artifacts/task1/qwen_to_bge_salvage/missing_bge_score_candidates.jsonl`.
+- Created the machine-readable summary and audit:
+  `artifacts/task1/qwen_to_bge_salvage/qwen_to_bge_join_summary.json` and
+  `reports/task1/qwen_to_bge_salvage_handoff_audit.md`.
+- No BGE inference, GPU, Modal, Qwen run, label use, submission creation, or
+  source-artifact mutation occurred.
+
+## 2026-09-18 — QWEN_TEACHER_BGE_STUDENT_SALVAGE_AUDIT
+
+- Verified immutable FULLDOC Qwen teacher artifact: 5,600 F1–F4 queries,
+  598,192 unique q-doc rows, SHA256
+  `25cc4b7dfb5919a47f927c545927e775c11997790984b519e2b74a71abce0415`.
+- Public Step4 population is a separate 1,000-query namespace; query-ID
+  mapping was not attempted. No public Qwen reuse or expansion was authorized.
+- FULLDOC_TOP200_NEW candidates are outside the canonical BGE candidate pool;
+  retained BGE-score coverage was insufficient for full F1–F4 BGE-only policy
+  validation (rank ≤20: 0.3091%; ≤50: 0.2354%; ≤100: 0.2061%; ≤200: 0.1690%).
+- Decision: `NO_DEPLOYABLE_EXPANSION_POLICY`; safe deployment policy is
+  `NO_OP_KEEP_STEP4_INCUMBENT`.
+- Public expansion and missing-BGE worklists were intentionally left empty;
+  no submission was created. No GPU, Modal, Qwen inference, or BGE inference
+  ran; no source artifact was mutated.
+- Temporary analysis scripts were removed after the audit:
+  `scripts/_tmp_qwen_teacher_bge_student.py` and
+  `scripts/_tmp_probe_teacher.py`.
+- Detailed report: `reports/task1/qwen_teacher_bge_student_salvage.md`.
+
+## 2026-09-18 — QWEN_TO_BGE_MINIMAL_WORKLIST_AUDIT
+
+- CPU/read-only audit confirmed the Step4 F1–F4 union has 5,600 queries and
+  1,120,000 unique `(query_id, doc_id)` pairs; candidate counts are exactly
+  200/query, with zero duplicate identities. The real candidate field is
+  `doc_id` (not `document_id`). Fold0 overlap is zero.
+- Qwen merged SHA256 matched
+  `25cc4b7dfb5919a47f927c545927e775c11997790984b519e2b74a71abce0415`;
+  598,192 unique q-doc rows, 5,600 queries, zero duplicates/non-finite
+  scores, and query intersection `5600/5600`.
+- Offline Qwen discovery outside the Step4 union: TOP5 `25,496`, TOP10
+  `51,378`, TOP20 `103,627`. Reusable canonical F1–F4 BGE q-doc scores for
+  those new pairs: `57/96/171`; baseline slot4/5 has `463` missing pairs.
+- Generated missing-BGE worklists (including missing baseline slot4/5):
+  TOP5 `25,902`, TOP10 `51,745`, TOP20 `103,919` pairs. TOP5 is the first
+  worklist; these are bounded future inference inputs only.
+- Counted only
+  `artifacts/task1/recovery_096/baseline_093_oof/sources/f1to4_original_bge_chunk200_compact.jsonl`
+  as reusable. It contains chunk-level `bge_score`; document reuse is
+  `MAX(bge_score)` per q-doc. Its persisted artifact does not prove the exact
+  requested immutable revision/weight hash.
+- `modal_step4_ensemble.py` is not arbitrary-subset capable as written; no
+  patch was made. Public FULLDOC candidate generation is `NO`: no deterministic
+  public FULLDOC rank/worklist generator is present.
+- Artifacts: `artifacts/task1/qwen_to_bge_minimal/` and
+  `reports/task1/qwen_to_bge_minimal_scoring_plan.md`.
+- BGE inference runs: `0`; GPU runs: `0`; Modal runs: `0`; Qwen runs: `0`.
+
+## 2026-09-18 — BGE_SUBSET_SCORER_CPU_BENCHMARK
+
+- Added CPU-only scorer `scripts/evaluation/score_task1_bge_subset.py` for
+  `artifacts/task1/qwen_to_bge_minimal/top5_missing_bge.jsonl`. It preserves
+  the active BGE CrossEncoder contract: max length 512, canonical true-S2
+  top-three selection, and MAX document aggregation. It rejects Qwen paths.
+- Fixed a valid local BGE config compatibility detail: `num_labels` is omitted
+  from `models/reranker/config.json`, but `id2label` proves one output label;
+  the scorer now resolves that field without weakening the BGE guard.
+- Bounded smoke passed: 10 q-doc rows / 30 chunk pairs, finite scores, no
+  duplicate identities. Bounded benchmark passed: 100 q-doc rows / 300 chunk
+  pairs, 99 unique documents, 78.5046 s inference, 128.7815 s total wall,
+  3.8214 chunk pairs/s, and peak RSS 2,084.8 MiB.
+- Full-worklist estimate for 25,902 rows / 77,706 chunk pairs is 6.14 h
+  optimistic unique-document-scaled, 7.71 h central row-scaled preparation,
+  and 9.27 h conservative wall-linear. Recommendation:
+  `LOCAL_CPU_IMPRACTICAL` without further optimization.
+- Exact parity remains `SKIP_PARITY_UNPROVEN`; dual Step4 FT+Base score is not
+  locally available. No full worklist, GPU, Modal, Qwen, labels, Fold0, or
+  submission run occurred.
+- Report: `reports/task1/bge_subset_scorer_cpu_benchmark.md`.
+
+## 2026-09-18 — BGE_SUBSET_GPU_READINESS
+
+- Reconstructed the Step4 handoff contract: it requires both Model A
+  fine-tuned BGE-M3 (`/data/bge_ft/bge_m3_finetuned`) and Model B base BGE
+  (`/data/models/reranker`), with composite weights FT 0.40, Base 0.30, RRF
+  0.20, Support 0.10. The calibrated gate is delta >= 0.40 plus rank safety,
+  with Top 1-3 locked.
+- The fine-tuned weights/revision are absent from the repo and not
+  reconstructable from the handoff: `BGE_FT_PROVENANCE=MISSING`.
+- Local subset versus historical Step4 has explicit population/evidence,
+  MAX-versus-LogSumExp, and raw-versus-normalized score mismatches. It is
+  therefore not labeled Step4-compatible; no scientific scorer was changed.
+- Added `scripts/modal/task1_bge_subset_gpu.py` with separate FT/Base scores,
+  one-time worklist upload, direct document preparation cache, batch sizes
+  1/4/8/16/32, durable SQLite generation checkpoints, stale contract/model/
+  revision/worklist rejection, finite-score checks, and separate output
+  namespace `runtime/task1_bge_subset_top5/`.
+- Prepared one canary command only: 256 q-docs, at most 768 chunks, batch 16,
+  checkpoint every 64. Production command is documented but blocked until
+  canary PASS and FT provenance completion.
+- Python compile and offline checkpoint resume/stale-rejection tests passed.
+  GPU runs: 0. Modal runs: 0. Report:
+  `reports/task1/bge_subset_gpu_readiness.md`.
+
+## 2026-09-18 — BGE_FT_PROVENANCE_HASH_GATE
+
+- Patched `scripts/modal/task1_bge_subset_gpu.py` so Base validation still
+  requires exact Hugging Face revision
+  `953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e`, while FT validation requires
+  exact `model.safetensors` and `config.json` SHA256 values.
+- Local file-only FT preflight passed at
+  `outputs/task1/bge_ft_model/bge_m3_finetuned`: weight SHA256
+  `68bc6d16a5b898a3ff2a89d8171fc8e6b3a20d3ea7c78a15c7340b1a3f02a89c`, config
+  SHA256 `16f6e0bece36db2318601cbf5119f5f9eb616857eed068ddb73cb482f104524b`,
+  one-label BGE config.
+- FT checkpoint identity now carries artifact ID, weight SHA, and config SHA;
+  it no longer treats a fake 40-character revision as provenance.
+- Regression harness passed exact-artifact validation, mutated-expected-FT-SHA
+  rejection, wrong-Base-revision rejection, and stale-FT-checkpoint rejection.
+  Compile passed. GPU/Modal/upload/canary/production runs: 0.
+
+## 2026-09-18 — BGE_MODAL_NEW_ACCOUNT_UPLOAD_READY
+
+- Used Modal profile `nan928904` only for allowed storage operations. Created
+  exactly `udsc-p13` and `udsc-task1-modal`; no reset or destructive volume
+  action was used.
+- Built and verified exact TOP5 staging at
+  `artifacts/task1/modal_stage_bge_top5/`: 25,902 pairs, 5,594 queries,
+  6,069 unique documents, 6,069 required chunk files, zero missing/extra,
+  and 1,569,659,698 bytes. Chunks use NTFS hardlinks. Manifest includes
+  worklist/train SHA256 values.
+- Uploaded staged `runtime` to `udsc-p13`; remote train path and all 6,069
+  required chunk paths verified. Uploaded Base to `/models/reranker` and FT to
+  `/bge_ft/bge_m3_finetuned` in `udsc-task1-modal`; hidden Base revision tree
+  metadata is present.
+- Remote CLI exposes rounded weight sizes and no server-side SHA for the 2.1
+  GiB FT/Base weights, so `REMOTE_WEIGHT_HASH_RECHECK_NOT_AVAILABLE` is
+  recorded. Local exact FT SHA validation passed before upload.
+- Runner static path/batch/A10/canary gates passed. Prepared canary command
+  uses profile `nan928904`, limit 256, batch 16, checkpoint every 64; it was
+  printed but not run. GPU runs: 0; Modal inference runs: 0; production:
+  unauthorized.
+- Report: `reports/task1/bge_modal_new_account_upload_ready.md`.
+
+## 2026-09-18 — BGE_MODAL_CPU_PREFLIGHT_IMPORT_REPAIR
+
+- Fixed Modal-safe local-root resolution in
+  `scripts/modal/task1_bge_subset_gpu.py`: local Windows source paths still
+  resolve to `D:\\udsc2026`; shallow Modal source `/root/task1_bge_subset_gpu.py`
+  resolves to the sentinel `LOCAL_ROOT_SENTINEL`.
+- Audited `LOCAL_ROOT`, `DEFAULT_WORKLIST`, and `LOCAL_SELECTOR_ROOT`: they are
+  local-entrypoint/image-build only; remote runtime uses `/workspace/p13`,
+  `/data`, and the selector copied into the Modal image.
+- Added CPU-only `preflight` dispatch/function. It does not allocate GPU,
+  load CrossEncoder models, infer, or commit a Volume. L4 remains the GPU
+  declaration for the blocked canary, with runtime validation updated to L4.
+- Local `py_compile` passed; shallow-path and local-root tests passed (`2/2`).
+- Exactly one Modal CPU-only preflight ran with profile `nan928904` and passed:
+  remote source `/root/task1_bge_subset_gpu.py`, sentinel mode, 256/256 q-docs,
+  768 resolved units, 246 unique documents, zero missing documents, Base
+  revision `953dc6f6f85a1b2dbfca4c34a2796e7dde08d41e`, and FT config SHA
+  `16f6e0bece36db2318601cbf5119f5f9eb616857eed068ddb73cb482f104524b`.
+  GPU requested: NO; models loaded: NO; inference pairs: 0; Volume commit: NO.
+- Previous failed app `ap-EcLkBnDB147gjnTjqjHWcT` was classified as
+  `MODULE_IMPORT_BEFORE_INFERENCE`; cost was not inferred.
+
+## 2026-09-18 — BGE_PRODUCTION_RESUME_ORCHESTRATION_REPAIR
+
+- Inspected `udsc-p13` read-only with profile `nan928904` before any launch.
+  The runner namespace exists, but production checkpoint/result/manifest do
+  not: only the canary namespace is present. No checkpoint was downloaded,
+  deleted, reset, or modified.
+- Production checkpoint state: `checkpoint_exists=NO`,
+  `result_exists=NO`, `manifest_exists=NO`; therefore no completed q-doc or
+  durable generation was available to resume.
+- Patched only orchestration in `scripts/modal/task1_bge_subset_gpu.py`:
+  production now refuses `--limit`, checks active calls, uses exactly one
+  `run_subset.spawn(...)`, prints `app_id` and `fc-*`, and never waits with
+  `.get()`. Canary remains on the existing blocking path.
+- Added `status`/`reattach` mode using `modal.FunctionCall.from_id(fc_id).get()`;
+  it does not spawn a new call. Scoring contract, checkpoint namespace,
+  selector, aggregation, model, batch size, and max length were unchanged.
+- Local compile passed and orchestration tests passed (`5/5`). No Modal
+  function, GPU, canary, or production run was launched. Previous app
+  `ap-3fbDrlt5ImIylJzzzLnggb` remains classified as
+  `LOCAL_MODAL_CLIENT_HEARTBEAT_CONNECTION_ERROR` / local client heartbeat,
+  not model, OOM, BGE scoring, or L4 failure.
+
+## 2026-09-18 — GEMINI_WARMUP_OVERLAY_TOOL
+
+- Added `scripts/task1/gemini_warmup_overlay.py` to preserve the Step4
+  incumbent and write a separate candidate overlay. It uses the warm-up
+  labels only locally after matching; answer labels are never sent to Gemini.
+- Target question text is read from
+  `artifacts/task1/public_benchmark_adapter.jsonl`, which exactly covers the
+  1,000 IDs in the Step4 calibrated submission. The warm-up has 500 questions;
+  53 target questions have exact normalized-text matches (including one
+  cross-ID match), while 947 are eligible for Gemini semantic adjudication.
+- Added round-robin API-key rotation, retry/backoff for quota/auth/transient
+  failures, resumable match cache, strict candidate-ID/confidence validation,
+  and output/report SHA256s. Keys must be supplied through the environment or
+  interactive prompt and are never persisted.
+- Exact-only local validation passed: 1,000 output IDs preserved, 53 answers
+  changed, incumbent untouched. This is an intermediate artifact only;
+  Gemini semantic matching has not been run because no `GEMINI_API_KEYS`
+  environment variable is configured in the agent process.
+
+## 2026-09-19 — BGE_TOP5_F1_F4_CPU_VALIDATION
+
+- Verified the downloaded BGE TOP5 production JSONL against its manifest:
+  `25,902/25,902` unique q-doc rows, exact worklist SHA, finite FT/Base and
+  chunk scores, expected selector/aggregation/model/revision, and runner
+  `MAX_LENGTH=512`. Local output SHA is
+  `a72b243e9895b2973b63bc16a48c150982346cc1ba384b77ebf82453f61c5fd7`.
+- Froze a byte-identical canonical copy at
+  `artifacts/task1/qwen_to_bge_minimal/bge_top5_production_canonical.jsonl`.
+- Ran CPU-only F1–F4 policy replay over 5,600 queries. Fold0, public labels,
+  Modal, GPU, and Qwen inference were not used; F1–F4 train gold was read
+  only after prediction construction for retrospective metrics. Baseline
+  reproduced exactly:
+  recall `0.9259285714285714`, precision `0.19739285714285715`.
+- The old persisted BGE inventory was deliberately not used because its
+  provenance is `MODEL_REVISION_UNPROVEN_FOR_PERSISTED_SCORE_ARTIFACT`.
+  Therefore only 463 current BGE-scored baseline slot-4/5 anchors (437
+  queries) were eligible for a score-to-score replacement comparison; other
+  incumbent slots were conservatively locked.
+- Evaluated the requested FT/Base/Step4 policy and slot-margin/rank-safety
+  grid. No policy had positive pooled recall gain; the best changes were
+  neutral. Selected policy is `RETURN_TO_09411`; production authorization is
+  `NO`. Results are in
+  `artifacts/task1/qwen_to_bge_minimal/bge_top5_f1_f4_policy_results.json`,
+  predictions in `bge_top5_f1_f4_predictions.jsonl`, and the report is
+  `reports/task1/bge_top5_f1_f4_validation.md`.
+- CPU evaluator: `scripts/analysis/evaluate_bge_top5_f1_f4.py`;
+  compile passed. No historical artifact or incumbent submission was
+  overwritten.

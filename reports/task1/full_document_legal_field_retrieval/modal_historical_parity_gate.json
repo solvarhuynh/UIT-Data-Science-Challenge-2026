@@ -1,0 +1,12 @@
+{
+  "exact_matches": 256,
+  "gate": "PASS",
+  "max_abs_diff": 0.0,
+  "mean_abs_diff": 0.0,
+  "median_abs_diff": 0.0,
+  "nan_inf": 0,
+  "ordering_mismatches": 0,
+  "p95_abs_diff": 0.0,
+  "produced": 256,
+  "rows": 256
+}

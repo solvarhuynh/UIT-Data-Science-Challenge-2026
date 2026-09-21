@@ -1,0 +1,177 @@
+{
+  "status": "K20_FINAL_RANKING_DIAGNOSIS_COMPLETE",
+  "input_verify": {
+    "manifest_complete": true,
+    "worklist_sha_match": true,
+    "qdocs": 112000,
+    "queries": 5600,
+    "candidates_per_query": [
+      20
+    ],
+    "unique_qdocs": 112000,
+    "duplicate_qdocs": 0,
+    "scores_complete": true,
+    "nonfinite_scores": 0,
+    "max_aggregation_verified": true
+  },
+  "metadata_available": {
+    "worklist_fields": [
+      "aggregation",
+      "candidate_rank",
+      "document_id",
+      "expected_inference_units",
+      "max_length",
+      "query_id",
+      "scoring_rule",
+      "selected_chunk_ids",
+      "selector",
+      "source_ranks"
+    ],
+    "current_score_fields": [
+      "aggregation",
+      "base_chunk_scores",
+      "base_model_revision",
+      "bge_base_score",
+      "bge_ft_score",
+      "document_id",
+      "ft_artifact_id",
+      "ft_chunk_scores",
+      "ft_config_sha256",
+      "ft_model_id",
+      "ft_weight_sha256",
+      "model_id",
+      "query_id",
+      "selected_chunk_ids",
+      "selector"
+    ],
+    "retrieval_rank_fields_in_k20": [
+      "bm25",
+      "dense",
+      "knn_word"
+    ],
+    "retrieval_rank_presence_counts_in_k20": {
+      "bm25": 480237,
+      "dense": 482775,
+      "knn_word": 248934
+    },
+    "union_metadata_fields": [
+      "doc_id",
+      "rrf_score",
+      "source_ranks",
+      "source_support",
+      "union_rank"
+    ],
+    "union_source_rank_presence_counts": {
+      "dense": 12811620,
+      "bm25": 84617307,
+      "knn_word": 121490,
+      "knn_char": 120488
+    },
+    "k20_rows_missing_union_metadata": 14944,
+    "current_bge_scores": [
+      "bge_ft_score",
+      "bge_base_score",
+      "ft_chunk_scores",
+      "base_chunk_scores"
+    ],
+    "retrieval_scores_available": false,
+    "rrf_metadata_available": [
+      "union_rank",
+      "rrf_score",
+      "source_support",
+      "source_ranks"
+    ]
+  },
+  "population": {
+    "folds": [
+      "F1",
+      "F2",
+      "F3",
+      "F4"
+    ],
+    "queries": 5600,
+    "qdocs": 112000,
+    "fold0_used": false
+  },
+  "candidate_oracle_recall_at_20": 0.9664940476190477,
+  "ft_only_reproduced": {
+    "status": "VALID",
+    "policy": "FT_ONLY_CURRENT",
+    "recall": 0.8423571428571428,
+    "precision": 0.1787857142857143,
+    "fold_recall": {
+      "F1": 0.8560714285714286,
+      "F2": 0.8397619047619047,
+      "F3": 0.8363095238095238,
+      "F4": 0.8372857142857143
+    },
+    "delta_vs_ft_only": {
+      "recall": 0.0,
+      "precision": 0.0,
+      "fold_recall": {
+        "F1": 0.0,
+        "F2": 0.0,
+        "F3": 0.0,
+        "F4": 0.0
+      }
+    },
+    "queries_changed": 0,
+    "relevant_docs_gained": 0,
+    "relevant_docs_lost": 0,
+    "net_relevant_doc_change": 0,
+    "deployment_gate": false
+  },
+  "retrieval_rrf_no_label": {
+    "status": "VALID",
+    "policy": "RETRIEVAL_RRF_NO_LABEL",
+    "recall": 0.924514880952381,
+    "precision": 0.19689285714285715,
+    "fold_recall": {
+      "F1": 0.9298214285714286,
+      "F2": 0.9284523809523809,
+      "F3": 0.9217857142857143,
+      "F4": 0.918
+    },
+    "delta_vs_ft_only": {
+      "recall": 0.08215773809523819,
+      "precision": 0.01810714285714285,
+      "fold_recall": {
+        "F1": 0.07374999999999998,
+        "F2": 0.08869047619047621,
+        "F3": 0.08547619047619048,
+        "F4": 0.08071428571428574
+      }
+    },
+    "queries_changed": 5568,
+    "relevant_docs_gained": 569,
+    "relevant_docs_lost": 62,
+    "net_relevant_doc_change": 507,
+    "deployment_gate": true
+  },
+  "rrf_plus_current_bge": {
+    "policy": "RRF_PLUS_CURRENT_BGE",
+    "status": "BLOCKED",
+    "reason": "Canonical Step4 union metadata (rrf_score/source_support) is absent for some frozen K20 rows; no score or support value was invented.",
+    "missing_union_metadata_rows": 14944
+  },
+  "provenance": {
+    "gold_used_only_for_evaluation": true,
+    "fold0_used": false,
+    "label_overlay_used": false,
+    "retrieval_rerun": false,
+    "gpu_runs": 0,
+    "modal_inference_runs": 0,
+    "rrf_plus_formula": "0.40*minmax(FT)+0.30*minmax(Base)+0.20*minmax(union RRF)+0.10*(source_support/4), canonical Step4 implementation",
+    "retrieval_rrf_formula": "sum(weight/(2+rank)) for dense=.2, bge=.3, knn_word=.2, bm25=.3; canonical weighted_rrf tie-break"
+  },
+  "diagnosis": {
+    "best_policy": "RETRIEVAL_RRF_NO_LABEL",
+    "best_top5_recall": 0.924514880952381,
+    "ft_only_oracle_to_top5_gap": 0.12413690476190486,
+    "oracle_to_best_top5_gap": 0.04197916666666668,
+    "candidate_retrieval_gap": 0.03350595238095233,
+    "main_failure_source": "FINAL_RANKING",
+    "deployment_gate": "PASS",
+    "historical_baseline_recall_reference": 0.9259285714285714
+  }
+}

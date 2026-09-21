@@ -1,0 +1,65 @@
+{
+  "schema_version": "full_doc_qwen_32_shard_merge_fusion_audit_v1",
+  "status": "MERGE_COMPLETE_FUSION_BLOCKED_MISSING_ANCHOR",
+  "gpu_runs": 0,
+  "modal_runs": 0,
+  "merge": {
+    "source_root": "artifacts/task1/full_doc_qwen_optimized_outputs",
+    "manifest_root": "artifacts/task1/full_doc_qwen_optimized_manifests",
+    "shards": 32,
+    "merged_qdocs": 598192,
+    "unique_identities": 598192,
+    "duplicates": 0,
+    "nonfinite_scores": 0,
+    "manifest_validation": {
+      "all_status_complete": true,
+      "contract_sha256_values": [
+        "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e"
+      ],
+      "universe_sha256_values": [
+        "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+      ],
+      "all_output_sha_match": true,
+      "missing_manifests": []
+    },
+    "artifact": "artifacts/task1/full_doc_qwen_optimized_merged/full_doc_top200_qwen_optimized_32shards.jsonl",
+    "sha256": "25cc4b7dfb5919a47f927c545927e775c11997790984b519e2b74a71abce0415",
+    "layout_note": "shard_00..27 are under optimized_production; shard_28..31 are at the source-root level; each was present exactly once and merged in numeric order."
+  },
+  "step4_anchor": {
+    "requested_anchor": "Step4 0.9411",
+    "status": "NOT_FOUND_LOCALLY",
+    "searched_repo_and_git_refs": true,
+    "required_missing_inputs": [
+      "canonical Step4 final_top5 for F1-F4 and/or public population",
+      "Step4 candidate union Top50 with provenance",
+      "Step4 BGE-FT/BGE-Base/RRF/composite features or swap log",
+      "validation report establishing the 0.9411 anchor"
+    ],
+    "nearby_artifacts_not_equivalent": [
+      "reports/task1/workflow_a/step4_workflow_a_finalization.md (Workflow-A P5; not a 0.9411 final-top5 artifact)",
+      "artifacts/task1/recovery_096/final_public_v3/public_v3a_predictions.json (public V3A artifact; 1000 queries; not Step4 0.9411)",
+      "reports/task1/workflow_b/tv2/b2a/reports/b2a_qwen3vl2b_auxiliary_fusion_crossfit.json (BLOCKED; exact comparator/join not proven)",
+      "reports/task1/final_task1_scientific_closeout.md (preserve incumbent ~0.9391; Qwen auxiliary has no valid positive result)"
+    ]
+  },
+  "fusion": {
+    "policies_A_to_D_evaluated": false,
+    "reason": "Cannot label-safe evaluate or select a fusion without the claimed Step4 anchor and its frozen candidate/provenance artifacts; synthesizing an anchor from another policy would violate the requested contract.",
+    "selection_labels": "none used for this blocked decision",
+    "best_validated_policy": "existing incumbent preserved; no new fusion authorized",
+    "recall": null,
+    "precision": null,
+    "delta_vs_anchor": null,
+    "query_changes": null,
+    "add_drop_counts": null,
+    "fold_by_fold_F1_F4": null,
+    "submission_created": false
+  },
+  "incumbent": {
+    "path": "artifacts/task1/submission.zip",
+    "sha256": "4f860cb42a5ee681894cbd96b98a27bd2ad564100f8d90d058b23826fcee5a1a",
+    "preserved": true,
+    "observed_score_in_closeout": "~0.9391"
+  }
+}
