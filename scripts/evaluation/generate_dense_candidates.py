@@ -25,12 +25,14 @@ from udsc2026.evaluation import (  # noqa: E402
     write_run_manifest,
 )
 from udsc2026.evaluation.models import PredictionSample  # noqa: E402
+from udsc2026.contracts.retrieval import RetrievalHit  # noqa: E402
 from udsc2026.infrastructure.config import load_config  # noqa: E402
 from udsc2026.infrastructure.embedding.bkai_client import (  # noqa: E402
     EmbeddingClient,
 )
 from udsc2026.infrastructure.vector_db.factory import (  # noqa: E402
     get_vector_db_adapter,
+    resolve_vector_db_config,
 )
 
 
@@ -59,6 +61,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Label-free public-official.json; use this for production public candidates.",
     )
+    question_group.add_argument(
+        "--private-official",
+        type=Path,
+        help="Label-free private-official.json; use this for private retrieval only.",
+    )
     parser.add_argument("--config-env", default="gpu")
     parser.add_argument("--candidate-k", type=_positive_int, default=50)
     parser.add_argument("--query-batch-size", type=_positive_int, default=64)
@@ -84,6 +91,21 @@ def build_parser() -> argparse.ArgumentParser:
         "--manifest",
         type=Path,
         default=Path("artifacts/tv2/production/dense_run_manifest.json"),
+    )
+    parser.add_argument(
+        "--pv1-index",
+        type=Path,
+        help="Explicit PV1 IndexFlatIP file; enables mapping-backed PV1 retrieval.",
+    )
+    parser.add_argument(
+        "--pv1-mapping",
+        type=Path,
+        help="Explicit PV1 row-to-chunk JSONL mapping.",
+    )
+    parser.add_argument(
+        "--pv1-chunks-dir",
+        type=Path,
+        help="Canonical PV1 chunks directory used to materialize selected hits.",
     )
     return parser
 
@@ -144,23 +166,199 @@ def _write_prediction_batch(stream: Any, predictions: list[PredictionSample]) ->
         )
 
 
+def _run_pv1_mapping_backend(
+    args: argparse.Namespace,
+    samples: list[tuple[str, str]],
+) -> list[Path]:
+    """Run the same dense search contract against an explicit PV1 index/mapping."""
+    if not (args.pv1_index and args.pv1_mapping and args.pv1_chunks_dir):
+        raise ValueError("--pv1-index, --pv1-mapping and --pv1-chunks-dir are required together")
+    if len(samples) != 2080 or len({question_id for question_id, _ in samples}) != 2080:
+        raise ValueError("PV1 Private retrieval requires exactly 2080 unique queries")
+    if any(not question.strip() for _, question in samples):
+        raise ValueError("Private input contains a missing question")
+
+    import faiss
+    import numpy as np
+
+    pv1_manifest_path = Path("data/processed_pv1/metadata/pv1_dense_faiss_manifest.json")
+    pv1_manifest = json.loads(pv1_manifest_path.read_text(encoding="utf-8"))
+    corpus_manifest = json.loads(Path("data/processed_pv1/metadata/pv1_corpus_manifest.json").read_text(encoding="utf-8"))
+    if pv1_manifest.get("dense_faiss_gate") != "PASS":
+        raise ValueError("PV1 dense/FAISS manifest is not PASS")
+    index = faiss.read_index(str(args.pv1_index))
+    if type(index).__name__ != "IndexFlatIP" or index.d != 768 or index.ntotal != 1_272_971:
+        raise ValueError(
+            f"unexpected PV1 FAISS contract: type={type(index).__name__} d={index.d} ntotal={index.ntotal}"
+        )
+
+    row_to_item: list[tuple[str, str]] = []
+    chunk_ids: set[str] = set()
+    with args.pv1_mapping.open(encoding="utf-8") as stream:
+        for expected_row, line in enumerate(stream):
+            if not line.strip():
+                continue
+            item = json.loads(line)
+            if int(item["row"]) != expected_row:
+                raise ValueError("PV1 mapping row sequence is not contiguous")
+            chunk_id = str(item["chunk_id"])
+            if chunk_id in chunk_ids:
+                raise ValueError(f"duplicate PV1 mapping chunk_id: {chunk_id}")
+            chunk_ids.add(chunk_id)
+            row_to_item.append((chunk_id, str(item["document_id"])))
+    if len(row_to_item) != index.ntotal or len(chunk_ids) != index.ntotal:
+        raise ValueError("PV1 mapping does not exactly cover FAISS rows")
+
+    config = load_config(args.config_env)
+    embedding = dict(config.get("embedding", {}))
+    model_path = str(embedding.get("model_path", "./models/dek21-v2"))
+    if embedding.get("model_id") != "huyydangg/DEk21_hcmute_embedding_v2":
+        raise ValueError("PV1 query embedding model_id mismatch")
+    if int(embedding.get("max_length", 256)) != 256 or int(embedding.get("output_dimension", 768)) != 768:
+        raise ValueError("PV1 query embedding dimension/max_length mismatch")
+    if not bool(embedding.get("normalize_embeddings", True)):
+        raise ValueError("PV1 query embedding normalization must be enabled")
+    if str(embedding.get("device", "cpu")).casefold() != "cpu":
+        raise ValueError("PV1 retrieval is CPU-only")
+    embedder = EmbeddingClient(
+        model_path=model_path,
+        device="cpu",
+        batch_size=int(embedding.get("batch_size", 32)),
+        max_length=256,
+        normalize_embeddings=True,
+        output_dimension=768,
+        window_long_texts=False,
+    )
+
+    started = time.perf_counter()
+    search_rows: list[list[tuple[int, float]]] = []
+    for offset in range(0, len(samples), args.query_batch_size):
+        batch = samples[offset : offset + args.query_batch_size]
+        vectors = np.asarray(
+            embedder.embed_documents([question for _, question in batch], batch_size=args.query_batch_size),
+            dtype="float32",
+        )
+        scores, rows = index.search(vectors, args.candidate_k)
+        for query_scores, query_rows in zip(scores, rows):
+            selected: list[tuple[int, float]] = []
+            seen_docs: set[str] = set()
+            for score, row in zip(query_scores, query_rows):
+                if int(row) < 0:
+                    continue
+                document_id = row_to_item[int(row)][1]
+                if document_id in seen_docs:
+                    continue
+                seen_docs.add(document_id)
+                selected.append((int(row), float(score)))
+            search_rows.append(selected)
+        print(f"PV1_DENSE_PROGRESS completed={len(search_rows)}/{len(samples)}", flush=True)
+
+    selected_chunk_ids = {row_to_item[row][0] for hits in search_rows for row, _ in hits}
+    selected_records: dict[str, dict[str, Any]] = {}
+    for path in sorted(args.pv1_chunks_dir.glob("*.jsonl")):
+        with path.open(encoding="utf-8") as stream:
+            for line in stream:
+                if not line.strip():
+                    continue
+                record = json.loads(line)
+                chunk_id = str(record["chunk_id"])
+                if chunk_id in selected_chunk_ids:
+                    selected_records[chunk_id] = record
+    if set(selected_records) != selected_chunk_ids:
+        raise ValueError("PV1 selected chunk records are incomplete")
+
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    with args.output.open("w", encoding="utf-8", newline="\n") as stream:
+        for (question_id, _), hits in zip(samples, search_rows):
+            materialized: list[RetrievalHit] = []
+            for rank, (row, score) in enumerate(hits, start=1):
+                record = selected_records[row_to_item[row][0]]
+                materialized.append(
+                    RetrievalHit(
+                        chunk_id=str(record["chunk_id"]),
+                        parent_id=record.get("parent_id"),
+                        doc_id=str(record["doc_id"]),
+                        text=str(record["text"]),
+                        score=score,
+                        dense_score=score,
+                        final_score=score,
+                        source=record.get("source"),
+                        law_name=record.get("law_name"),
+                        article=record.get("article"),
+                        clause=record.get("clause"),
+                        metadata=dict(record.get("metadata") or {}),
+                        rank=rank,
+                    )
+                )
+            _write_prediction_batch(stream, [PredictionSample(question_id=question_id, hits=materialized)])
+
+    output_sha = _sha256(args.output)
+    manifest = {
+        "schema_version": 2,
+        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "run_mode": "CPU",
+        "question_source": str(args.private_official),
+        "question_source_sha256": _sha256(args.private_official),
+        "question_source_type": "private_official",
+        "question_count": len(samples),
+        "candidate_k": args.candidate_k,
+        "output": str(args.output),
+        "output_sha256": output_sha,
+        "elapsed_seconds": time.perf_counter() - started,
+        "query_embeddings": "RECOMPUTED_CPU",
+        "query_embedding_contract": {
+            "model_id": embedding.get("model_id"),
+            "model_path": model_path,
+            "pooling": "mean",
+            "normalization": True,
+            "max_length": 256,
+            "dimension": 768,
+        },
+        "pv1_corpus_fingerprint": pv1_manifest["pv1_corpus_fingerprint"],
+        "faiss_sha256": _sha256(args.pv1_index),
+        "mapping_sha256": _sha256(args.pv1_mapping),
+        "faiss_index_type": "IndexFlatIP",
+        "faiss_dimension": index.d,
+        "faiss_ntotal": index.ntotal,
+        "mapping_rows": len(row_to_item),
+        "mapping_unique_chunk_ids": len(chunk_ids),
+        "output_queries": len(search_rows),
+        "zero_candidate_queries": sum(not hits for hits in search_rows),
+        "duplicate_documents": 0,
+        "invalid_documents": 0,
+        "repaired_documents_seen": len(
+            {row_to_item[row][1] for hits in search_rows for row, _ in hits}
+            & set(corpus_manifest.get("changed_document_ids", []))
+        ),
+        "complete": len(search_rows) == len(samples),
+    }
+    write_run_manifest(manifest, args.manifest)
+    return [args.output, args.manifest]
+
+
 def run(args: argparse.Namespace) -> list[Path]:
-    question_source = args.legal_ir_train or args.benchmark or args.public_official
+    question_source = (
+        args.legal_ir_train
+        or args.benchmark
+        or args.public_official
+        or args.private_official
+    )
     if question_source is None:
         question_source = Path("data/processed_v3/benchmarks/synthetic_qa.jsonl")
     if args.legal_ir_train is not None:
         samples = [
             (sample.id, sample.question) for sample in load_warmup(question_source)
         ]
-    elif args.public_official is not None:
-        payload = json.loads(args.public_official.read_text(encoding="utf-8-sig"))
+    elif args.public_official is not None or args.private_official is not None:
+        official_path = args.public_official or args.private_official
+        payload = json.loads(official_path.read_text(encoding="utf-8-sig"))
         if not isinstance(payload, dict):
-            raise ValueError("public-official questions must be an object")
+            raise ValueError("official question input must be an object")
         samples = []
         for question_id, record in payload.items():
             if not isinstance(record, dict) or not isinstance(record.get("question"), str):
-                raise ValueError(f"invalid public question {question_id!r}")
-            # Public answers are intentionally never accessed.
+                raise ValueError(f"invalid official question {question_id!r}")
+            # Official answers are intentionally never accessed.
             samples.append((str(question_id), str(record["question"])))
     else:
         samples = [
@@ -171,6 +369,8 @@ def run(args: argparse.Namespace) -> list[Path]:
         samples = samples[: args.limit]
     if not samples:
         raise ValueError("benchmark selection must not be empty")
+    if any(value is not None for value in (args.pv1_index, args.pv1_mapping, args.pv1_chunks_dir)):
+        return _run_pv1_mapping_backend(args, samples)
     completed_ids = _read_completed_question_ids(args.output)
     selected_ids = {question_id for question_id, _ in samples}
     unexpected_ids = completed_ids - selected_ids
@@ -273,7 +473,7 @@ def run(args: argparse.Namespace) -> list[Path]:
                     del batch_predictions, ranked_hits, hits, vectors, batch
             finally:
                 progress.close()
-    vector_settings = dict(config.get("vector_db", {}))
+    vector_settings = resolve_vector_db_config(config)
     index_manifest = (
         Path(str(vector_settings["faiss_index_path"]))
         / str(vector_settings["collection_name"])
@@ -288,7 +488,17 @@ def run(args: argparse.Namespace) -> list[Path]:
         "question_source": str(question_source),
         "question_source_sha256": _sha256(question_source),
         "question_source_type": (
-            "legal_ir_train" if args.legal_ir_train is not None else ("public_official" if args.public_official is not None else "benchmark")
+            "legal_ir_train"
+            if args.legal_ir_train is not None
+            else (
+                "public_official"
+                if args.public_official is not None
+                else (
+                    "private_official"
+                    if args.private_official is not None
+                    else "benchmark"
+                )
+            )
         ),
         "question_count": len(samples),
         "candidate_k": args.candidate_k,
