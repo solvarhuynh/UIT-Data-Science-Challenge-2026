@@ -232,3 +232,5 @@ private_task1/experiments/
 private_task1/rerank/worklists/
 private_task1/rerank/scores/
 private_task1/submissions/
+
+.tmp_pv1_bge_ft/
