@@ -9,6 +9,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import time
 from collections import Counter
 from pathlib import Path
@@ -38,7 +39,11 @@ MANIFEST_ROOT = OUTPUT_ROOT / "manifests"
 LOG_ROOT = OUTPUT_ROOT / "logs"
 FINAL_ROOT = OUTPUT_ROOT / "final"
 
-LOCAL_ROOT = Path(__file__).resolve().parents[2]
+# The source is a nested repository file locally but Modal 1.x imports the
+# packaged runner directly from /root.  The local-root paths are deployment
+# inputs only; use an inert non-existent root during remote re-import.
+_SOURCE_PATH = Path(__file__).resolve()
+LOCAL_ROOT = _SOURCE_PATH.parents[2] if len(_SOURCE_PATH.parents) >= 3 else Path("/__modal_local_source_unavailable__")
 LOCAL_REPORT_ROOT = LOCAL_ROOT / "reports/task1/full_document_legal_field_retrieval"
 LOCAL_WORKLIST_ROOT = LOCAL_REPORT_ROOT / "full_doc_top200_qwen_worklists"
 LOCAL_UNIVERSE_MANIFEST = LOCAL_REPORT_ROOT / "full_doc_top200_qwen_future_universe_manifest.json"
@@ -60,6 +65,7 @@ INFERENCE_BATCH_SIZE = 1
 MAX_LENGTH = 8192
 DTYPE = "torch.bfloat16"
 SHARD_COUNT = 32
+AUTHORITATIVE_MANIFEST_SHA256 = "1f26dde0bb3a03c5482a0c2d03a1a1d47e40ca53ac2d8410bb9c6022811e5722"
 
 
 if LOCAL_WORKLIST_ROOT.is_dir() and LOCAL_UNIVERSE_MANIFEST.is_file():
@@ -107,6 +113,32 @@ def frozen_universe() -> dict[str, Any]:
     if int(value.get("q_doc_count", -1)) != 598192 or int(value.get("inference_unit_count", -1)) != 1794571:
         raise RuntimeError("future universe cardinality mismatch")
     return value
+
+
+def validate_production_shard(shard_id: str, universe: dict[str, Any]) -> tuple[list[dict[str, Any]], str]:
+    if not isinstance(shard_id, str) or not re.fullmatch(r"(?:0[0-9]|[12][0-9]|3[01])", shard_id):
+        raise ValueError("shard_id must be a zero-padded value from 00 through 31")
+    if sha256_file(REMOTE_UNIVERSE_MANIFEST) != AUTHORITATIVE_MANIFEST_SHA256:
+        raise RuntimeError("authoritative production manifest SHA mismatch")
+    entry = next((item for item in universe.get("shards", []) if int(item["shard_id"]) == int(shard_id)), None)
+    if entry is None:
+        raise RuntimeError(f"production shard missing from manifest: {shard_id}")
+    source_path = REMOTE_WORKLIST_ROOT / f"shard_{shard_id}.jsonl"
+    worklist_sha = sha256_file(source_path)
+    if worklist_sha != str(entry["worklist_sha256"]):
+        raise RuntimeError(f"production worklist SHA mismatch: {shard_id}")
+    rows = list(jsonl(source_path))
+    identities = [(str(row["query_id"]), str(row["document_id"])) for row in rows]
+    if len(rows) != int(entry["q_doc_count"]) or len(identities) != len(set(identities)):
+        raise RuntimeError(f"production shard q-doc coverage mismatch: {shard_id}")
+    units = sum(int(row["expected_inference_units"]) for row in rows)
+    if units != int(entry["inference_unit_count"]):
+        raise RuntimeError(f"production shard unit coverage mismatch: {shard_id}")
+    if identities and [identities[0][0], identities[0][1]] != [str(x) for x in entry["first_identity"]]:
+        raise RuntimeError(f"production shard first identity mismatch: {shard_id}")
+    if identities and [identities[-1][0], identities[-1][1]] != [str(x) for x in entry["last_identity"]]:
+        raise RuntimeError(f"production shard last identity mismatch: {shard_id}")
+    return rows, worklist_sha
 
 
 def contract_values(universe: dict[str, Any]) -> dict[str, Any]:
@@ -164,6 +196,43 @@ def selected_chunks(query: str, doc: str, question: str, expected_units: int, ex
     return selected
 
 
+def frozen_parity_chunks(query: str, doc: str, frozen_ids: list[str]) -> list[dict[str, Any]]:
+    """Resolve, in frozen order, the historical scorer inputs for parity only."""
+    if not 1 <= len(frozen_ids) <= 3 or len(frozen_ids) != len(set(frozen_ids)):
+        raise RuntimeError(f"invalid frozen parity IDs: {query}/{doc}")
+    by_id = {str(item.get("chunk_id", "")): item for item in load_document_rows(doc)}
+    selected: list[dict[str, Any]] = []
+    for chunk_id in frozen_ids:
+        item = by_id.get(str(chunk_id))
+        text = str(item.get("text", "")) if item is not None else ""
+        if item is None or not str(chunk_id).startswith(doc + "_") or not text.strip():
+            raise RuntimeError(f"unresolvable frozen parity chunk: {query}/{doc}/{chunk_id}")
+        selected.append({"chunk_id": str(chunk_id), "raw_chunk_text": text})
+    return selected
+
+
+def validated_questions(query_ids: set[str]) -> dict[str, str]:
+    questions = historical.load_questions(query_ids)
+    for query, question in questions.items():
+        if not isinstance(question, str) or not question.strip() or question == str(query):
+            raise RuntimeError(f"query-text tripwire failure: {query}")
+    return questions
+
+
+def validate_historical_parity_inputs(rows: list[dict[str, Any]]) -> dict[str, str]:
+    if len(rows) != 256 or sorted(Counter(len(row["selected_chunk_ids"]) for row in rows).items()) != [(1, 32), (2, 32), (3, 192)]:
+        raise RuntimeError("historical parity sample contract mismatch")
+    questions = validated_questions({str(row["query_id"]) for row in rows})
+    units = 0
+    for row in rows:
+        frozen_ids = list(row["selected_chunk_ids"])
+        frozen_parity_chunks(str(row["query_id"]), str(row["document_id"]), frozen_ids)
+        units += len(frozen_ids)
+    if units != 672:
+        raise RuntimeError(f"historical parity inference-unit mismatch: {units}")
+    return questions
+
+
 def tripwire(path: Path, row: dict[str, Any], question: str, chunks: list[dict[str, Any]]) -> None:
     fsync_json(path, {
         "query_id": row["query_id"],
@@ -177,18 +246,15 @@ def tripwire(path: Path, row: dict[str, Any], question: str, chunks: list[dict[s
     volume.commit()
 
 
-def model_bundle(query_ids: set[str]) -> tuple[dict[str, str], Any, Any, Any, dict[str, str]]:
+def model_bundle(query_ids: set[str], questions: dict[str, str] | None = None) -> tuple[dict[str, str], Any, Any, Any, dict[str, str], str, str]:
     import torch
     import transformers
-    questions = historical.load_questions(query_ids)
-    for query, question in questions.items():
-        if not isinstance(question, str) or not question.strip() or question == str(query):
-            raise RuntimeError(f"query-text tripwire failure: {query}")
+    questions = questions if questions is not None else validated_questions(query_ids)
     model_path, revision, provenance, yes, no = historical.download_locked_snapshot()
     if revision != MODEL_REVISION:
         raise RuntimeError("resolved model revision mismatch")
-    processor, model, _, _, _, _ = historical.load_model(torch, transformers, model_path, yes, no)
-    return questions, processor, model, torch, provenance
+    processor, model, _, gpu_name, _, _ = historical.load_model(torch, transformers, model_path, yes, no)
+    return questions, processor, model, torch, provenance, str(model_path), str(gpu_name)
 
 
 def identity(kind: str, universe: dict[str, Any], worklist_sha: str, shard_id: str) -> dict[str, str]:
@@ -201,7 +267,7 @@ def identity(kind: str, universe: dict[str, Any], worklist_sha: str, shard_id: s
     }
 
 
-def score_rows(kind: str, shard_id: str, rows: list[dict[str, Any]], complete: bool) -> dict[str, Any]:
+def score_rows(kind: str, shard_id: str, rows: list[dict[str, Any]], complete: bool, validated_parity_questions: dict[str, str] | None = None) -> dict[str, Any]:
     volume.reload()
     verify_scientific_source(); universe = frozen_universe()
     source_path = REMOTE_PARITY_SAMPLE if kind == "historical_parity" else REMOTE_CURRENT_SAMPLE if kind == "current_canary" else REMOTE_WORKLIST_ROOT / f"shard_{int(shard_id):02d}.jsonl"
@@ -209,7 +275,7 @@ def score_rows(kind: str, shard_id: str, rows: list[dict[str, Any]], complete: b
     store_path = CHECKPOINT_ROOT / kind / f"shard_{shard_id}.sqlite3"
     store = DurableShardStore(store_path, identity(kind, universe, worklist_sha, shard_id))
     completed_before = store.completed_identities()
-    questions, processor, model, torch, provenance = model_bundle({str(row["query_id"]) for row in rows})
+    questions, processor, model, torch, provenance, model_path, gpu_name = model_bundle({str(row["query_id"]) for row in rows}, validated_parity_questions)
     buffer: list[tuple[str, str, list[tuple[str, float]]]] = []
     buffer_chunks = 0; scored_now = 0; first_pending = True
     expected: dict[tuple[str, str], int] = {}
@@ -222,7 +288,7 @@ def score_rows(kind: str, shard_id: str, rows: list[dict[str, Any]], complete: b
         question = questions[query]
         if question != historical.load_questions({query})[query]:
             raise RuntimeError(f"canonical query equality failure: {query}")
-        chunks = selected_chunks(query, doc, question, expected_units, row.get("selected_chunk_ids"))
+        chunks = frozen_parity_chunks(query, doc, list(row["selected_chunk_ids"])) if kind == "historical_parity" else selected_chunks(query, doc, question, expected_units, row.get("selected_chunk_ids"))
         if first_pending:
             tripwire(LOG_ROOT / kind / f"shard_{shard_id}_first_qdoc.json", row, question, chunks)
             first_pending = False
@@ -241,6 +307,8 @@ def score_rows(kind: str, shard_id: str, rows: list[dict[str, Any]], complete: b
         "completed_before": len(completed_before), "scored_now": scored_now,
         "completed_after": len(store.completed_identities()), "contract_sha256": contract_sha256(universe),
         "universe_sha256": universe["universe_sha256"], "worklist_sha256": worklist_sha,
+        "checkpoint": str(store_path), "model_cache_path": model_path, "actual_gpu": gpu_name,
+        "resolved_revision": MODEL_REVISION,
     }
     if complete:
         output_rows = store.validate_complete(expected)
@@ -260,16 +328,15 @@ def score_rows(kind: str, shard_id: str, rows: list[dict[str, Any]], complete: b
         }
         manifest_path = MANIFEST_ROOT / kind / f"shard_{shard_id}.json"
         fsync_json(manifest_path, manifest); volume.commit()
-        result.update({"output_sha256": output_sha, "manifest": str(manifest_path), "status": "COMPLETE"})
+        result.update({"output": str(output_path), "output_sha256": output_sha, "manifest": str(manifest_path), "status": "COMPLETE"})
     store.close()
     return result
 
 
 def parity_remote() -> dict[str, Any]:
     rows = list(jsonl(REMOTE_PARITY_SAMPLE))
-    if len(rows) != 256 or sorted(Counter(len(row["selected_chunk_ids"]) for row in rows).items()) != [(1, 32), (2, 32), (3, 192)]:
-        raise RuntimeError("historical parity sample contract mismatch")
-    result = score_rows("historical_parity", "00", rows, complete=True)
+    questions = validate_historical_parity_inputs(rows)
+    result = score_rows("historical_parity", "00", rows, complete=True, validated_parity_questions=questions)
     fresh = {(row["query_id"], row["document_id"]): row["score"] for row in jsonl(Path(result["manifest"]).parents[2] / "shards/historical_parity/shard_00.jsonl")}
     deltas = [abs(fresh[(row["query_id"], row["document_id"])] - float(row["expected_document_score"])) for row in rows]
     exact = sum(delta == 0.0 for delta in deltas)
@@ -283,7 +350,8 @@ def parity_remote() -> dict[str, Any]:
                 historical_order = math.copysign(1, float(left["expected_document_score"]) - float(right["expected_document_score"])) if left["expected_document_score"] != right["expected_document_score"] else 0
                 fresh_order = math.copysign(1, fresh[(left["query_id"], left["document_id"])] - fresh[(right["query_id"], right["document_id"])]) if fresh[(left["query_id"], left["document_id"])] != fresh[(right["query_id"], right["document_id"])] else 0
                 contradictions += historical_order != fresh_order
-    parity = {"rows": len(rows), "produced": len(fresh), "exact_matches": exact, "max_abs_diff": max(deltas), "mean_abs_diff": sum(deltas)/len(deltas), "median_abs_diff": sorted(deltas)[len(deltas)//2], "nan_inf": 0, "ordering_mismatches": contradictions}
+    ordered_deltas = sorted(deltas)
+    parity = {"rows": len(rows), "produced": len(fresh), "exact_matches": exact, "max_abs_diff": max(deltas), "mean_abs_diff": sum(deltas)/len(deltas), "median_abs_diff": ordered_deltas[len(ordered_deltas)//2], "p95_abs_diff": ordered_deltas[math.ceil(0.95 * len(ordered_deltas)) - 1], "nan_inf": 0, "ordering_mismatches": contradictions}
     parity["gate"] = "PASS" if len(fresh) == 256 and max(deltas) <= 1e-4 and contradictions == 0 else "FAIL"
     fsync_json(MANIFEST_ROOT / "historical_parity_result.json", parity); volume.commit()
     return {**result, "parity": parity}
@@ -302,6 +370,18 @@ def current_part2_remote() -> dict[str, Any]:
     result["gate"] = "PASS" if result["resume_tested"] else "FAIL"
     fsync_json(MANIFEST_ROOT / "current_canary_result.json", result); volume.commit()
     return result
+
+
+def production_shard_remote(shard_id: str) -> dict[str, Any]:
+    volume.reload(); verify_scientific_source(); universe = frozen_universe()
+    rows, worklist_sha = validate_production_shard(shard_id, universe)
+    print(json.dumps({
+        "kind": "production", "shard_id": shard_id, "expected": len(rows),
+        "expected_units": sum(int(row["expected_inference_units"]) for row in rows),
+        "universe_sha256": universe["universe_sha256"], "worklist_sha256": worklist_sha,
+        "contract_sha256": contract_sha256(universe),
+    }, sort_keys=True), flush=True)
+    return score_rows("production", shard_id, rows, complete=True)
 
 
 def volume_test_write_remote() -> dict[str, Any]:
@@ -353,20 +433,26 @@ def current_part1() -> dict[str, Any]: return current_part1_remote()
 @app.function(image=image, gpu="A10", volumes={str(MOUNT): volume}, timeout=60*60, cpu=8, memory=32768, retries=0)
 def current_part2() -> dict[str, Any]: return current_part2_remote()
 
-@app.function(image=modal.Image.debian_slim(python_version="3.12"), volumes={str(MOUNT): volume}, timeout=10*60, retries=0)
+@app.function(image=image, gpu="A10", volumes={str(MOUNT): volume}, timeout=60*60, cpu=8, memory=32768, retries=0)
+def production_shard(shard_id: str) -> dict[str, Any]: return production_shard_remote(shard_id)
+
+@app.function(image=image, volumes={str(MOUNT): volume}, timeout=10*60, cpu=1, retries=0)
 def volume_test_write() -> dict[str, Any]: return volume_test_write_remote()
 
-@app.function(image=modal.Image.debian_slim(python_version="3.12"), volumes={str(MOUNT): volume}, timeout=10*60, retries=0)
+@app.function(image=image, volumes={str(MOUNT): volume}, timeout=10*60, cpu=1, retries=0)
 def volume_test_verify(expected_sha256: str) -> dict[str, Any]: return volume_test_verify_remote(expected_sha256)
 
 
 @app.local_entrypoint()
-def main(mode: str = "volume-test", expected_sha256: str = "") -> None:
+def main(mode: str = "volume-test", expected_sha256: str = "", shard_id: str = "") -> str:
     if mode == "import-smoke": result = import_smoke_remote.remote()
     elif mode == "volume-test-write": result = volume_test_write.remote()
     elif mode == "volume-test-verify": result = volume_test_verify.remote(expected_sha256)
     elif mode == "historical-parity": result = historical_parity.remote()
     elif mode == "current-part1": result = current_part1.remote()
     elif mode == "current-part2": result = current_part2.remote()
-    else: raise ValueError("mode must be import-smoke, volume-test-write, volume-test-verify, historical-parity, current-part1, or current-part2")
-    print("FULLDOC_TOP200_RESULT=" + json.dumps(result, sort_keys=True), flush=True)
+    elif mode == "production-shard": result = production_shard.remote(shard_id)
+    else: raise ValueError("mode must be import-smoke, volume-test-write, volume-test-verify, historical-parity, current-part1, current-part2, or production-shard")
+    serialized = result if isinstance(result, str) else json.dumps(result, sort_keys=True)
+    print("FULLDOC_TOP200_RESULT=" + serialized, flush=True)
+    return serialized
