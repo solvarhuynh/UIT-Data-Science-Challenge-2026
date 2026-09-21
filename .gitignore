@@ -124,6 +124,7 @@ celerybeat.pid
 # Environments
 .env
 .envrc
+scripts/task1/gemini_api_keys.local.txt
 .venv
 env/
 venv/
@@ -221,4 +222,13 @@ reports/task1/workflow_b/tv2/b2a/manifests/b2a_qwen_true_s2_top3_worklist.jsonl
 reports/task1/full_document_legal_field_retrieval/full_document_legal_field_retrieval_candidates.jsonl
 reports/task1/workflow_c/shared/c2/execution/.worker_jobs/
 .cline_pytest_tmp/
-task1_large_files.zip
+task1_large_files.zip
+
+
+# Private Task1: large generated data; keep manifests/state/logs tracked.
+private_task1/retrieval/candidates/
+private_task1/retrieval/preflight/
+private_task1/experiments/
+private_task1/rerank/worklists/
+private_task1/rerank/scores/
+private_task1/submissions/

@@ -29,6 +29,11 @@ MODELS = (
         Path("models/qwen3-vl-reranker-2b"),
     ),
     ModelSpec(
+        "bge_reranker",
+        "BAAI/bge-reranker-v2-m3",
+        Path("models/reranker"),
+    ),
+    ModelSpec(
         "llm",
         "thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2",
         Path("models/qwen3-legal"),
@@ -52,15 +57,25 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--profile",
-        choices=("task1", "task1-baseline", "task1-top1", "all"),
+        choices=(
+            "task1",
+            "task1-baseline",
+            "task1-top1",
+            "task1-bge",
+            "task1-qwen",
+            "all",
+        ),
         default="all",
-        help="Download profile (task1 profiles contain only HCMUTE + Qwen3-VL reranker).",
+        help=(
+            "Download profile; active task1 profiles select HCMUTE + BGE. "
+            "Use task1-qwen only for historical Qwen reproduction."
+        ),
     )
     parser.add_argument(
         "--only",
         nargs="+",
         choices=[spec.key for spec in MODELS],
-        help="Download only selected model roles (default: all three).",
+        help="Download only selected model roles (default: all available models).",
     )
     parser.add_argument(
         "--revision",
@@ -78,8 +93,14 @@ def main() -> int:
         raise SystemExit(
             "Missing huggingface-hub; run `python -m pip install -e .[gpu]` first."
         ) from exc
-    task1_keys = {"embedding", "reranker"}
-    profile_keys = task1_keys if args.profile != "all" else {spec.key for spec in MODELS}
+    task1_keys = {"embedding", "bge_reranker"}
+    task1_qwen_keys = {"embedding", "reranker"}
+    if args.profile == "all":
+        profile_keys = {spec.key for spec in MODELS}
+    elif args.profile == "task1-qwen":
+        profile_keys = task1_qwen_keys
+    else:
+        profile_keys = task1_keys
     selected = set(args.only or profile_keys)
     invalid = selected - profile_keys if args.profile != "all" else set()
     if invalid:

@@ -38,7 +38,7 @@ class RerankerSettings(BaseModel):
 
     enabled: bool = True
     model_name_or_path: str = Field(
-        default="./models/qwen3-vl-reranker-2b",
+        default="./models/reranker",
         min_length=1,
     )
     device: str | None = "cpu"
@@ -100,6 +100,15 @@ def load_reranker_settings(
         raise ValueError("Configuration field 'reranker' must be a mapping")
 
     values: dict[str, Any] = dict(reranker_config)
+    # Task1 selection configs use the domain-facing ``name``/``model_path``
+    # keys, while the shared runtime settings use the client-facing
+    # ``model_name_or_path`` key.  Normalize only these aliases so an explicit
+    # Task1 config is honored without changing the historical defaults.
+    values.pop("name", None)
+    if "model_name_or_path" not in values and "model_path" in values:
+        values["model_name_or_path"] = values.pop("model_path")
+    else:
+        values.pop("model_path", None)
     environment = os.environ if environ is None else environ
     for variable, field_name in _ENVIRONMENT_FIELDS.items():
         if variable in environment:

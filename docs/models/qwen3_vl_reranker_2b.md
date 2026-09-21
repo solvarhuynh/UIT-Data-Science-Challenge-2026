@@ -13,7 +13,7 @@ của model vẫn có thể dùng cho tài liệu đa phương thức.
 ## Tải và benchmark
 
 ```powershell
-python download_models.py --profile task1 --only reranker
+python download_models.py --profile task1-qwen --only reranker
 ```
 
 Không copy file từ `models/reranker` cũ sang thư mục mới. GPU được khuyến nghị;
