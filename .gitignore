@@ -234,3 +234,7 @@ private_task1/rerank/scores/
 private_task1/submissions/
 
 .tmp_pv1_bge_ft/
+
+# Local Phase 2B remote-sync payload; archived locally, not suitable for GitHub.
+_tmp_phase2b_remote_sync/
+_tmp_phase2b_remote_sync.zip
