@@ -1,0 +1,24 @@
+=================================================================
+Constrained Dual-Anchor RRF Submission Builder
+=================================================================
+Loaded Guarded (0.9174): 2080 queries
+Loaded v2 (0.9168):      2080 queries
+
+RRF Configuration:
+  k = 60
+  weight_guarded = 0.55
+  weight_v2 = 0.45
+
+Guardrails:
+  - Guarded Rank 1: Protected in Top 5 (0 queries violated)
+  - v2 Rank 1: Protected in Top 5 (189 queries injected into Top 5)
+
+Validation:
+  - Oracle Recall@5 (109 queries): 109/109 (1.0000)
+  - Schema: 2080 queries, 5 unique docs per query
+
+CodaBench Result (1977 unseen queries):
+  - Recall:    0.920544597 (1819.92 correct queries)
+  - Precision: 0.196661609 (1944/5 hits)
+  - Status:    NEW TEAM RECORD (> 0.920)
+=================================================================

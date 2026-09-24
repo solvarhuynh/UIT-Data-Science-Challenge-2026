@@ -1,0 +1,169 @@
+{
+  "status": "NO_UNIQUE_EXACT_FILE_CANDIDATE",
+  "fingerprint": {
+    "queries": 189,
+    "sha256": "c4e86d37f4df4c66a3c7fb94185b0e1654370ad3886f9e8f770249deb4acccd5",
+    "path": "private_task1/reports/team_09205/v2_rank1_fingerprint_189.jsonl"
+  },
+  "filesystem_candidate_files_scanned": 48,
+  "structural_2080_candidates": 9,
+  "git_historical_candidate_paths_examined": 38,
+  "git_historical_candidates": 0,
+  "rank1_exact_candidates": 0,
+  "candidates": [
+    {
+      "path": "private_task1/submissions/team_09205/submission_private_dual_anchor_guarded_09198.zip",
+      "kind": "zip_json_submission",
+      "source_sha256": "3908ff798562cf17c7a2cdecf51007864711b9de6412e331ce67346e56e1c119",
+      "payload_signature_sha256": "06997f8d7c9593548e3187702b597b665ea231d2cc53857f2c59794fd681f070",
+      "duplicate_payload_of_prior_candidate": false,
+      "fingerprint": {
+        "query_coverage": 2080,
+        "coverage_exact": true,
+        "injection_set_size": 0,
+        "injection_query_id_match": 0,
+        "injection_query_id_extra": 0,
+        "injection_query_id_missing": 189,
+        "inferred_rank1_doc_match": 0,
+        "rank1_exact": false
+      }
+    },
+    {
+      "path": "private_task1/submissions/team_09205/submission_private_constrained_dual_anchor_rrf_09205.zip",
+      "kind": "zip_json_submission",
+      "source_sha256": "aa8ef30147500164ce23eb2ecfa6aaa57efd393d0fdc953371315f14460f4dae",
+      "payload_signature_sha256": "74068f671359dd2985459598ed7c49067db5854a0b6d773bd8122d1f5073e00b",
+      "duplicate_payload_of_prior_candidate": false,
+      "fingerprint": {
+        "query_coverage": 2080,
+        "coverage_exact": true,
+        "injection_set_size": 0,
+        "injection_query_id_match": 0,
+        "injection_query_id_extra": 0,
+        "injection_query_id_missing": 189,
+        "inferred_rank1_doc_match": 0,
+        "rank1_exact": false
+      }
+    },
+    {
+      "path": "private_task1/submissions/team_09205/anchors/submission_v2_reconstructed_candidate.zip",
+      "kind": "zip_json_submission",
+      "source_sha256": "7c67cef6007714747ee08a429ebf527d339098973aaf42c12b870da2b53a5ca4",
+      "payload_signature_sha256": "623158c0363bfd901397bc30e34e286323af4b791eaa24878fd654b1eaa6d9ec",
+      "duplicate_payload_of_prior_candidate": false,
+      "fingerprint": {
+        "query_coverage": 2080,
+        "coverage_exact": true,
+        "injection_set_size": 0,
+        "injection_query_id_match": 0,
+        "injection_query_id_extra": 0,
+        "injection_query_id_missing": 189,
+        "inferred_rank1_doc_match": 0,
+        "rank1_exact": false
+      }
+    },
+    {
+      "path": "private_task1/submissions/pv1_final/submission_private_pv1.zip",
+      "kind": "zip_json_submission",
+      "source_sha256": "3e8fa9045a49baed5f0d007e8d52c22c25b4296f837774a756f2f3733c5402e0",
+      "payload_signature_sha256": "59e2a66ed27ec3a8eff6af0785389eed0009ba0c2bad6506602d2c51d3a8756b",
+      "duplicate_payload_of_prior_candidate": false,
+      "fingerprint": {
+        "query_coverage": 2080,
+        "coverage_exact": true,
+        "injection_set_size": 0,
+        "injection_query_id_match": 0,
+        "injection_query_id_extra": 0,
+        "injection_query_id_missing": 189,
+        "inferred_rank1_doc_match": 0,
+        "rank1_exact": false
+      }
+    },
+    {
+      "path": "private_task1/submissions/pv1_final/submission_private_pv1.json",
+      "kind": "json_submission",
+      "source_sha256": "83db32798d1990eb86201dabc0764f7a1dbb23c1b9c67175caa9e0a86c61dfb2",
+      "payload_signature_sha256": "59e2a66ed27ec3a8eff6af0785389eed0009ba0c2bad6506602d2c51d3a8756b",
+      "duplicate_payload_of_prior_candidate": true,
+      "fingerprint": {
+        "query_coverage": 2080,
+        "coverage_exact": true,
+        "injection_set_size": 0,
+        "injection_query_id_match": 0,
+        "injection_query_id_extra": 0,
+        "injection_query_id_missing": 189,
+        "inferred_rank1_doc_match": 0,
+        "rank1_exact": false
+      }
+    },
+    {
+      "path": "private_task1/submissions/sprint48_guarded_direct/submission_private_guarded_direct.zip",
+      "kind": "zip_json_submission",
+      "source_sha256": "cb2b65b46068fabc5d8d6601add88ec8205dbab60a4c5536af210df3a5cf87fd",
+      "payload_signature_sha256": "cc9f077604da276b4930b39d001154ee030ae54581f1427c9d2d98500f515520",
+      "duplicate_payload_of_prior_candidate": false,
+      "fingerprint": {
+        "query_coverage": 2080,
+        "coverage_exact": true,
+        "injection_set_size": 0,
+        "injection_query_id_match": 0,
+        "injection_query_id_extra": 0,
+        "injection_query_id_missing": 189,
+        "inferred_rank1_doc_match": 0,
+        "rank1_exact": false
+      }
+    },
+    {
+      "path": "private_task1/submissions/sprint48_guarded_direct/submission_private_guarded_direct.json",
+      "kind": "json_submission",
+      "source_sha256": "8728cf452074040579fb8d4bb92145a90df261fb18adf1b1a67202b5b22704f8",
+      "payload_signature_sha256": "cc9f077604da276b4930b39d001154ee030ae54581f1427c9d2d98500f515520",
+      "duplicate_payload_of_prior_candidate": true,
+      "fingerprint": {
+        "query_coverage": 2080,
+        "coverage_exact": true,
+        "injection_set_size": 0,
+        "injection_query_id_match": 0,
+        "injection_query_id_extra": 0,
+        "injection_query_id_missing": 189,
+        "inferred_rank1_doc_match": 0,
+        "rank1_exact": false
+      }
+    },
+    {
+      "path": "private_task1/submissions/final/first-time/submission_private.json",
+      "kind": "json_submission",
+      "source_sha256": "80979c4d671f4654f6d3ec403219c3c936e1555182372fe004e5839f1a07a2d9",
+      "payload_signature_sha256": "623158c0363bfd901397bc30e34e286323af4b791eaa24878fd654b1eaa6d9ec",
+      "duplicate_payload_of_prior_candidate": true,
+      "fingerprint": {
+        "query_coverage": 2080,
+        "coverage_exact": true,
+        "injection_set_size": 0,
+        "injection_query_id_match": 0,
+        "injection_query_id_extra": 0,
+        "injection_query_id_missing": 189,
+        "inferred_rank1_doc_match": 0,
+        "rank1_exact": false
+      }
+    },
+    {
+      "path": "private_task1/submissions/final/first-time/submission_private.zip",
+      "kind": "zip_json_submission",
+      "source_sha256": "962606b848d446115cfd564e4092e1cb2fbc6f9c1fbb4d2dc4366b09b8ab8d64",
+      "payload_signature_sha256": "623158c0363bfd901397bc30e34e286323af4b791eaa24878fd654b1eaa6d9ec",
+      "duplicate_payload_of_prior_candidate": true,
+      "fingerprint": {
+        "query_coverage": 2080,
+        "coverage_exact": true,
+        "injection_set_size": 0,
+        "injection_query_id_match": 0,
+        "injection_query_id_extra": 0,
+        "injection_query_id_missing": 189,
+        "inferred_rank1_doc_match": 0,
+        "rank1_exact": false
+      }
+    }
+  ],
+  "exact_checksum_survivor_count": 0
+}

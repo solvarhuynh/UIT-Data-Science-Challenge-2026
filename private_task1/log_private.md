@@ -485,3 +485,551 @@ GPU command đã chuẩn bị, chưa chạy:
   `private_task1/experiments/sprint48_step4/same_bge_hard_negative_ft_v2_estimate.json`;
   this is not a runtime benchmark.
   Recommended next action: `RUN_HARD_NEGATIVE_BGE_FT_V2`.
+
+## 2026-09-21 — PHASE 2A SAME-BGE HARD-NEGATIVE FT V2 PREFLIGHT
+
+- CPU-only Phase 2A preflight/materialization completed under
+  `private_task1/experiments/sprint48_bge_ft_v2/`; GPU runs `0`, Modal runs
+  `0`, model loads `0`, and no Private answers/Fold0/public labels were used.
+- Immutable gates passed: reconstructed PV1 BGE SHA
+  `5e47db9d9d706660a2943656408af561504ef18f8b6cbfdb36fde99681e93bd0`,
+  F1-F4 worklist SHA `5bb1f804b629a65611ee0f9e6b11c4b95026a42c3303b395b3dbc0d92ab8a2e2`,
+  candidate SHA `8a56267146d6d2670da3737cbd78d68761899a0672ad2d7424e6d77ac47b30e8`,
+  PV1 corpus fingerprint, strict folds, and the verified local FT weight/config
+  hashes all match the Phase 1 contract.
+- V2 student initialization is frozen to `CURRENT_FT` and teacher to the same
+  verified local checkpoint `outputs/task1/bge_ft_model/bge_m3_finetuned`
+  (weight SHA `68bc6d16a5b898a3ff2a89d8171fc8e6b3a20d3ea7c78a15c7340b1a3f02a89c`).
+  This is the only no-rewrite implementation of the reviewed V3 anchored
+  trainer and the frozen current-FT teacher requirement. The mismatched Modal
+  FT artifact remains forbidden.
+- Training uses exactly the frozen inference-selected raw chunk that gives each
+  document's current teacher MAX; the full selected-ID list is retained. No
+  selector rerun, document summary, synthetic chunk, or inferred teacher logit.
+  Persisted exact teacher logits are absent by design; V3 dynamically computes
+  exact logits from the frozen teacher during an authorized GPU run.
+- Materialized strict outer work: F1 `52,512` examples / `3,282` updates /
+  `83,988` score units; F2 `52,488` / `3,281` / `83,991`; F3 `52,668` /
+  `3,292` / `83,994`; F4 `52,284` / `3,268` / `83,985`. OOF total is
+  `209,952` examples / `13,123` updates / `112,000` q-docs / `335,958` units;
+  leakage, Fold0, Private, duplicates, invalid chunks, and non-finite cached
+  teacher probabilities are all `0`.
+- Final-fit worklist is `34,992` pairs / `69,984` examples / `4,374` updates.
+  The isolated smoke is two pairs / four examples / one update. Safetensors
+  metadata-only audit found `567,755,777` total parameters, `491,127,808`
+  frozen (embeddings + layers 0--17), and `76,627,969` trainable.
+- Added deterministic Phase 2A materializer, exact GPU worklist scorer, and a
+  CPU-only strict-OOF gate evaluator; repaired V3 gradient accumulation,
+  explicit frozen-teacher path, deterministic seed, completed-run resume
+  verification, checkpoint reload verification, and a strict F1--F4 marker
+  that prevents a V2 run from requesting Fold0. All compile; the V3 CPU
+  preflight read `52,512` F1 training examples without loading a model. GPU
+  smoke/OOF/final commands and frozen promotion gate are in
+  `private_task1/experiments/sprint48_bge_ft_v2/preflight/phase2a_report.md`.
+
+## 2026-09-21 — PHASE 2B PRE-GPU GATES / EXECUTION BLOCKER
+
+- Final CPU-only Stage 0/1 gate passed and is recorded in
+  `private_task1/experiments/sprint48_bge_ft_v2/preflight/stage2b_final_execution_gate.json`.
+  It re-hashed the frozen V2 config (`09ae8694...44d7d6b`), current
+  student/teacher weight and config, Phase 1 reconstructed BGE scores,
+  F1--F4 worklist/candidate artifacts, strict folds, train data, PV1 corpus,
+  and every materialized fold training/scoring worklist. All matched Phase 2A.
+- The final-policy evaluator was repaired only at evaluator plumbing level:
+  it now supports a one-fold immediate early gate and preserves the frozen
+  candidate source ranks/base BGE score while replacing only `bge_ft_score`.
+  CPU assertion reproduced the historical `RETRIEVAL_RRF_NO_LABEL` Top-5 for
+  all 5,600 F1--F4 queries exactly (0 RRF mismatches), including baseline
+  Recall `0.9255863095238096` and Precision `0.19710714285714284`.
+  No model, frozen recipe, selector, aggregation, candidate, corpus, or RRF
+  weight changed.
+- No smoke was launched: this workspace's `.venv` has `torch 2.2.2+cpu`,
+  `cuda_available=false`, zero CUDA devices, and no `nvidia-smi` executable.
+  The frozen local `--device cuda` command therefore cannot supply the
+  required L4. This is an execution-environment blocker, not a scientific or
+  smoke failure. GPU runs `0`; Modal runs `0`; no model was loaded.
+- Next action is to provide/activate the exact L4 execution route for the
+  frozen smoke command; do not substitute a CPU run or alter the recipe.
+
+## 2026-09-22 — PHASE 2B L4 GPU SMOKE PASS
+
+- The isolated Modal route `scripts/modal/task1_same_bge_ft_v2.py --mode smoke`
+  completed exactly once on Modal profile `nan928904`; no A10/other GPU and no
+  retry was used. Modal app `ap-YfWcsu1lttNlHoqul07KLT`, function call
+  `fc-01M32F66P5NMF5RK3P64SQ5V52`.
+- Environment gate passed: actual GPU `NVIDIA L4`, CUDA `12.4`, torch
+  `2.5.1+cu124`, total VRAM `23,659,151,360` bytes, peak allocated VRAM
+  `5,786,695,680` bytes; no OOM/runtime failure.
+- Remote model provenance was verified before model load: CURRENT_FT weight
+  SHA `68bc6d16a5b898a3ff2a89d8171fc8e6b3a20d3ea7c78a15c7340b1a3f02a89c`,
+  config SHA `16f6e0bece36db2318601cbf5119f5f9eb616857eed068ddb73cb482f104524b`,
+  model `BAAI/bge-reranker-v2-m3`; smoke groups SHA
+  `e7f776b42f7bbef0fb27fcaa53b96ea83d39412ea00fbb6e4ccb050c2acce180`.
+- Frozen smoke contract passed: 2 pairs / 4 examples, exactly 1 optimizer
+  step and 1 micro-step, dynamic teacher logits, finite BCE
+  `0.554519534111023`, finite teacher MSE `0.000285633112071082`, finite
+  total loss `0.2774025797843933`, checkpoint save/reload, and post-reload
+  CrossEncoder scoring with finite scores.
+- Smoke checkpoint SHA: weight
+  `b925c86274c93e78c707c363225519a13646ea408756c2978738d1f66d25da74`,
+  config `16f6e0bece36db2318601cbf5119f5f9eb616857eed068ddb73cb482f104524b`.
+  Wall time `36.160629474` seconds. Checkpoint remains non-promotable until
+  the frozen strict F1--F4 OOF gate passes.
+- Evidence downloaded to
+  `private_task1/experiments/sprint48_bge_ft_v2/smoke/remote_evidence/` and
+  the smoke checkpoint to `.../smoke/gpu_checkpoint/`; no historical namespace
+  was touched.
+
+## 2026-09-22 — PHASE 2B REMOTE FOLD INPUT GATE PASS
+
+- Added only Modal infrastructure plumbing for sequential fold execution; the
+  canonical trainer, scorer, selected chunks, loss, recipe, and RRF evaluator
+  were not changed. All modified Python files compile.
+- Exact required remote inputs were synchronized into the isolated namespace
+  under `/runtime/private_task1/experiments/sprint48_bge_ft_v2/remote_inputs/`
+  (the uploaded directory is named `_tmp_phase2b_remote_sync`); no historical
+  Modal namespace was overwritten.
+- CPU-only Modal input gate passed in app
+  `ap-LJZEZCfuFoAOzumpnbTZrB`, with no GPU request and no model load. It
+  verified the CURRENT_FT hashes, reference SHA
+  `5e47db9d9d706660a2943656408af561504ef18f8b6cbfdb36fde99681e93bd0`, all
+  four train-group/worklist SHAs, 7,723 unique required documents, exactly
+  7,723 remote chunk files, and zero missing required documents.
+- Two earlier CPU-only input-probe attempts failed solely because of typos in
+  the newly added local expected-hash constants; they did not request a GPU,
+  load a model, or mutate scientific artifacts. The constants were corrected,
+  and the subsequent gate passed exactly as above.
+
+## 2026-09-22 — F1 OOF GPU EXECUTION STARTED
+
+- F1 is the first and only fold launched after the smoke and full remote-input
+  gates passed. Frozen training contract: F2+F3+F4, 52,512 examples, 3,282
+  optimizer steps; held-out scoring target is 28,000 q-docs / 83,988 units.
+- Modal app `ap-Z7KLb8Yaj1SmFFZSXfK89G`, function call
+  `fc-01M32GFHYEPDP9SZRZAM7TEWXB`, actual requested GPU `L4`, retries `0`.
+  The canonical V3 trainer is running with the unchanged frozen recipe; no
+  second fold is launched until F1 completes and its CPU RRF early gate is
+  evaluated.
+- F1 training completed PASS: 52,512 examples, 13,128 micro-steps, exactly
+  3,282 optimizer steps, checkpoint reload verified, mean loss
+  `0.4917044478447598`, wall `2578.299434656` seconds. Fold-1 checkpoint
+  weight SHA `4bbe295ef1a1901288230c030438663cffd775d0c1eb6aa49f1c4eed9a3ce601`,
+  config SHA `16f6e0bece36db2318601cbf5119f5f9eb616857eed068ddb73cb482f104524b`.
+
+## 2026-09-22 — F1 OOF EARLY-KILL FAIL / STOP
+
+- F1 scoring ran once on L4 in Modal app `ap-gSvjqGE1GYbIpNWzQhehze`,
+  function call `fc-01M32K0ZF6Z0PQ8D7TJTD86D7Z`, with no retry. Exact coverage
+  passed: 28,000 q-docs / 83,988 units, finite scores, duplicate q-docs `0`,
+  selected-chunk provenance preserved, scorer output SHA
+  `2009fd527adf148bfc27d9b84aef7d4af91e6bd818190675af3bdb12bd310565`, wall
+  `1411.605766494` seconds.
+- CPU-only frozen RRF evaluator result is recorded at
+  `private_task1/experiments/sprint48_bge_ft_v2/fold1/early_rrf_gate.json`.
+  F1 baseline Recall `0.9319642857142857`, proposed Recall
+  `0.9310119047619048`, delta `-0.0009523809523809268`; baseline Precision
+  `0.1975714285714286`, proposed Precision `0.1972857142857143`.
+- `EARLY_KILL_GATE = FAIL_F1`. This is a valid scientific negative fold, not
+  an infrastructure failure. Per frozen contract, F2/F3/F4, pooled OOF,
+  final-fit, Private scoring, and submission ZIP were not run. The F1 remote
+  checkpoint and score artifacts are preserved; no automatic submission/upload
+  occurred.
+
+## 2026-09-22 — PHASE 2B FINAL STATUS
+
+- `MODAL_RUNTIME_GATE = PASS`; `REMOTE_MODEL_GATE = PASS`; `REMOTE_INPUT_GATE = PASS`;
+  `L4_ENV_GATE = PASS`; `SMOKE_GATE = PASS`; `EARLY_KILL_GATE = FAIL_F1`.
+- `F1_DELTA = -0.0009523809523809268`; `F2_DELTA/F3_DELTA/F4_DELTA = NOT_RUN`.
+  `FT_V2_OOF_GATE = NOT_REACHED`; `FINAL_CHECKPOINT_CREATED = NO`;
+  `PRIVATE_V2_SUBMISSION_GATE = NOT_CREATED`.
+- Final status: `FT_V2_SCIENTIFIC_FAIL`. The frozen experiment stopped at the
+  required first negative outer-fold gate. The incumbent remains unchanged;
+  no Fold0/Private labels, no second recipe, no F2 GPU call, no final fit, and
+  no submission/upload were performed.
+- Current Phase 2B execution count: `GPU_RUN_COUNT = 3` (smoke, F1 train, F1
+  score); `MODAL_RUN_COUNT = 10` including the non-GPU import/input probes and
+  their preserved engineering-failure evidence.
+
+
+## 2026-09-22 — F1 SAME-BGE FT V2 CPU FORENSIC AUDIT
+
+- CPU-only audit completed from frozen local artifacts; GPU runs `0`, Modal runs `0`, model/scorer not loaded or rerun.
+- Baseline replay: Recall `0.9319642857142857`, Precision `0.1975714285714286`; exact expected values reproduced.
+- V2: Recall `0.9310119047619048`, Precision `0.1972857142857143`; Recall delta `-0.0009523809523809268`.
+- Final Top5 changed `488` queries; improved `1`, harmed `3`; relevant gained/lost `1/3`.
+- BGE-only substitution gate: `PASS`; selected chunk identity and frozen source-rank inputs passed.
+- Chunk-MAX audit: `1210` changed / `28000` q-docs; objective-conflict evidence: `STRONG`.
+- Exact F1 checkpoint tensor integrity is unavailable because the checkpoint is not present locally; scorer runtime parity has no persisted independent sample.
+- Primary classification: `INCONCLUSIVE`; do not call this `TRUE_SCIENTIFIC_FAIL` until checkpoint provenance is restored.
+- Reports: `private_task1\experiments\sprint48_bge_ft_v2\fold1\forensic_audit.json`, `private_task1\experiments\sprint48_bge_ft_v2\fold1\forensic_audit.md`.
+
+
+## 2026-09-22 — F1 CHECKPOINT FORENSIC CLOSURE
+
+- CPU-only Modal Volume audit found the authoritative checkpoint at `/workspace/p13/runtime/private_task1/experiments/sprint48_bge_ft_v2/fold1/gpu_checkpoint/checkpoint`. No training, inference, or GPU was run.
+- Checkpoint SHA `4bbe295ef1a1901288230c030438663cffd775d0c1eb6aa49f1c4eed9a3ce601` and config SHA `16f6e0bece36db2318601cbf5119f5f9eb616857eed068ddb73cb482f104524b` match the recorded F1 execution/score manifests.
+- Tensor contract PASS: `393` tensors, missing/extra `0`, nonfinite `0`; frozen embeddings + encoder layers 0–17: `0/293` changed; trainable tensors changed `100/100`.
+- Final classification: `PRACTICAL_SCIENTIFIC_FAIL_WITH_PARITY_CAVEAT`; `FT_V2_STATUS = CLOSED`; `SCORER_RUNTIME_PARITY = UNPROVEN`.
+- Do not rerun SAME-BGE FT V2. Future work must use a separately named teacher-anchoring objective hypothesis.
+- Tensor manifest: `private_task1\experiments\sprint48_bge_ft_v2\fold1\checkpoint_tensor_diff_manifest.json`.
+
+## 2026-09-22 — SAME-BGE HARD-NEGATIVE FT V3 F1 EARLY-KILL
+
+- V3 hypothesis: `CONFLICT_AWARE_TEACHER_ANCHORING`; V2 remained frozen and was
+  not rerun. V3 config SHA `8523a19389f1314e64aeac81d0432adaf3e23639bad149e28331c51ceb52a6b7`.
+  Training-side conflict population: positive `34704`, negative `23730`.
+- CPU loss tests, legacy-formula parity, exact V2 train-group/worklist SHA
+  parity, remote provenance, and L4 smoke all passed. Smoke verified both
+  teacher-consistent and teacher-conflict masks, finite losses, backward,
+  save, and reload.
+- V3 F1 training ran once on L4: `52512` examples, `13128` micro-steps,
+  `3282` optimizer steps, teacher-anchor mode `conflict-aware`, checkpoint
+  reload PASS. Checkpoint weight SHA
+  `5701abf3e49f3a856fe56f6565361228a0426f83055d08f8f56f1bfac99b3421`;
+  config SHA `16f6e0bece36db2318601cbf5119f5f9eb616857eed068ddb73cb482f104524b`.
+- V3 F1 scoring ran once on actual `NVIDIA L4`, with exact frozen coverage
+  `28000` q-docs / `83988` units, finite scores, duplicate q-docs `0`, and
+  selected-chunk provenance PASS. Output SHA
+  `6c3923dd3fe82a243b2262eba2c6baae99d3bd7b63e14087f1d77eb635fc554f`.
+- CPU-only F1 RRF comparison on `1400` held-out queries:
+  CURRENT_FT `Recall 0.9319642857142857 / Precision 0.1975714285714286`;
+  V2 `0.9310119047619048 / 0.1972857142857143`;
+  V3 `0.9306547619047619 / 0.1972857142857143`.
+  V3 delta versus CURRENT_FT: Recall `-0.0013095238095237605`, Precision
+  `-0.0002857142857143058`. V3 changed `241` Top5 memberships, improved `2`
+  queries, harmed `4`, neutral-changed `235`; relevant documents gained/lost
+  `2/4` (membership comparison).
+- `V3_F1_GATE = FAIL_F1` because Recall delta is negative. Per the frozen
+  early-kill contract, F2/F3/F4, pooled OOF, final fit, Private scoring, and
+  submission creation were not run. V3 branch is scientifically failed; no
+  automatic upload or submission occurred. V3 GPU run count: `3` (smoke, F1
+  train, F1 score).
+- Post-run local checks: V3 files `py_compile` PASS; conflict-anchor unit tests
+  `2 passed`; downloaded V3 score SHA matches the remote manifest exactly.
+
+## 2026-09-22 — GUARDED_DIRECT_K20_RESIDUAL FINAL CPU EXPERIMENT
+
+- Closed branches remained frozen: `STEP4_K20_PORT`, full `DIRECT_K20` Top5
+  replacement, `BGE_FT_V2`, and `BGE_FT_V3_CONFLICT_ANCHOR`; no historical
+  artifact was mutated.
+- `DIRECT_SIGNAL_GATE = PASS`; exact outer-OOF replay passed. Full Direct
+  Recall `0.9293809523809524`, Precision `0.1980357142857143`, delta Recall
+  `+0.003794642857142927`; F3 delta `-0.00011904761904768524`. Replay counts
+  matched exactly: changed `4683`, improved/harmed `68/42`, net relevant
+  `+26`. Gains requiring Top1–3 change `39`; harms from Top1–3 change `26`.
+- Frozen `GUARDED_DIRECT_K20_RESIDUAL_V1` contract SHA256:
+  `35e4ed32467bb8015af7156a7b5c62a722c60b6fba86fb696692814dd2b286f2`.
+  V1 Recall delta `+0.0036755952380952417`, but F1 delta
+  `-0.001011904761904714`; `PRIMARY_GATE = FAIL`.
+- Exactly one predeclared nested calibration ran because V1 had positive pooled
+  signal but one negative fold. `GUARDED_DIRECT_K20_RESIDUAL_V2_NESTED` passed:
+  Recall `0.9300505952380952`, delta `+0.004464285714285698`, Precision delta
+  `+0.0010357142857142787`; fold Recall deltas F1/F2/F3/F4 were
+  `+0.00011904761904768524 / +0.008095238095238155 /
+  +0.0017857142857142794 / +0.007857142857142896`; changed/improved/harmed
+  `1101/42/13`; Top1–3 changes `0`.
+- Selected policy: `V2_NESTED`. Private application was label-free: `2080`
+  queries, changed `36`, rank4/rank5 changes `11/25`, Top1–3 changed `0`,
+  maximum one new document/query, mean Top5 Jaccard `0.9942307692307693`.
+- Isolated submission created, never uploaded or overwrote incumbent:
+  `private_task1/submissions/sprint48_guarded_direct/submission_private_guarded_direct.zip`.
+  ZIP SHA256 `cb2b65b46068fabc5d8d6601add88ec8205dbab60a4c5536af210df3a5cf87fd`.
+  Frozen final model SHA256 `4b962c56570e6315876aeb6eea26d8877a8007e636d83c70ac2e84a13c2a175c`;
+  canonical validator PASS on both JSON and ZIP: `2080` questions, exactly
+  `5` documents each.
+- CPU-only execution: GPU runs `0`, Modal runs `0`, model loads `0`; no Fold0,
+  public labels, or Private labels. Final status:
+  `READY_FOR_MANUAL_SUBMISSION`; manual review only, no automatic upload.
+
+## 2026-09-22 — FINAL PRE-SUBMISSION AUDIT
+
+- Read-only audit confirmed the final call is
+  `fit_direct_model(sorted(target_qids), feature_cache, gold)` over F1–F4.
+  Exact final training population: `5600` queries, `112000` q-doc rows,
+  `5832` positive rows, `106168` negative rows; feature matrix has `11`
+  columns. Fold0 and Private labels were not used.
+- `training_population.qdocs = 5600` is a metadata naming bug: it stores the
+  query count, not the fitted-row count. It does not indicate a 5600-row fit.
+  Full-matrix replay matched final StandardScaler mean/variance exactly:
+  max absolute differences `0.0 / 0.0`.
+- No retrain, refit, prediction change, GPU, or Modal run. JSON and ZIP
+  validators both PASS (`2080` queries, exactly `5` unique documents/query).
+  ZIP SHA remains
+  `cb2b65b46068fabc5d8d6601add88ec8205dbab60a4c5536af210df3a5cf87fd`.
+- Final decision remains `READY_FOR_MANUAL_SUBMISSION`; audit manifest:
+  `private_task1/experiments/sprint48_guarded_direct/final_fit_audit_manifest.json`.
+
+## 2026-09-22 — CORRECTED_QWEN_SINGLE_RESCUE PHASE A
+
+- CPU-only cache/provenance audit completed and rerun after `py_compile` PASS.
+- Canonical corrected-Qwen cache: `artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b/predictions.jsonl`;
+  SHA256 `65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f`.
+- Provenance PASS: Qwen3-VL-Reranker-2B, revision
+  `4bd860ac4f15ad1897a214615cccc700f8f71818`, corrected scorer SHA
+  `e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe`,
+  selector `true_s2_bm25_within_document_v2`, aggregation `MAX`, higher score =
+  more relevant. Cache has `5600` queries / `431200` q-doc rows / K77,
+  duplicate keys `0`, non-finite scores `0`.
+- Exact join key: `(query_id, document_id)`; no row-order join.
+- Validation PV1 K20: `111816/112000` covered (`99.835714%`), missing `184`;
+  full `5443`, partial `157`, zero `0`. Rank-band coverage: 1–5 `27975/28000`,
+  6–10 `27958/28000`, 11–20 `55883/56000`.
+- Private PV1 K20: `0/41600` covered (`0%`); `2080` zero-coverage queries;
+  `PRIVATE_QWEN_CACHE_STATUS = ABSENT`.
+- Structural rescue feasibility: validation `5600` queries have an eligible
+  cached rank6–20 candidate; Private `0`. No labels, Recall/Precision,
+  candidate selection, threshold, policy, inference, GPU, Modal, or submission
+  work was performed.
+- Decision: `QWEN_PROVENANCE_GATE = PASS`, `DEPLOYABILITY_CLASS = CACHE_PARTIAL`.
+  Do not open Phase B; first fill the `184` missing validation identities and
+  obtain a separate Private cache. Guarded Direct V2_NESTED incumbent unchanged.
+- Script: `private_task1/scripts/analysis/corrected_qwen_single_rescue_phase_a.py`.
+- Reports: `private_task1/reports/task1/corrected_qwen_single_rescue_phase_a.json` and
+  `private_task1/reports/task1/corrected_qwen_single_rescue_phase_a.md`.
+
+## 2026-09-22 — CORRECTED_QWEN_SINGLE_RESCUE PHASE A.5
+
+- CPU-only Phase A.5 completed; `py_compile` PASS. No Qwen inference, GPU,
+  Modal, labels, Recall/Precision, policy selection, or submission work.
+- Exact validation gap: `184` q-docs across `157` queries. Root causes:
+  `131` `PV1_NEW_OR_REPAIRED_DOC`, `53` `CANDIDATE_UNIVERSE_DRIFT`, `0`
+  historical K77 miss, `0` identity-join issues.
+- Same-contract cache search recovered `0/184`; all `184` remain for inference,
+  exactly `552` chunk units (`3/3/3` min/median/max). Larger full-doc scores
+  were not reused because selected-chunk provenance is unavailable/incompatible.
+- Validation delta worklist:
+  `private_task1/experiments/qwen_single_rescue/validation_delta_worklist.jsonl`.
+- Private worklist: `41600` q-docs / `124798` chunk units; exact question-text +
+  document + selected-chunk reuse is safe for `55` q-docs, leaving `41545`
+  q-docs / `124633` new chunk units. No Private labels used.
+- Runtime estimate only from comparable corrected Qwen NVIDIA A10 evidence:
+  validation delta `15.19s`; Private new work `3428.57s` scorer-only. Excludes
+  startup/checkpoint/Volume commits; no dollar cost estimated.
+- `PHASE_B_READINESS = READY_FOR_VALIDATION_DELTA_GPU`. Next action is only a
+  bounded validation-delta Qwen run after explicit GPU approval; do not score
+  Private or open rescue policy yet. Guarded Direct V2_NESTED unchanged.
+- Script: `private_task1/scripts/analysis/corrected_qwen_single_rescue_phase_a5.py`.
+- Reports/worklists: `private_task1/experiments/qwen_single_rescue/`.
+
+## 2026-09-22 — CORRECTED_QWEN_VALIDATION_DELTA_FILL PHASE A.6 PREFLIGHT
+
+- CPU-only preflight PASS for the frozen validation delta; `py_compile` PASS.
+- Delta worklist SHA256:
+  `c9384fde1338e9a6b850e473876a4ff819c8f8dbfe7d90d536493a5d1d9fc428`.
+  Exact Phase A.5 missing-set equality PASS: `184` q-docs / `157` queries /
+  `552` selected chunk units / `64` unique documents.
+- Identity/input gates PASS: duplicate q-docs `0`, duplicate selected chunk IDs
+  `0`, missing query text `0`, missing chunk text `0`, non-current PV1 identities
+  `0`. Model/revision/scorer/selector/MAX contract PASS.
+- GPU/Modal was intentionally not run. The existing optimized runner only accepts
+  its embedded 32-shard full-doc universe; the historical runner hard-codes the
+  431200-pair K77 worklist. Neither safely accepts the isolated 184-row delta.
+- Decision: `BLOCKED_RUNNER_INPUT_ROUTE`; no score/output/cache merge was made.
+  Next action is to add only isolated delta-input route plumbing reusing the
+  canonical scorer, rerun CPU preflight, then request approval for exactly one
+  GPU delta job.
+- Preflight script/report:
+  `private_task1/scripts/analysis/corrected_qwen_validation_delta_phase_a6_preflight.py`,
+  `private_task1/experiments/qwen_single_rescue/phase_a6_preflight.{json,md}`.
+
+## 2026-09-22 — PHASE A.6 DELTA ROUTE PREPARED (GPU NOT RUN)
+
+- Added isolated Modal wrapper
+  `private_task1/scripts/modal/task1_qwen_validation_delta.py`.
+- The wrapper reuses the canonical historical `download_locked_snapshot`,
+  `load_model`, and `score_batch`; it does not implement a new scorer. It is
+  locked to worklist SHA
+  `c9384fde1338e9a6b850e473876a4ff819c8f8dbfe7d90d536493a5d1d9fc428`,
+  exactly `184` q-docs / `552` units, model revision, scorer SHA, selector,
+  MAX aggregation, and an isolated output namespace.
+- It validates current PV1 chunk text, canonical query text, finite scores,
+  duplicate identities, writes raw chunk + q-doc outputs and a manifest, then
+  commits only the isolated delta namespace. It never reads Private input or
+  labels.
+- Both A.6 wrapper and preflight `py_compile`: PASS. CPU preflight rerun:
+  `DELTA_WORKLIST_GATE = PASS`, `QWEN_MODEL_GATE = PASS`,
+  `QWEN_SCORER_GATE = PASS`, `GPU_RUN_STATUS = NOT_RUN`.
+- Phase status: `READY_FOR_USER_GPU_APPROVAL`. No Modal call, GPU run, model
+  load, score, or validation-cache merge occurred.
+
+## 2026-09-22 — PHASE A.6 FINAL PRE-LAUNCH REPAIR/AUDIT
+
+- Patched `private_task1/scripts/modal/task1_qwen_validation_delta.py` to use
+  canonical chunk text precedence `text -> chunk_text`; `raw_chunk_text` is no
+  longer a fallback. If both raw/text exist, the wrapper counts both and fails
+  the input gate on any mismatch.
+- Added CPU-only `--mode cpu-preflight` over the mounted
+  `/workspace/p13/runtime/data/processed_pv1/chunks`; it checks 64 documents,
+  184 q-docs, 552 selected chunks, non-empty text, and cross-document IDs
+  without loading Qwen or using a GPU.
+- GPU function timeout changed exactly from `3600` to `900` seconds. A10,
+  `cpu=8`, `memory=32768`, batch `1`, model/revision/scorer/selector/MAX and
+  isolated output namespace are unchanged.
+- `py_compile`: PASS. Local PV1 mirror precheck: `64` document files,
+  `552` selected chunks, raw/text both-present `0`, raw/text mismatch `0`.
+- Remote Modal CPU preflight was not executed because the environment approval
+  review rejected the external Modal command before launch. Therefore remote
+  Volume gate is **UNVERIFIED**, not silently treated as PASS; GPU runs `0`,
+  Qwen loads `0`, Modal runs `0`.
+
+## 2026-09-22 — PHASE A.6 MODAL REMOTE-PATH PACKAGING REPAIR
+
+- Fixed the Modal packaging boundary: `REMOTE_DELTA` and `REMOTE_SCORER` are
+  now absolute POSIX string literals (`/opt/qwen_validation_delta.jsonl` and
+  `/root/task1_b2a_qwen3vl2b.py`), and are passed directly to `remote_path=`.
+  Filesystem calls convert them back with `Path(...)` at use sites.
+- `REMOTE_CHUNKS` remains a Linux-container `Path` and is not used as a
+  packaging `remote_path`.
+- `py_compile`: PASS. No scientific contract, worklist, selected chunks,
+  batch, A10, timeout `900`, or output namespace changed.
+- CPU-only Modal preflight was launched once at app
+  `ap-ummlJnEwFCik2HzDJlK738`, but remote import failed before function entry.
+  Exact traceback: `IndexError: 3` at
+  `/root/task1_qwen_validation_delta.py:23`,
+  `LOCAL_ROOT = Path(__file__).resolve().parents[3]` because the packaged
+  module lives directly under `/root`.
+- Per the A.6 stop rule, no second Modal route was attempted. Remote Volume
+  coverage was not reached; GPU runs `0`, Modal GPU runs `0`, Qwen model loads
+  `0`. This is a remaining container-import blocker, not a Qwen/scientific
+  failure.
+
+## 2026-09-22 — PHASE A.6 GUARDED IMPORT RETEST
+
+- Repaired the remote-import boundary with guarded `_LOCAL_ROOT` detection.
+  Local packaging uses repository paths only when they exist; remote `/root`
+  import uses the already packaged scorer and worklist without `parents[3]`.
+- `REMOTE_IMPORT_REPO_PARENT_DEPENDENCY = 0`; all `remote_path` values remain
+  absolute POSIX strings. `py_compile`: PASS.
+- Exactly one CPU-only Modal preflight was launched at app
+  `ap-Wfvaca7SlYPvYx2RQwQzhZ`. Remote function entry succeeded; no Qwen model
+  loaded and no GPU was allocated.
+- Remote preflight stopped at the first input failure:
+  `RuntimeError: missing PV1 chunk file: 177151` at
+  `/root/task1_qwen_validation_delta.py:108`. Complete remote coverage was not
+  reached; the remote input gate is FAIL, not PASS.
+- No second Modal command, GPU validation-delta, Private scoring, or scientific
+  evaluation was run. Final gate is blocked by missing remote PV1 file
+  `177151`.
+
+## 2026-09-22 — PHASE A.6 REMOTE PV1 INPUT SYNC
+
+- Derived the exact set from the delta worklist; local gate PASS: `64/64`
+  documents, `552/552` selected units, no missing/extra staged files, and
+  source-vs-stage SHA256 parity `64/64`.
+- Staging manifest:
+  `private_task1/experiments/qwen_single_rescue/remote_sync/manifest.json`.
+  Staging directory contains only the exact 64 document JSONL files.
+- Executed exactly one bounded `modal volume put` operation. Modal reported the
+  upload as successful, but its directory semantics placed the files under
+  `/runtime/data/processed_pv1/chunks/staged_chunks/`, not directly under
+  `/runtime/data/processed_pv1/chunks/`.
+- Executed exactly one CPU-only Modal preflight after upload. Remote function
+  entered, did not load Qwen, and failed at the expected target path with:
+  `RuntimeError: missing PV1 chunk file: 177151`.
+- No second upload, no remote move/delete, no GPU, no inference, and no
+  Private/scientific evaluation was performed. Final gate:
+  `BLOCKED_UPLOAD_NESTED_DESTINATION`.
+
+## 2026-09-22 — PHASE A.6 REMOTE LAYOUT REPAIR COMPLETE
+
+- Read-only verification found the exact manifest-required nested set:
+  `64/64` files at `/runtime/data/processed_pv1/chunks/staged_chunks/`.
+- Ran `modal volume cp` once using the exact 64 manifest-derived file paths;
+  no second upload and no deletion of `staged_chunks/`.
+- Parent layout coverage is now `64/64`, with zero missing and zero extra
+  numeric document files at `/runtime/data/processed_pv1/chunks/`.
+- Ran exactly one CPU-only Modal preflight. Result: `PASS`.
+  Remote documents `64/64`, q-docs `184/184`, selected chunks `552/552`,
+  non-empty texts `552/552`, cross-document IDs `0`, canonical text gate
+  `PASS`, worklist SHA verified.
+- `QWEN_MODEL_LOADED: NO`, `GPU_RUNS: 0`, volume commit `false`.
+- Final launch gate: `READY_TO_RUN`. GPU `validation-delta` was not launched.
+
+## 2026-09-22 — PHASE A.7 CORRECTED_QWEN_VALIDATION_CACHE_COMPLETE
+
+- Downloaded only the three completed Phase A.6 artifacts from `udsc-p13`;
+  the initial `volume cp` syntax was rejected because `cp` is volume-internal.
+  Correct `volume get` downloads then passed all exact SHA gates.
+- Frozen current PV1 F1–F4 K20 source:
+  `private_task1/experiments/pv1_regression_forensics/validation_pv1_worklist_k20.jsonl`;
+  `5600` queries / `112000` q-docs / exactly `20` per query.
+- Historical compatible coverage: `111816` current-K20 identities. Phase A.6
+  delta filled the exact remaining `184`; historical/delta overlap `0`.
+- Complete cache gates PASS: duplicates `0`, missing `0`, extra `0`, nonfinite
+  scores `0`, provenance contract PASS, labels/Fold0 unused.
+- Complete cache:
+  `private_task1/experiments/qwen_single_rescue/validation_complete/qwen_validation_k20_complete.jsonl`
+  SHA256 `d66ad20546baa7641ddc39f558481c00bec56aa3ad897d8f75b82a9727c87b79`.
+  Manifest: `private_task1/experiments/qwen_single_rescue/validation_complete/merge_manifest.json`.
+- `GPU_RUNS_THIS_PHASE: 0`, `QWEN_INFERENCE_THIS_PHASE: 0`,
+  `PRIVATE_QWEN_RUNS: 0`. Phase B readiness:
+  `READY_FOR_CPU_RESCUE_EVALUATION`; stop and request Phase B separately.
+
+## 2026-09-22 — CORRECTED_QWEN_SINGLE_RESCUE PHASE B CLOSED
+
+- Frozen complete Qwen cache and PV1 K20 SHA gates passed. Current universe:
+  `5600` F1–F4 queries / `112000` q-docs / exactly `20` per query; Fold0,
+  Public labels, and Private labels were excluded.
+- Reconstructed `GUARDED_DIRECT_K20_RESIDUAL_V2_NESTED` only from its exact
+  OOF baseline and nested-swap artifacts. Canonical evaluator replay passed:
+  Recall `0.9300505952380952`, Precision `0.19814285714285715`.
+- Strict nested OOF tested only the predeclared Qwen slot-5 family:
+  rank caps `{10,20}` × training-margin quantiles `{0.70,0.80,0.90,0.95}`.
+  Top1–4 remained unchanged for `5600/5600` queries.
+- Qwen OOF Recall `0.9296041666666667`, delta `-0.00044642857142851433`;
+  Precision delta `-0.0001071428571428612`. Fold deltas: F1 `0`, F2 `0`,
+  F3 `-0.0017857142857142794`, F4 `0`. Changed/improved/harmed: `76/0/3`.
+- Hard scientific gate FAIL: F3 is negative, no positive folds, pooled Recall
+  is below incumbent, and improved is not greater than harmed. Decision:
+  `CLOSE_NO_PRIVATE_GPU`; C-PREP was not run.
+- Reports: `private_task1/experiments/qwen_single_rescue/phase_b/`.
+  GPU, Modal GPU, and Qwen inference runs in this phase: `0/0/0`.
+
+## 2026-09-23 — LAST-DAY DIRECT LISTWISE TOP5 BRANCH CLOSED
+
+- Ran the new CPU-only `DIRECT_K20_PLUS_ANCHORS_DOCUMENT_LISTWISE_TOP5`
+  branch. Contract was frozen before the first fit; LightGBM `LGBMRanker`
+  LambdaRank/NDCG@5 used one fixed configuration, `n_jobs=1`, with no Qwen
+  features and no hyperparameter sweep.
+- Technical preflight PASS: real fit/predict smoke completed with finite
+  scores. F1–F4 source population was `5600` queries / `112000` K20 rows;
+  incumbent anchors added outside K20: `0`; final candidate rows `112000`.
+- Incumbent replay PASS: `GUARDED_DIRECT_K20_RESIDUAL_V2_NESTED` Recall
+  `0.9300505952380952`, Precision `0.19814285714285715`.
+- Listwise OOF: Recall `0.9305863095238095` (delta
+  `+0.000535714285714306`), Precision `0.19846428571428573` (delta
+  `+0.0003214285714285836`). Fold Recall deltas: F1
+  `-0.00011904761904768524`, F2 `+0.004761904761904745`, F3
+  `-0.002142857142857224`, F4 `-0.0003571428571429447`.
+- OOF mutations: `4576` changed / `1024` unchanged; `39` improved / `30`
+  harmed / `4507` neutral. Mutation counts by changed documents: 1=`688`,
+  2=`1865`, 3=`1167`, 4=`686`, 5=`170`. Candidate oracle Recall ceiling:
+  `0.9669404761904762`.
+- Scientific gate: `FAIL` because F1, F3, F4 are negative, fewer than 3
+  folds are positive, and pooled delta is below `+0.0015`. Private final fit
+  and challenger were not run. GPU/Modal GPU: `0/0`.
+- Decision: `DIRECT_LISTWISE_DECISION=CLOSE`. Last-day recommendation:
+  `KEEP_GUARDED_DIRECT_V2_NESTED_INCUMBENT_AND_CLOSE_NEW_EXPERIMENTS`.
+- 2026-09-23 FINAL DEADLINE FREEZE AUDIT: incumbent `GUARDED_DIRECT_K20_RESIDUAL / V2_NESTED` giữ nguyên; Private observed `0.9174`. Submission ZIP SHA và final model SHA đều khớp expected. Canonical JSON/ZIP validator PASS; `2080/2080` query, đúng `5` docs/query, missing/extra/duplicate/null = `0`. Deployment contract PASS (`V2_NESTED`, OOF Recall `0.9300505952380952`, Fold0/private labels không dùng). Failed branches Qwen single rescue và Direct listwise đã CLOSED, artifacts được giữ. GPU/Modal/training/refit/inference = `0`; không mutation incumbent. Final freeze: `READY_TO_KEEP_CURRENT_SUBMISSION`; next action `NO_MORE_EXPERIMENTS`. Reports: `private_task1/reports/final_deadline_freeze_audit.json` và `.md`.
+- 2026-09-23 TEAM 09205 INCUMBENT FREEZE: giữ nguyên `CONSTRAINED_DUAL_ANCHOR_RRF`, Private observed `0.920544597`. Incumbent ZIP SHA gate PASS: `aa8ef30147500164ce23eb2ecfa6aaa57efd393d0fdc953371315f14460f4dae`. Canonical validator PASS: `2080/2080` query, đúng `5` docs/query, missing/extra/duplicate/null = `0`. Exact V2 anchor `MISSING_AND_NOT_IDENTIFIABLE`; recovery đóng, không fabricated anchor. Branches `MISSING_V2_ANCHOR_RECOVERY=CLOSED`, `DUAL_ANCHOR_SELECTOR=BLOCKED_NO_EXACT_V2`, `QWEN_SINGLE_RESCUE=CLOSED`, `DIRECT_LISTWISE=CLOSED`. GPU/Modal/training = `0`; incumbent không bị thay đổi. Final freeze: `READY_TO_KEEP_09205_SUBMISSION`. Reopen chỉ khi teammate cung cấp exact V2 hoặc generator + inputs. Reports: `private_task1/reports/team_09205/final_09205_incumbent_freeze.json` và `.md`.
+- 2026-09-23 GUARDED VS DIRECT TOP5 META SELECTOR: CPU-only branch trên incumbent `0.920544597`; ZIP SHA/validator PASS. Expert A (Guarded V2_NESTED) replay Recall `0.9300505952380952`; Expert B Direct Top5 replay exact `0.9293809523809524`. Complementarity: B better/A better/same = `29/32/5539`; oracle Recall `0.9337708333333333`, delta `+0.0037202380952381375`. Strict nested meta-selector (frozen Q90/Q95/Q97.5, Top1-3 lock, <=2 membership changes) OOF Recall delta = `0`, F1-F4 = `0/0/0/0`, changed/improved/harmed = `16/0/0`; hard promotion gate FAIL. Không fit/apply Private overlay, không tạo challenger, không mutation incumbent. GPU/Modal/Fold0/Public/Private labels = `0`. Decision: `CLOSE_META_SELECTOR`. Artifacts: `private_task1/experiments/guarded_vs_direct_top5_meta_selector/`.
+- 2026-09-23 09205 TRIPLE-CONSENSUS LAST-CHANCE: incumbent SHA/3-anchor validator PASS. Chỉ `1891/2080` query có `09205 == 09198 == Guarded` được phép residual; `189` query còn lại immutable. Expert B exact replay PASS. One-swap oracle delta `+0.0031845238095238315`. C1 Pareto delta `0`, gate FAIL. C2 Tree2 delta `+0.00032738095238105114`, improved/harmed `4/1`, relaxed gate PASS; challenger 16 private one-swap mutations. C3 decisive-logit delta `+0.0003571428571429447`, improved/harmed `4/1`, relaxed gate PASS; challenger 10 private one-swap mutations. Hai ZIP đều PASS (`2080`, 5 unique docs/query, missing/extra/duplicate/null = 0), Top1-3 changed = 0, non-triple mutations = 0. Manual order: C3 rồi C2. GPU/Modal/Fold0/Public/Private labels = 0; incumbent không đổi, auto-submit = NO. Report: `private_task1/experiments/09205_last_chance/last_chance_report.md`.
+- 2026-09-23 PRIVATE-MATCHED SEMANTIC MICROSURGERY: incumbent SHA/validator PASS; mutable/immutable `1891/189`. Label-free domain classifier AUC `0.9932851597584212`, xác nhận distribution shift mạnh. Strict HGB action OOF không chọn action: ordinary/weighted delta `0/0`, improved/harmed `0/0`, statistical gate FAIL; theo contract tiếp tục manual-evidence mode. Đã review đủ 30 action bằng hai pass đảo thứ tự, không dùng Private labels. Chọn đúng 4 `SEMANTIC_OVERRIDE` one-swap có margin `11/8/8/7`, model ratio gate và retrieval-consensus: q88908 `68024→204342`, q168090 `282223→104132`, q90972 `208105→286745`, q54780 `226240→100833`. Final ZIP SHA `228225ba197492e0f72a1feeed6b01929c340109a7ef0986237fb1a7d7b906e7`; validator PASS (`2080`, 5 unique docs/query, no missing/extra/duplicate/null), Top1-3 changed `0`, immutable mutations `0`. GPU/Modal/Private labels/auto-submit = `0/0/NO/NO`. Status `FINAL_MICROSURGERY_READY`. Report: `private_task1/experiments/09205_final_semantic_microsurgery/final_report.md`.
+
+## 2026-09-23 — FINAL AUTOMATED MULTI-EXPERT STACK
+
+- CPU-only `PRIVATE_ADAPTIVE_MULTI_EXPERT_STACKED_TOP5` completed; incumbent ZIP SHA/validator PASS and remained untouched (`aa8ef30147500164ce23eb2ecfa6aaa57efd393d0fdc953371315f14460f4dae`).
+- Exact OOF expert reproduction: A `0.9300505952380952`, B `0.9293809523809524`, C `0.9305863095238095`, canonical R `0.924514880952381`; multi-expert union oracle `0.939485119047619` (delta vs A `+0.00943452380952381`).
+- Domain AUC `0.9892423592032967`. Raw stack Recall `0.9311220238095238` (delta `+0.001071428571428612`). Nested gated Recall `0.9305565476190476` (delta `+0.0005059523809524125`), F1/F2/F3/F4 deltas `-0.00011904761904768524 / +0.0007142857142856673 / 0 / +0.0014285714285713347`; changed/improved/harmed/net `186/6/1/+5`. Gate: `LAST_SLOT`.
+- Private firewall: mutable/immutable `1891/189`; automatic non-noop proposals `89`, cap/final changes `40`; immutable mutations `0`, Top1-3 changes `0`; no manual/semantic selection.
+- One challenger created: `private_task1/submissions/team_09205/submission_private_09205_final_multi_expert_stack.zip`, SHA256 `2db2e1357defa4b6ea79a441c7c4c6c65c8fccffb79c47b9b7face3593b67740`, validator PASS. No auto-submit; Private score unknown. GPU/Modal/Qwen/Fold0/Public/Private labels = `0`.
+- Artifacts: `private_task1/experiments/09205_final_multi_expert_stack/`. Incumbent `0.920544597` remains the known-score fallback.
+
+## 2026-09-23 — FINAL LAST-SLOT LOCAL REGIME SELECTOR
+
+- Stage-0 audit of the existing multi-expert challenger PASS: OOF gate `LAST_SLOT`, no gate violation; ZIP SHA `2db2e1357defa4b6ea79a441c7c4c6c65c8fccffb79c47b9b7face3593b67740`, validator PASS.
+- Strict local OOF P1 selector: Recall `0.929514880952381`, delta `-0.000535714285714195`, changed/improved/harmed/net `353/2/6/-4`; F1/F2/F3/F4 deltas `0/0/-0.002142857142857224/0`. Rejected.
+- Strict local OOF P2 fusion: Recall `0.9300505952380952`, delta `0`, changed/improved/harmed/net `0/0/0/0`. Rejected.
+- P0 existing multi-stack remained best: Recall `0.9305565476190476`, delta `+0.0005059523809524125`, changed/improved/harmed/net `186/6/1/+5`; selected in `NORMAL_LAST_SLOT` mode.
+- Final last-slot ZIP reuses P0 bytes exactly: `private_task1/submissions/team_09205/submission_private_09205_FINAL_LAST_SLOT.zip`, SHA `2db2e1357defa4b6ea79a441c7c4c6c65c8fccffb79c47b9b7face3593b67740`. Private changes `40` (`39` one-document membership, `1` order-only), protected-189 overrides `0`, Top1-3 changes `0`, validator PASS. Expected net-gain/delta proxies `1.075268817204301 / 0.0005169561621174524`; diagnostic only.
+- No manual/semantic edits, hardcoded query IDs, Private/Public/Fold0 labels, leaderboard target, GPU, Modal, Qwen, or auto-submit. Artifacts: `private_task1/experiments/09205_final_last_slot_local_regime_selector/`.

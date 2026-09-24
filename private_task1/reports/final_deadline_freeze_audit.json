@@ -1,0 +1,56 @@
+{
+  "audit": "FINAL_DEADLINE_FREEZE_AUDIT",
+  "status": "PASS",
+  "incumbent": "GUARDED_DIRECT_K20_RESIDUAL / V2_NESTED",
+  "observed_private_score": 0.9174,
+  "submission": {
+    "path": "private_task1/submissions/sprint48_guarded_direct/submission_private_guarded_direct.zip",
+    "sha256": "cb2b65b46068fabc5d8d6601add88ec8205dbab60a4c5536af210df3a5cf87fd",
+    "sha256_expected_match": true,
+    "json_path": "private_task1/submissions/sprint48_guarded_direct/submission_private_guarded_direct.json",
+    "json_validator": "PASS",
+    "zip_validator": "PASS",
+    "zip_member": "submission.json",
+    "zip_member_count": 1,
+    "zip_payload_matches_json": true,
+    "query_count": 2080,
+    "expected_query_count": 2080,
+    "missing_queries": 0,
+    "extra_queries": 0,
+    "documents_per_query": 5,
+    "bad_document_count_queries": 0,
+    "duplicate_documents": 0,
+    "null_document_ids": 0,
+    "nonstring_document_ids": 0,
+    "question_set_match": true
+  },
+  "final_model": {
+    "path": "private_task1/experiments/sprint48_guarded_direct/final_direct_model.json",
+    "sha256": "4b962c56570e6315876aeb6eea26d8877a8007e636d83c70ac2e84a13c2a175c",
+    "sha256_expected_match": true,
+    "selected_policy": "V2_NESTED",
+    "oof_recall": 0.9300505952380952,
+    "oof_delta": 0.004464285714285698,
+    "fold0_used": false,
+    "private_labels_used": false,
+    "final_fit_gate": "PASS"
+  },
+  "lineage": {
+    "private_changed_queries": 36,
+    "private_top1_3_changed": 0,
+    "qwen_single_rescue": "CLOSED",
+    "direct_listwise": "CLOSED",
+    "failed_challenger_artifacts_preserved": true,
+    "incumbent_mutation_detected": false,
+    "targeted_git_diff": "no changes reported"
+  },
+  "execution": {
+    "gpu_runs": 0,
+    "model_training": 0,
+    "modal_runs": 0,
+    "predictions_changed_by_audit": false,
+    "read_only_incumbent_checks": true
+  },
+  "decision": "READY_TO_KEEP_CURRENT_SUBMISSION",
+  "next_action": "NO_MORE_EXPERIMENTS"
+}

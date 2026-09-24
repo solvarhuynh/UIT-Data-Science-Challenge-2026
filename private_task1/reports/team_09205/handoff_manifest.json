@@ -1,0 +1,46 @@
+{
+  "schema_version": "team_09205_handoff_root_patch_v1",
+  "official_score": {
+    "recall": 0.920544597,
+    "precision": 0.196661609,
+    "source": "scoring_result_09205.zip"
+  },
+  "artifacts": {
+    "submission_09205": {
+      "path": "private_task1/submissions/team_09205/submission_private_constrained_dual_anchor_rrf_09205.zip",
+      "sha256": "aa8ef30147500164ce23eb2ecfa6aaa57efd393d0fdc953371315f14460f4dae",
+      "queries": 2080,
+      "docs_per_query": 5
+    },
+    "submission_09198": {
+      "path": "private_task1/submissions/team_09205/submission_private_dual_anchor_guarded_09198.zip",
+      "sha256": "3908ff798562cf17c7a2cdecf51007864711b9de6412e331ce67346e56e1c119",
+      "queries": 2080,
+      "docs_per_query": 5
+    },
+    "scoring_result": {
+      "path": "private_task1/reports/team_09205/scoring_result_09205.zip",
+      "sha256": "bfc02f72da860bb70370edaf71a552aac0b529dae6687c460f1da5e75742e7ec"
+    }
+  },
+  "comparison_09198_to_09205": {
+    "queries_with_order_change": 1464,
+    "queries_with_top5_membership_change": 64,
+    "queries_reordered_only_same_top5_set": 1400,
+    "interpretation": "Primary set-based Recall/Precision can only change on the membership-change queries; rank-only reorder is metric-neutral."
+  },
+  "path_corrections": {
+    "repo_root": "D:/udsc2026",
+    "private_input": "private_task1/input/private-official.json",
+    "guarded_anchor": "private_task1/submissions/sprint48_guarded_direct/submission_private_guarded_direct.zip",
+    "new_incumbent_dir": "private_task1/submissions/team_09205",
+    "scripts_dir": "private_task1/scripts/analysis/team_09205",
+    "reports_dir": "private_task1/reports/team_09205"
+  },
+  "scientific_notes": [
+    "Official 0.920544597 is verified from the supplied CodaBench scoring_result_09205.zip.",
+    "The original handoff scripts use train/warmup answer matching only as an oracle diagnostic. The corrected root-patch builders remove all label/oracle loading and perform structural validation only.",
+    "The README statement '1819.92 correct queries' should not be treated as a literal count; recall is a macro metric and the supplied score file reports recall/precision only.",
+    "The original '109 oracle queries' diagnostic is not equivalent to the official 1977-unseen scoring population and must not be used for model selection."
+  ]
+}

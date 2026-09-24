@@ -1,0 +1,89 @@
+{
+  "status": "RECOVERY_FAIL_SAFEGUARD_CHECKSUM",
+  "original_handoff_v2_file_present_before_recovery": false,
+  "private_09168_reproduction_lineage": {
+    "status": "PASS",
+    "generator": "scripts/analysis/finalize_private_rrf_k20.py",
+    "rank_helper": "finalize_private_rrf_k20.py::verify_inputs + rank_query",
+    "formula": "sum(weight/(2+rank)); dense=.2,bge=.3,knn_word=.2,bm25=.3",
+    "tie_break": "weighted RRF desc; dense/bge/knn_word/bm25 ranks; numeric document_id",
+    "worklist": "private_task1/rerank/worklists/private_rrf_k20_bge_worklist.jsonl",
+    "worklist_sha256": "cf3554e9dfa9e753896e7b5332275e12aa030269c747a59222a072ad4d6a5f86",
+    "scores": "private_task1/experiments/private_rrf_k20/gpu_download/results/production/scores.jsonl",
+    "scores_sha256": "1688dcec0afbc97722780fa1e0c92a18025498375b778d5e9cc81ac53cb7fa91"
+  },
+  "reconstructed_v2": {
+    "path": "private_task1/submissions/team_09205/anchors/submission_v2_reconstructed_candidate.zip",
+    "sha256": "7c67cef6007714747ee08a429ebf527d339098973aaf42c12b870da2b53a5ca4",
+    "structural_check": {
+      "queries": 2080,
+      "missing": 0,
+      "extra": 0,
+      "duplicate_documents": 0,
+      "null_documents": 0,
+      "bad_length_queries": 0
+    }
+  },
+  "safeguard_09198": {
+    "injections": 0,
+    "comparison": {
+      "query_count": 2080,
+      "exact_order_match_queries": 1891,
+      "exact_top5_set_match_queries": 1891,
+      "order_mismatches": 189,
+      "membership_mismatches": 189,
+      "first_20_order_mismatch_query_ids": [
+        "430",
+        "1854",
+        "1872",
+        "3424",
+        "4378",
+        "5740",
+        "5836",
+        "6028",
+        "7108",
+        "7230",
+        "9602",
+        "10390",
+        "11158",
+        "12012",
+        "14568",
+        "14572",
+        "15074",
+        "15566",
+        "17016",
+        "18778"
+      ],
+      "first_20_membership_mismatch_query_ids": [
+        "430",
+        "1854",
+        "1872",
+        "3424",
+        "4378",
+        "5740",
+        "5836",
+        "6028",
+        "7108",
+        "7230",
+        "9602",
+        "10390",
+        "11158",
+        "12012",
+        "14568",
+        "14572",
+        "15074",
+        "15566",
+        "17016",
+        "18778"
+      ],
+      "canonical_json_payload_equal": false
+    }
+  },
+  "rrf_09205": {
+    "comparison": null
+  },
+  "private_oracle_matching_used": false,
+  "warmup_reads": 0,
+  "train_answer_reads_for_private": 0,
+  "private_labels_used": false
+}

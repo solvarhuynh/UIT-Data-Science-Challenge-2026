@@ -1,0 +1,52 @@
+{
+  "report": "FINAL_09205_INCUMBENT_FREEZE",
+  "incumbent_policy": "CONSTRAINED_DUAL_ANCHOR_RRF",
+  "observed_private_score": 0.920544597,
+  "submission": {
+    "path": "private_task1/submissions/team_09205/submission_private_constrained_dual_anchor_rrf_09205.zip",
+    "expected_sha256": "aa8ef30147500164ce23eb2ecfa6aaa57efd393d0fdc953371315f14460f4dae",
+    "actual_sha256": "aa8ef30147500164ce23eb2ecfa6aaa57efd393d0fdc953371315f14460f4dae",
+    "sha_gate": "PASS",
+    "query_count": 2080,
+    "documents_per_query": 5,
+    "missing_queries": 0,
+    "extra_queries": 0,
+    "duplicate_documents": 0,
+    "null_documents": 0,
+    "validator": "PASS"
+  },
+  "v2_exact_anchor": "MISSING_AND_NOT_IDENTIFIABLE",
+  "recovery_evidence": {
+    "fingerprint_queries": 189,
+    "filesystem_candidates_scanned": 48,
+    "structural_2080_query_candidates": 9,
+    "rank1_exact_candidates": 0,
+    "git_historical_candidates": 0,
+    "inverse_unique": "0/2080",
+    "inverse_ambiguous": "2080/2080",
+    "inverse_no_solution": "0/2080",
+    "fabricated_anchor_created": false
+  },
+  "forensic_artifacts_preserved": [
+    "private_task1/reports/team_09205/v2_rank1_fingerprint_189.jsonl",
+    "private_task1/reports/team_09205/v2_candidate_fingerprint_search.json",
+    "private_task1/reports/team_09205/v2_inverse_identifiability_audit.json",
+    "private_task1/reports/team_09205/v2_anchor_recovery_audit.json"
+  ],
+  "constraints": {
+    "private_labels_used": false,
+    "fold0_used": false,
+    "gpu_runs": 0,
+    "modal_runs": 0,
+    "prediction_artifact_altered": false
+  },
+  "branches": {
+    "MISSING_V2_ANCHOR_RECOVERY": "CLOSED",
+    "DUAL_ANCHOR_SELECTOR": "BLOCKED_NO_EXACT_V2",
+    "QWEN_SINGLE_RESCUE": "CLOSED",
+    "DIRECT_LISTWISE": "CLOSED"
+  },
+  "final_freeze_gate": "PASS",
+  "final_status": "READY_TO_KEEP_09205_SUBMISSION",
+  "next_action": "ONLY_REOPEN_IF_TEAMMATE_PROVIDES_EXACT_V2_OR_GENERATOR"
+}

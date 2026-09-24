@@ -1,0 +1,689 @@
+{
+  "status": "CORRECTED_QWEN_SINGLE_RESCUE_PHASE_A_COMPLETE",
+  "canonical_artifact": {
+    "path": "artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b/predictions.jsonl",
+    "sha256": "65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f",
+    "query_count": 5600,
+    "qdoc_count": 431200,
+    "candidate_depth": "K77 (77 document scores/query)",
+    "score_field": "document_scores[].score",
+    "fields": [
+      "query_id",
+      "predicted_doc_ids",
+      "document_scores"
+    ],
+    "model": "Qwen/Qwen3-VL-Reranker-2B",
+    "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+    "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+    "selector": "true_s2_bm25_within_document_v2 / select_true_s2_prepared",
+    "aggregation": "MAX over selected chunks",
+    "score_direction": "higher = more relevant",
+    "scope": "canonical corrected historical artifact for current F1-F4 PV1; no Private qids",
+    "provenance_status": "VALID",
+    "run_state": {
+      "status": "PASS_PREDICTIONS_FROZEN",
+      "model": "Qwen/Qwen3-VL-Reranker-2B",
+      "requested_revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+      "resolved_revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+      "model_revision_verified": true,
+      "true_token_id": 9693,
+      "false_token_id": 2152,
+      "snapshot_provenance_sha256": {
+        "config.json": "82d38a8f803e38e13986fdd622114a6fec12a834adbd3cee9253d757a257d23d",
+        "tokenizer_config.json": "81ec7bb9530159b326c0bef1d0b6c33d392090524014ea3f0123a3c1eb9c2af5",
+        "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+        "model.safetensors": "466ec01961061e9d7f804b4fb1625fb6f406106cd1567e026096d4736fa9d5b9",
+        "1_LogitScore/config.json": "73e3156450564d8a98b7e47bcf5aace0f29600828b51937da545571e84db3ff3"
+      },
+      "instruction": "Given a Vietnamese legal question, determine whether the Document contains legal provisions relevant to answering the Query.",
+      "worklist_sha256": "a935e356cf8fe62a000e56c3817fd31dfc5ebbc079c4eef849803a7552c3c25a",
+      "smoke": "NOT_RUN_FULL_MODE",
+      "full_q_doc_pairs": 431200,
+      "full_chunks_scored": 1293198,
+      "checkpoint_integrity": "absent",
+      "checkpoint_chunks_recovered": 0,
+      "chunks_skipped_as_already_complete": 0,
+      "chunks_resumed_scored": 1293198,
+      "full_runtime_seconds": 35575.007443385,
+      "full_throughput_chunks_per_second": 36.351306519275624,
+      "errors": 0,
+      "prediction_artifact": "/workspace/p13/runtime/artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b-batch1-full-querytext-fixed/predictions.jsonl",
+      "prediction_sha256": "65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f",
+      "labels_loaded": false,
+      "fold0_used": false,
+      "metrics": "NOT_RUN"
+    },
+    "score_stats": {
+      "rows": 431200,
+      "query_count": 5600,
+      "duplicate_keys": 0,
+      "nonfinite_scores": 0,
+      "score_min": 0.05029296875,
+      "score_median": 0.4921875,
+      "score_max": 0.90625
+    }
+  },
+  "other_corrected_qwen_candidates": [
+    {
+      "path": "artifacts/task1/workflow_b/tv2/b2a/qwen3-vl-reranker-2b/predictions.jsonl",
+      "sha256": "65ef5e500f6f0f3e9006da0aeaa6f07bff98e7123d7a5c2e09fd87db5eaabc2f",
+      "query_count": 5600,
+      "qdoc_count": 431200,
+      "candidate_depths": [
+        77
+      ],
+      "score_field": "document_scores[].score",
+      "duplicate_keys": 0,
+      "nonfinite_scores": 0,
+      "score_min": 0.05029296875,
+      "score_median": 0.4921875,
+      "score_max": 0.90625,
+      "scope": "F1-F4 corrected historical K77; labels_loaded=false; fold0_used=false",
+      "model": "Qwen/Qwen3-VL-Reranker-2B",
+      "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+      "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+      "provenance_status": "VALID_BUT_STALE_K77"
+    },
+    {
+      "path": "artifacts/task1/full_doc_qwen_optimized_merged/full_doc_top200_qwen_optimized_32shards.jsonl",
+      "sha256": "25cc4b7dfb5919a47f927c545927e775c11997790984b519e2b74a71abce0415",
+      "scope": "complete 32-shard full-document rank<=200 residual; current PV1 overlap is not its intended universe",
+      "status": "VALID_BUT_NOT_CURRENT_K20_CANONICAL",
+      "manifest_audit": {
+        "manifest_path": "artifacts/task1/full_doc_qwen_optimized_merged/full_doc_top200_qwen_optimized_32shards_manifest.json",
+        "manifest_sha256": "415c164b5259df1820b7f9053f04d5f31924d2d7e0f40727c02d2cb206ef186a",
+        "manifest_status": "COMPLETE",
+        "merged_sha256_recorded": "25cc4b7dfb5919a47f927c545927e775c11997790984b519e2b74a71abce0415",
+        "merged_sha256_actual": "25cc4b7dfb5919a47f927c545927e775c11997790984b519e2b74a71abce0415",
+        "shard_count": 32,
+        "merged_q_doc_rows": 598192,
+        "unique_query_document_identities": 598192,
+        "duplicate_identities": 0,
+        "nonfinite_scores": 0,
+        "all_shards_output_sha_match": true,
+        "model_pass": true,
+        "revision_pass": true,
+        "scorer_pass": true,
+        "contract_pass": true,
+        "universe_pass": true,
+        "shards": [
+          {
+            "shard_id": "00",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "01",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "02",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "03",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "04",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "05",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "06",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "07",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "08",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "09",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "10",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "11",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "12",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "13",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "14",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "15",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "16",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "17",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "18",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "19",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "20",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "21",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "22",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "23",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "24",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "25",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "26",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "27",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "28",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "29",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "30",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          },
+          {
+            "shard_id": "31",
+            "status": "COMPLETE",
+            "output_exists": true,
+            "manifest_exists": true,
+            "output_sha_match": true,
+            "model": "Qwen/Qwen3-VL-Reranker-2B",
+            "revision": "4bd860ac4f15ad1897a214615cccc700f8f71818",
+            "scorer_sha256": "e3ed417275404c70ea75e189b5922aa9ab1fe711611391f48bb2a74d9e0cabfe",
+            "contract_sha256": "ae1fba276359fd809221b816a6be1c933786475be30219593805d329ac821d5e",
+            "universe_sha256": "28ee4cc484eccd52e0013bd9b0bd512cc4911e675d7ee8aa84413af72f83b13d"
+          }
+        ],
+        "gate": "PASS"
+      },
+      "current_validation_coverage": {
+        "qdoc_total": 112000,
+        "qwen_covered": 1,
+        "qwen_missing": 111999,
+        "coverage_pct": 0.0008928571428571428,
+        "queries_total": 5600,
+        "queries_fully_covered": 0,
+        "queries_partially_covered": 1,
+        "queries_zero_coverage": 5599,
+        "rank_bands": {
+          "rank_1_5": {
+            "total": 28000,
+            "covered": 0,
+            "missing": 28000,
+            "coverage_pct": 0.0
+          },
+          "rank_6_10": {
+            "total": 28000,
+            "covered": 0,
+            "missing": 28000,
+            "coverage_pct": 0.0
+          },
+          "rank_11_20": {
+            "total": 56000,
+            "covered": 1,
+            "missing": 55999,
+            "coverage_pct": 0.0017857142857142857
+          }
+        }
+      },
+      "current_private_coverage": {
+        "qdoc_total": 41600,
+        "qwen_covered": 0,
+        "qwen_missing": 41600,
+        "coverage_pct": 0.0,
+        "queries_total": 2080,
+        "queries_fully_covered": 0,
+        "queries_partially_covered": 0,
+        "queries_zero_coverage": 2080,
+        "rank_bands": {
+          "rank_1_5": {
+            "total": 10400,
+            "covered": 0,
+            "missing": 10400,
+            "coverage_pct": 0.0
+          },
+          "rank_6_10": {
+            "total": 10400,
+            "covered": 0,
+            "missing": 10400,
+            "coverage_pct": 0.0
+          },
+          "rank_11_20": {
+            "total": 20800,
+            "covered": 0,
+            "missing": 20800,
+            "coverage_pct": 0.0
+          }
+        }
+      },
+      "score_stats": {
+        "rows": 598192,
+        "query_count": 5600,
+        "duplicate_keys": 0,
+        "nonfinite_scores": 0,
+        "fields": [
+          "chunk_count",
+          "document_id",
+          "query_id",
+          "score"
+        ],
+        "score_min": 0.037841796875,
+        "score_median": 0.3671875,
+        "score_max": 0.859375
+      }
+    },
+    {
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_historical_parity_256.jsonl",
+      "sha256": "11cc2f98e821a0e968d1c73da90c047a350f23a796827fafd4114fd26bd7cbfa",
+      "scope": "256-row parity subset",
+      "status": "PARTIAL"
+    },
+    {
+      "path": "reports/task1/full_document_legal_field_retrieval/full_doc_top200_qwen_current_canary_16.jsonl",
+      "sha256": "d70264701534114084c972f83588411c3ad99b40e21a0014f23f5850e235348d",
+      "scope": "16-q-doc canary subset",
+      "status": "PARTIAL"
+    }
+  ],
+  "join_key": {
+    "fields": [
+      "query_id",
+      "document_id"
+    ],
+    "row_order_join_used": false,
+    "validation_duplicate_keys": 0,
+    "private_duplicate_keys": 0,
+    "qwen_duplicate_keys": 0
+  },
+  "validation_coverage": {
+    "qdoc_total": 112000,
+    "qwen_covered": 111816,
+    "qwen_missing": 184,
+    "coverage_pct": 99.83571428571429,
+    "queries_total": 5600,
+    "queries_fully_covered": 5443,
+    "queries_partially_covered": 157,
+    "queries_zero_coverage": 0,
+    "rank_bands": {
+      "rank_1_5": {
+        "total": 28000,
+        "covered": 27975,
+        "missing": 25,
+        "coverage_pct": 99.91071428571429
+      },
+      "rank_6_10": {
+        "total": 28000,
+        "covered": 27958,
+        "missing": 42,
+        "coverage_pct": 99.85
+      },
+      "rank_11_20": {
+        "total": 56000,
+        "covered": 55883,
+        "missing": 117,
+        "coverage_pct": 99.79107142857143
+      }
+    }
+  },
+  "private_coverage": {
+    "qdoc_total": 41600,
+    "qwen_covered": 0,
+    "qwen_missing": 41600,
+    "coverage_pct": 0.0,
+    "queries_total": 2080,
+    "queries_fully_covered": 0,
+    "queries_partially_covered": 0,
+    "queries_zero_coverage": 2080,
+    "rank_bands": {
+      "rank_1_5": {
+        "total": 10400,
+        "covered": 0,
+        "missing": 10400,
+        "coverage_pct": 0.0
+      },
+      "rank_6_10": {
+        "total": 10400,
+        "covered": 0,
+        "missing": 10400,
+        "coverage_pct": 0.0
+      },
+      "rank_11_20": {
+        "total": 20800,
+        "covered": 0,
+        "missing": 20800,
+        "coverage_pct": 0.0
+      }
+    }
+  },
+  "private_qwen_cache_status": "ABSENT",
+  "validation_query_ids_equal_qwen_query_ids": true,
+  "private_query_ids_overlap_qwen": 0,
+  "rescue_feasibility": {
+    "validation_queries_with_rescue_candidate": 5600,
+    "private_queries_with_rescue_candidate": 0,
+    "definition": "candidate_rank 6-20, outside incumbent Top5, finite cached Qwen score present",
+    "candidate_selection_performed": false,
+    "threshold_applied": false,
+    "labels_used": false
+  },
+  "signal_compatibility": {
+    "direction": "higher = more relevant",
+    "evidence": "historical corrected run_state and full-doc provenance contract",
+    "normalization_applied": false,
+    "score_min": 0.05029296875,
+    "score_median": 0.4921875,
+    "score_max": 0.90625,
+    "finite_scores": true
+  },
+  "provenance_gate": "PASS",
+  "deployability_class": "CACHE_PARTIAL",
+  "execution": {
+    "gpu_runs": 0,
+    "modal_runs": 0,
+    "inference_runs": 0,
+    "recall_evaluated": false,
+    "precision_evaluated": false,
+    "labels_used": false,
+    "submission_created": false,
+    "incumbent_changed": false
+  },
+  "next_action": "Do not open rescue policy; identify and fill the missing cached Qwen identities before any Phase B."
+}
