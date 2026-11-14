@@ -53,7 +53,7 @@ run-backend:
 	python -m uvicorn udsc2026.api.app:app --reload --host $(BACKEND_BIND_ADDRESS) --port $(BACKEND_PORT)
 
 run-frontend:
-	cd "frontend/giao dien" && npm run dev
+	cd frontend && npm run dev
 
 tv5-smoke:
 	python scripts/ci_cd/smoke_test.py --mode host
