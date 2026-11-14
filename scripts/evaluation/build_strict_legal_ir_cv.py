@@ -263,7 +263,7 @@ This directory contains deterministic five-fold out-of-fold partitions of
 
 - Seed: `2026`
 - Normalization: the exact NFKC/case-fold/punctuation-collapse function used by
-  `scripts/submission/build_legal_ir_ensemble.py`.
+  `scripts/inference/build_legal_ir_ensemble.py`.
 - Every identical normalized question is placed in one validation fold only.
 - For fold *n*, use `validation_ids` for scoring and `training_ids` for any
   KNN, exact-label, or other supervised source. Do not train on either the
