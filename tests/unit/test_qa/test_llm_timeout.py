@@ -115,4 +115,5 @@ def test_qwen_chat_messages_use_tokenizer_template() -> None:
     assert seen["kwargs"] == {
         "tokenize": False,
         "add_generation_prompt": True,
+        "enable_thinking": False,
     }

@@ -372,9 +372,10 @@ def test_official_scorer_golden_parity_for_empty_overflow_and_multi_gold() -> No
         "q3": {"answer": ["a", "b", "c", "d", "e", "gold-3"]},
         "q4": {"answer": ["gold-4", "x", "gold-4b", "y", "z"]},
     }
-    expected_recall, expected_precision = _official_scorer_reference(
-        predictions, references
-    )
+    # Golden parity values from the official BTC LegalIR scorer:
+    # recall = (0.5 + 0.0 + 0.0 + 1.0) / 4 = 0.375
+    # precision = (1.0 + 0.0 + 0.0 + 0.4) / 4 = 0.35
+    expected_recall, expected_precision = 0.375, 0.35
 
     report = evaluate_legal_ir(
         [

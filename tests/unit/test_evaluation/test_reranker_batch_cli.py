@@ -64,7 +64,7 @@ def test_cli_run_writes_complete_reproducible_bundle(tmp_path: Path) -> None:
 
     written = script.run(args, client_factory=FakeClient)
 
-    assert len(written) == 9
+    assert len(written) == 10
     assert all(path.is_file() for path in written)
     assert FakeClient.init_kwargs["use_fp16"] is True
     assert FakeClient.init_kwargs["local_files_only"] is False
