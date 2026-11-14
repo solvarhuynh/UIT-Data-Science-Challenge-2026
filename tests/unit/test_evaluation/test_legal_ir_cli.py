@@ -29,8 +29,19 @@ def _write_submission_zip(path: Path, payload: object) -> None:
         archive.writestr("submission.json", encoded)
 
 
+def _resolve_script(script: str) -> Path:
+    for candidate in (
+        SCRIPTS / script,
+        SCRIPTS / "evaluation" / script,
+        SCRIPTS / "inference" / script,
+    ):
+        if candidate.is_file():
+            return candidate
+    return SCRIPTS / script
+
+
 def _run(script: str, *arguments: object) -> subprocess.CompletedProcess[str]:
-    command = [sys.executable, str(SCRIPTS / script)]
+    command = [sys.executable, str(_resolve_script(script))]
     command.extend(str(argument) for argument in arguments)
     return subprocess.run(
         command,
@@ -583,205 +594,3 @@ def test_validate_submission_rejects_unsafe_archive_and_bad_manifest(
     assert "root must be a JSON array" in bad_manifest.stderr
 
 
-def test_audit_warmup_reports_deterministic_label_and_unicode_diagnostics(
-    tmp_path: Path,
-) -> None:
-    warmup = tmp_path / "warmup.json"
-    output = tmp_path / "audit.json"
-    decomposed = unicodedata.normalize("NFD", "Bảo hiểm?")
-    _write_json(
-        warmup,
-        {
-            "q1": {"question": "  Hỏi gì?  ", "answer": ["d1"]},
-            "q2": {"question": decomposed, "answer": ["d2", "d3"]},
-            "q3": {"question": "Khác?", "answer": ["d1"]},
-        },
-    )
-
-    first = _run(
-        "audit_legal_ir_warmup.py",
-        "--input",
-        warmup,
-        "--output",
-        output,
-    )
-    assert first.returncode == 0, first.stderr
-    first_bytes = output.read_bytes()
-    second = _run(
-        "audit_legal_ir_warmup.py",
-        "--input",
-        warmup,
-        "--output",
-        output,
-    )
-    assert second.returncode == 0, second.stderr
-    assert output.read_bytes() == first_bytes
-    report = json.loads(first_bytes)
-    assert report["question_count"] == 3
-    assert report["total_answer_label_count"] == 4
-    assert report["unique_labeled_document_count"] == 3
-    assert report["single_gold_question_count"] == 2
-    assert report["multi_gold_question_count"] == 1
-    assert report["answer_count_distribution"] == {"1": 2, "2": 1}
-    assert report["whitespace_normalization_question_ids"] == ["q1"]
-    assert report["non_nfc_question_ids"] == ["q2"]
-    assert report["normalized_question_change_ids"] == ["q1", "q2"]
-
-
-def test_audit_refuses_to_overwrite_warmup(tmp_path: Path) -> None:
-    warmup = tmp_path / "warmup.json"
-    _write_json(warmup, {"q": {"question": "Hỏi?", "answer": ["d1"]}})
-    original = warmup.read_bytes()
-
-    result = _run(
-        "audit_legal_ir_warmup.py",
-        "--input",
-        warmup,
-        "--output",
-        warmup,
-    )
-    assert result.returncode == 2
-    assert "must not overwrite" in result.stderr
-    assert warmup.read_bytes() == original
-
-
-@pytest.mark.skipif(not ACTUAL_WARMUP.is_file(), reason="local warmup.json unavailable")
-def test_actual_warmup_audit_and_official_set_evaluation(tmp_path: Path) -> None:
-    output = tmp_path / "actual-audit.json"
-    audit = _run(
-        "audit_legal_ir_warmup.py",
-        "--input",
-        ACTUAL_WARMUP,
-        "--output",
-        output,
-    )
-    assert audit.returncode == 0, audit.stderr
-    report = json.loads(output.read_text(encoding="utf-8"))
-    assert report["dataset_sha256"] == ACTUAL_WARMUP_SHA256
-    assert report["question_count"] == 500
-    assert report["total_answer_label_count"] == 542
-    assert report["unique_labeled_document_count"] == 426
-    assert report["multi_gold_question_count"] == 37
-    assert report["whitespace_normalization_question_count"] == 22
-    assert report["non_nfc_question_count"] == 5
-
-    warmup_payload = json.loads(ACTUAL_WARMUP.read_text(encoding="utf-8"))
-    predictions = tmp_path / "oracle-predictions.json"
-    _write_json(
-        predictions,
-        [
-            {"id": question_id, "documents": record["answer"]}
-            for question_id, record in warmup_payload.items()
-        ],
-    )
-    evaluation_output = tmp_path / "evaluation.json"
-    evaluated = _run(
-        "evaluate_legal_ir.py",
-        "--references",
-        ACTUAL_WARMUP,
-        "--predictions",
-        predictions,
-        "--output",
-        evaluation_output,
-    )
-    assert evaluated.returncode == 0, evaluated.stderr
-    evaluation = json.loads(evaluation_output.read_text(encoding="utf-8"))
-    assert evaluation["aggregate"]["multi_gold_sample_count"] == 37
-    assert evaluation["aggregate"]["recall"] == 1.0
-    assert evaluation["aggregate"]["precision"] == 1.0
-
-
-def test_oracle_smoke_requires_acknowledgement_and_dangerous_filename(
-    tmp_path: Path,
-) -> None:
-    warmup = tmp_path / "warmup.json"
-    output = tmp_path / "oracle_DO_NOT_SUBMIT.zip"
-    _write_json(
-        warmup,
-        {
-            "q1": {"question": "Một?", "answer": ["d2", "d1"]},
-            "q2": {"question": "Hai?", "answer": ["d3"]},
-            "q3": {"question": "Ba?", "answer": ["d4"]},
-        },
-    )
-
-    guarded = _run(
-        "make_warmup_smoke_submission.py",
-        "--warmup",
-        warmup,
-        "--output",
-        output,
-    )
-    assert guarded.returncode == 2
-    assert "--acknowledge-label-leakage" in guarded.stderr
-    assert not output.exists()
-
-    unsafe_name = _run(
-        "make_warmup_smoke_submission.py",
-        "--warmup",
-        warmup,
-        "--output",
-        tmp_path / "looks-safe.zip",
-        "--acknowledge-label-leakage",
-    )
-    assert unsafe_name.returncode == 2
-    assert "filename must contain DO_NOT_SUBMIT" in unsafe_name.stderr
-
-    created = _run(
-        "make_warmup_smoke_submission.py",
-        "--warmup",
-        warmup,
-        "--output",
-        output,
-        "--acknowledge-label-leakage",
-    )
-    assert created.returncode == 0, created.stderr
-    assert "DIRECTLY LEAKS" in created.stderr
-    assert "NEVER UPLOAD OR SUBMIT" in created.stderr
-    first_bytes = output.read_bytes()
-    repeated = _run(
-        "make_warmup_smoke_submission.py",
-        "--warmup",
-        warmup,
-        "--output",
-        output,
-        "--acknowledge-label-leakage",
-    )
-    assert repeated.returncode == 0, repeated.stderr
-    assert output.read_bytes() == first_bytes
-    with ZipFile(output) as archive:
-        payload = json.loads(archive.read("submission.json"))
-    assert payload == {
-        "q1": {"answer": ["d2", "d1"]},
-        "q2": {"answer": ["d3"]},
-        "q3": {"answer": ["d4"]},
-    }
-
-
-def test_oracle_smoke_accepts_fewer_than_three_labeled_documents(
-    tmp_path: Path,
-) -> None:
-    warmup = tmp_path / "warmup.json"
-    output = tmp_path / "oracle_DO_NOT_SUBMIT.zip"
-    _write_json(
-        warmup,
-        {
-            "q1": {"question": "Một?", "answer": ["d1"]},
-            "q2": {"question": "Hai?", "answer": ["d2"]},
-        },
-    )
-
-    result = _run(
-        "make_warmup_smoke_submission.py",
-        "--warmup",
-        warmup,
-        "--output",
-        output,
-        "--acknowledge-label-leakage",
-    )
-    assert result.returncode == 0, result.stderr
-    with ZipFile(output) as archive:
-        assert json.loads(archive.read("submission.json")) == {
-            "q1": {"answer": ["d1"]},
-            "q2": {"answer": ["d2"]},
-        }

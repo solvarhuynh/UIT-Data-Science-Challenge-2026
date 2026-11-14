@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from scripts.task1.run_legal_ir_pipeline import _load_yaml, _stage_list, build_parser
+from scripts.inference.run_legal_ir import _load_yaml, _stage_list, build_parser
 
 
 def test_runner_defaults_to_all_and_dry_run_flags() -> None:

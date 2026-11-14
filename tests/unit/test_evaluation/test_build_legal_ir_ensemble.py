@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
-SCRIPT = PROJECT_ROOT / "scripts" / "submission" / "build_legal_ir_ensemble.py"
+SCRIPT = PROJECT_ROOT / "scripts" / "inference" / "build_legal_ir_ensemble.py"
 
 
 def _write_json(path: Path, payload: object) -> None:

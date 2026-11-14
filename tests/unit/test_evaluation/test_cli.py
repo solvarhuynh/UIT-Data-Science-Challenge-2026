@@ -15,7 +15,7 @@ def test_evaluate_cli_writes_before_after_and_comparison(tmp_path: Path) -> None
     result = subprocess.run(
         [
             sys.executable,
-            str(PROJECT_ROOT / "scripts" / "evaluate.py"),
+            str(PROJECT_ROOT / "scripts" / "evaluation" / "evaluate.py"),
             "--benchmark",
             str(FIXTURE_DIR / "dev_benchmark.jsonl"),
             "--before",
@@ -52,7 +52,7 @@ def test_evaluate_cli_single_run_uses_report_stem(tmp_path: Path) -> None:
     result = subprocess.run(
         [
             sys.executable,
-            str(PROJECT_ROOT / "scripts" / "evaluate.py"),
+            str(PROJECT_ROOT / "scripts" / "evaluation" / "evaluate.py"),
             "--benchmark",
             str(FIXTURE_DIR / "dev_benchmark.jsonl"),
             "--before",
@@ -74,7 +74,7 @@ def test_evaluate_cli_returns_two_for_invalid_input(tmp_path: Path) -> None:
     result = subprocess.run(
         [
             sys.executable,
-            str(PROJECT_ROOT / "scripts" / "evaluate.py"),
+            str(PROJECT_ROOT / "scripts" / "evaluation" / "evaluate.py"),
             "--benchmark",
             str(tmp_path / "missing.json"),
             "--before",
@@ -114,7 +114,7 @@ def test_evaluate_cli_refuses_to_overwrite_any_input(
     result = subprocess.run(
         [
             sys.executable,
-            str(PROJECT_ROOT / "scripts" / "evaluate.py"),
+            str(PROJECT_ROOT / "scripts" / "evaluation" / "evaluate.py"),
             "--benchmark",
             str(inputs["benchmark"]),
             "--before",
@@ -141,7 +141,7 @@ def test_submission_cli_writes_configured_csv(tmp_path: Path) -> None:
     result = subprocess.run(
         [
             sys.executable,
-            str(PROJECT_ROOT / "scripts" / "write_submission.py"),
+            str(PROJECT_ROOT / "scripts" / "inference" / "write_submission.py"),
             "--input",
             str(FIXTURE_DIR / "qa_responses.jsonl"),
             "--output",
@@ -165,7 +165,7 @@ def test_submission_cli_returns_two_for_invalid_schema(tmp_path: Path) -> None:
     result = subprocess.run(
         [
             sys.executable,
-            str(PROJECT_ROOT / "scripts" / "write_submission.py"),
+            str(PROJECT_ROOT / "scripts" / "inference" / "write_submission.py"),
             "--input",
             str(FIXTURE_DIR / "qa_responses.jsonl"),
             "--output",
@@ -197,7 +197,7 @@ def test_submission_cli_refuses_symlink_collision_with_input(tmp_path: Path) -> 
     result = subprocess.run(
         [
             sys.executable,
-            str(PROJECT_ROOT / "scripts" / "write_submission.py"),
+            str(PROJECT_ROOT / "scripts" / "inference" / "write_submission.py"),
             "--input",
             str(input_link),
             "--output",
