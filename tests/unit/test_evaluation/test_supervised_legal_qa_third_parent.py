@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 from nltk.translate.meteor_score import meteor_score
 
-from scripts.submission.supervised_legal_qa_third_parent import (
+from scripts.inference.supervised_legal_qa_third_parent import (
     CandidateDataset,
     CandidateMeta,
     FEATURE_NAMES,

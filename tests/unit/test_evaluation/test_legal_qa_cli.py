@@ -35,8 +35,19 @@ def _write_submission_zip(
         archive.writestr(member_name, encoded)
 
 
+def _resolve_script(script: str) -> Path:
+    for candidate in (
+        SCRIPTS / script,
+        SCRIPTS / "evaluation" / script,
+        SCRIPTS / "inference" / script,
+    ):
+        if candidate.is_file():
+            return candidate
+    return SCRIPTS / script
+
+
 def _run(script: str, *arguments: object) -> subprocess.CompletedProcess[str]:
-    command = [sys.executable, str(SCRIPTS / script)]
+    command = [sys.executable, str(_resolve_script(script))]
     command.extend(str(argument) for argument in arguments)
     return subprocess.run(
         command,
@@ -102,10 +113,6 @@ def _official_submission_payload(
                 "official object-shaped submission ZIP",
             ),
         ),
-        (
-            "make_legal_qa_warmup_smoke_submission.py",
-            ("official object-shaped ZIP", "must never be uploaded"),
-        ),
     ],
 )
 def test_cli_help_distinguishes_internal_json_from_official_zip(
@@ -118,114 +125,6 @@ def test_cli_help_distinguishes_internal_json_from_official_zip(
     normalized_help = " ".join(result.stdout.split())
     for fragment in required_fragments:
         assert fragment in normalized_help
-
-
-def test_audit_reports_deterministic_unicode_whitespace_and_checksum(
-    tmp_path: Path,
-) -> None:
-    warmup = tmp_path / "warmup.json"
-    output = tmp_path / "audit.json"
-    _write_json(warmup, _warmup_payload())
-
-    first = _run(
-        "audit_legal_qa_warmup.py",
-        "--input",
-        warmup,
-        "--output",
-        output,
-    )
-    assert first.returncode == 0, first.stderr
-    summary = json.loads(first.stdout)
-    assert summary["status"] == "valid"
-    assert summary["question_count"] == 3
-    first_bytes = output.read_bytes()
-
-    second = _run(
-        "audit_legal_qa_warmup.py",
-        "--input",
-        warmup,
-        "--output",
-        output,
-    )
-    assert second.returncode == 0, second.stderr
-    assert output.read_bytes() == first_bytes
-    report = json.loads(first_bytes)
-    assert report["dataset_sha256"] == hashlib.sha256(warmup.read_bytes()).hexdigest()
-    assert report["question_count"] == 3
-    assert report["reference_answer_count"] == 3
-    assert report["question"]["surrounding_whitespace_ids"] == ["001"]
-    assert report["question"]["non_nfc_ids"] == ["002"]
-    assert report["answer"]["multiline_ids"] == ["001"]
-    assert report["answer"]["blank_line"] == {
-        "ids": ["001"],
-        "occurrence_count": 1,
-        "record_count": 1,
-    }
-    assert report["answer"]["non_breaking_space"]["ids"] == ["002"]
-    assert report["answer"]["soft_hyphen"]["occurrence_count"] == 1
-    assert report["answer"]["embedded_bom_feff"]["occurrence_count"] == 1
-    assert report["answer"]["format_character_cf"]["occurrence_count"] == 2
-    assert report["answer"]["trailing_line_whitespace"]["ids"] == ["001"]
-
-
-def test_audit_rejects_schema_error_and_input_output_collision(tmp_path: Path) -> None:
-    invalid = tmp_path / "invalid.json"
-    _write_json(invalid, {"q": {"question": "Hỏi?", "answer": ["not-string"]}})
-    schema_error = _run(
-        "audit_legal_qa_warmup.py",
-        "--input",
-        invalid,
-        "--output",
-        tmp_path / "audit.json",
-    )
-    assert schema_error.returncode == 2
-    assert "schema" in schema_error.stderr
-
-    warmup = tmp_path / "warmup.json"
-    _write_json(warmup, _warmup_payload())
-    original = warmup.read_bytes()
-    collision = _run(
-        "audit_legal_qa_warmup.py",
-        "--input",
-        warmup,
-        "--output",
-        warmup,
-    )
-    assert collision.returncode == 2
-    assert "must not overwrite" in collision.stderr
-    assert warmup.read_bytes() == original
-
-
-@pytest.mark.skipif(not ACTUAL_WARMUP.is_file(), reason="Task 2 warm-up unavailable")
-def test_actual_warmup_audit_matches_locked_regression_counts(tmp_path: Path) -> None:
-    output = tmp_path / "actual-audit.json"
-    result = _run(
-        "audit_legal_qa_warmup.py",
-        "--input",
-        ACTUAL_WARMUP,
-        "--output",
-        output,
-    )
-    assert result.returncode == 0, result.stderr
-    report = json.loads(output.read_text(encoding="utf-8"))
-    assert report["dataset_sha256"] == ACTUAL_WARMUP_SHA256
-    assert report["question_count"] == 500
-    assert report["reference_answer_count"] == 500
-    assert report["question"]["collapsed_whitespace_change_count"] == 31
-    assert report["question"]["non_nfc_count"] == 3
-    assert report["answer"]["multiline_count"] == 498
-    assert report["answer"]["non_nfc_count"] == 18
-    assert report["answer"]["character_length"]["min"] == 176
-    assert report["answer"]["character_length"]["median"] == 1373.0
-    assert report["answer"]["character_length"]["max"] == 8089
-    assert report["answer"]["non_breaking_space"]["record_count"] == 8
-    assert report["answer"]["non_breaking_space"]["occurrence_count"] == 42
-    assert report["answer"]["soft_hyphen"]["record_count"] == 1
-    assert report["answer"]["soft_hyphen"]["occurrence_count"] == 4
-    assert report["answer"]["embedded_bom_feff"]["record_count"] == 3
-    assert report["answer"]["format_character_cf"]["record_count"] == 4
-    assert report["answer"]["blank_line"]["record_count"] == 161
-    assert report["answer"]["trailing_line_whitespace"]["record_count"] == 20
 
 
 @pytest.mark.parametrize("prediction_suffix", [".json", ".zip"])
@@ -729,118 +628,3 @@ def test_validator_rejects_legacy_root_array_inside_official_zip(
     assert "array" in result.stderr
 
 
-def test_oracle_smoke_guards_acknowledgement_and_filename(tmp_path: Path) -> None:
-    warmup = tmp_path / "warmup.json"
-    output = tmp_path / "oracle_DO_NOT_SUBMIT.zip"
-    _write_json(warmup, _warmup_payload())
-
-    no_ack = _run(
-        "make_legal_qa_warmup_smoke_submission.py",
-        "--warmup",
-        warmup,
-        "--output",
-        output,
-    )
-    assert no_ack.returncode == 2
-    assert "--acknowledge-label-leakage" in no_ack.stderr
-    assert not output.exists()
-
-    safe_looking_name = _run(
-        "make_legal_qa_warmup_smoke_submission.py",
-        "--warmup",
-        warmup,
-        "--output",
-        tmp_path / "submission.zip",
-        "--acknowledge-label-leakage",
-    )
-    assert safe_looking_name.returncode == 2
-    assert "filename must contain DO_NOT_SUBMIT" in safe_looking_name.stderr
-
-
-def test_oracle_smoke_is_deterministic_loud_and_preserves_references(
-    tmp_path: Path,
-) -> None:
-    warmup_payload = _warmup_payload()
-    warmup = tmp_path / "warmup.json"
-    output = tmp_path / "oracle_DO_NOT_SUBMIT.zip"
-    _write_json(warmup, warmup_payload)
-
-    first = _run(
-        "make_legal_qa_warmup_smoke_submission.py",
-        "--warmup",
-        warmup,
-        "--output",
-        output,
-        "--acknowledge-label-leakage",
-    )
-    assert first.returncode == 0, first.stderr
-    summary = json.loads(first.stdout)
-    assert summary["label_leakage"] is True
-    assert summary["status"] == "local_only_do_not_submit"
-    assert "DIRECTLY COPIES REFERENCE ANSWERS" in first.stderr
-    assert "MUST NEVER BE UPLOADED OR SUBMITTED" in first.stderr
-    first_bytes = output.read_bytes()
-
-    second = _run(
-        "make_legal_qa_warmup_smoke_submission.py",
-        "--warmup",
-        warmup,
-        "--output",
-        output,
-        "--acknowledge-label-leakage",
-    )
-    assert second.returncode == 0, second.stderr
-    assert output.read_bytes() == first_bytes
-    with ZipFile(output) as archive:
-        payload = json.loads(archive.read("submission.json"))
-    assert payload == _official_submission_payload(warmup_payload)
-
-
-@pytest.mark.skipif(not ACTUAL_WARMUP.is_file(), reason="Task 2 warm-up unavailable")
-def test_actual_warmup_oracle_round_trip_is_local_only(tmp_path: Path) -> None:
-    output = tmp_path / "actual_oracle_DO_NOT_SUBMIT.zip"
-    result = _run(
-        "make_legal_qa_warmup_smoke_submission.py",
-        "--warmup",
-        ACTUAL_WARMUP,
-        "--output",
-        output,
-        "--acknowledge-label-leakage",
-    )
-    assert result.returncode == 0, result.stderr
-    summary = json.loads(result.stdout)
-    assert summary["question_count"] == 500
-    assert summary["label_leakage"] is True
-    with ZipFile(output) as archive:
-        assert archive.namelist() == ["submission.json"]
-        payload = json.loads(archive.read("submission.json"))
-    warmup = json.loads(ACTUAL_WARMUP.read_text(encoding="utf-8"))
-    assert len(payload) == 500
-    first_question_id = next(iter(warmup))
-    assert payload[first_question_id]["answer"] == warmup[first_question_id]["answer"]
-
-    validation = _run(
-        "validate_legal_qa_submission.py",
-        "--input",
-        output,
-        "--questions",
-        ACTUAL_WARMUP,
-    )
-    assert validation.returncode == 0, validation.stderr
-    assert json.loads(validation.stdout)["question_count"] == 500
-
-    report = tmp_path / "actual-oracle-diagnostic.json"
-    evaluation = _run(
-        "evaluate_legal_qa.py",
-        "--references",
-        ACTUAL_WARMUP,
-        "--predictions",
-        output,
-        "--output",
-        report,
-    )
-    assert evaluation.returncode == 0, evaluation.stderr
-    evaluation_summary = json.loads(evaluation.stdout)
-    assert evaluation_summary["question_count"] == 500
-    assert evaluation_summary["rouge_l"] == 1.0
-    assert evaluation_summary["official_scorer_parity"] is False

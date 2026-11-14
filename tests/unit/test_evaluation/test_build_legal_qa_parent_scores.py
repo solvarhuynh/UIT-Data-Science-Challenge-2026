@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.submission.build_legal_qa_parent_scores import (
+from scripts.inference.build_legal_qa_parent_scores import (
     bounded_parent_window,
     build_predictions,
     load_parent_scores,
