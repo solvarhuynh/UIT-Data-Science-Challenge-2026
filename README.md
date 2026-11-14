@@ -1,322 +1,312 @@
-# HCMUTE-SHIPCODE — UDSC 2026
+<div align="center">
+  <img src="docs/assets/banner.svg" alt="HCMUTE-SHIPCODE · UDSC 2026 — Vietnamese Legal RAG Platform" width="100%" />
 
-Hệ thống RAG pháp luật tiếng Việt cho hai tác vụ **LegalIR** và **LegalQA** của
-UIT Data Science Challenge 2026. Repository bao gồm pipeline chuẩn hóa dữ liệu,
-parent–child chunking, dense/BM25/hybrid retrieval, cross-encoder reranking,
-sinh câu trả lời bằng LLM local, đánh giá và đóng gói submission.
 
-- **LegalIR:** truy hồi danh sách `document_id`; đánh giá macro Recall và macro
-  Precision, hỗ trợ nhiều gold document cho một câu hỏi.
-- **LegalQA:** sinh câu trả lời dựa trên context đã truy hồi; đánh giá METEOR và
-  ROUGE-L, đồng thời giữ thông tin citation để kiểm tra.
+  <p>
+    <img src="https://img.shields.io/badge/Python-3.11%2B-3776AB?style=flat-square&amp;logo=python&amp;logoColor=white" alt="Python 3.11+" />
+    <img src="https://img.shields.io/badge/FastAPI-0.112%2B-009688?style=flat-square&amp;logo=fastapi&amp;logoColor=white" alt="FastAPI" />
+    <img src="https://img.shields.io/badge/React-19-61DAFB?style=flat-square&amp;logo=react&amp;logoColor=20232A" alt="React 19" />
+    <img src="https://img.shields.io/badge/Qdrant_%26_FAISS-Hybrid_Search-DC244C?style=flat-square" alt="Qdrant and FAISS" />
+    <img src="https://img.shields.io/badge/Models-%3C4B_Open_Weights-10B981?style=flat-square" alt="Open Models under 4B" />
+    <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&amp;logo=docker&amp;logoColor=white" alt="Docker Compose" />
+  </p>
 
-## Trạng thái hiện tại
+  <p><strong>Hệ thống RAG Pháp luật Tiếng Việt end-to-end: Legal ETL theo cấu trúc điều-khoản, Hybrid Retrieval, Cross-Encoder Reranking và Hỏi đáp có trích dẫn chuẩn xác.</strong></p>
 
-- Corpus xử lý chính: `data/processed_v3`; dữ liệu nguồn nằm tại `data/raw/`.
-- Toàn bộ model runtime được tải local, không gọi API model thương mại.
-- Retrieval giữ `parent_id`; QA chỉ mở rộng parent trong giới hạn sau khi rerank.
-- Workflow A của Task1 đã đóng; Workflow B TV2 đang ở bước audit B2a-0 về
-  provenance và tài liệu dài.
-- Các báo cáo, manifest và progress log trong `reports/task1/` là nguồn kiểm tra
-  trạng thái có thẩm quyền; tên file trong `artifacts/` không tự quyết định
-  production.
+  <p>
+    <a href="#tổng-quan--bài-toán">Tổng quan</a> ·
+    <a href="#kiến-trúc-hệ-thống">Kiến trúc</a> ·
+    <a href="#phân-công-thành-viên">Thành viên</a> ·
+    <a href="#cài-đặt--chạy-local">Cài đặt</a> ·
+    <a href="#hướng-dẫn-sử-dụng-usage">Hướng dẫn chạy</a> ·
+    <a href="#cấu-trúc-repository">Cấu trúc repo</a> ·
+    <a href="#kiểm-thử--chất-lượng">Kiểm thử</a>
+  </p>
+</div>
 
-## Mô hình chính thức
+---
 
-| Vai trò | Checkpoint | Local path | Công dụng |
-| --- | --- | --- | --- |
-| Embedding | [`huyydangg/DEk21_hcmute_embedding_v2`](https://huggingface.co/huyydangg/DEk21_hcmute_embedding_v2) | `models/dek21-v2` | Vector hóa query và chunk |
-| Reranker | [`Qwen/Qwen3-VL-Reranker-2B`](https://huggingface.co/Qwen/Qwen3-VL-Reranker-2B) | `models/qwen3-vl-reranker-2b` | Chấm điểm mức liên quan query–document bằng Qwen3-VL |
-| LLM | [`thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2`](https://huggingface.co/thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2) | `models/qwen3-legal` | Sinh câu trả lời pháp luật có citation |
+## Mục lục
 
-Task1 hiện dùng HCMUTE embedding và Qwen3-VL-Reranker-2B theo manifest local. Revision
-đã resolve của từng model được ghi trong `models/download_manifest.json`; không
-nên thay model chỉ dựa trên tên thư mục. Xem thêm [Model Registry](docs/models/model_registry.md).
+- [Tổng quan & Bài toán](#tổng-quan--bài-toán)
+- [Kiến trúc hệ thống](#kiến-trúc-hệ-thống)
+- [Dữ liệu & Mô hình chính thức](#dữ-liệu--mô-hình-chính-thức)
+- [Phân công thành viên](#phân-công-thành-viên)
+- [Cài đặt & Chạy local](#cài-đặt--chạy-local)
+- [Hướng dẫn sử dụng (Usage)](#hướng-dẫn-sử-dụng-usage)
+- [Hợp đồng API](#hợp-đồng-api)
+- [Kiểm thử & Chất lượng](#kiểm-thử--chất-lượng)
+- [Cấu trúc repository](#cấu-trúc-repository)
+- [Giấy phép](#giấy-phép)
 
-Tải đúng model production Task1 (Qwen3-VL-Reranker-2B):
+---
 
-```powershell
-python download_models.py --profile task1
-```
+## Tổng quan & Bài toán
 
-## Kiến trúc
+**HCMUTE-SHIPCODE — UDSC 2026** là hệ thống Retrieval-Augmented Generation (RAG) chuyên biệt cho văn bản quy phạm pháp luật tiếng Việt, xây dựng cho **UIT Data Science Challenge 2026**. Dự án giải quyết trọn vẹn hai bài toán cốt lõi trên cùng một nền tảng dữ liệu và mô hình mã nguồn mở cục bộ (`< 4B` tham số, không gọi API thương mại):
+
+- **Task 1 — LegalIR (Truy hồi văn bản pháp luật):** Truy hồi danh sách `document_id` liên quan nhất với câu hỏi pháp lý, hỗ trợ truy vấn đa văn bản (multi-gold) và đánh giá bằng **Macro Recall**, **Macro Precision** và **F1**.
+- **Task 2 — LegalQA (Hỏi đáp pháp luật có trích dẫn):** Sinh câu trả lời dựa trên ngữ cảnh pháp lý đã truy hồi và kiểm chứng trích dẫn (*Điều / Khoản / Điểm*), đánh giá bằng **METEOR**, **ROUGE-L** và kiểm tra chống suy diễn (anti-hallucination).
+
+---
+
+## Kiến trúc hệ thống
+
+Hệ thống tuân thủ nghiêm ngặt luồng xử lý đa tầng: **`retrieve children → rerank → bounded parent expansion → local LLM`**, bảo toàn đầy đủ metadata trích dẫn qua toàn bộ pipeline.
 
 ```mermaid
 flowchart LR
-    RAW[BTC raw contexts] --> ETL[Legal ETL + structure parser]
-    ETL --> CHILD[Child chunks]
-    ETL --> PARENT[Parent store]
-    CHILD --> EMB[DEk21 embedding]
+    RAW[Raw Legal Corpus] --> ETL[Legal ETL & Structure Parser]
+    ETL --> CHILD[Child Chunks · 192 tokens]
+    ETL --> PARENT[Parent Store · Điều / Khoản]
+    CHILD --> EMB[DEk21 HCMUTE Embedding v2]
     EMB --> DENSE[FAISS / Qdrant]
-    CHILD --> BM25[BM25]
-    DENSE --> HYBRID[Hybrid fusion]
+    CHILD --> BM25[BM25 · PyVi Tokenizer]
+    DENSE --> HYBRID[Hybrid Score Fusion]
     BM25 --> HYBRID
-    HYBRID --> RERANK[Qwen3-VL-Reranker-2B]
-    RERANK --> EXPAND[Bounded parent expansion]
+    HYBRID --> RERANK[BGE-v2-m3 / Qwen3-VL Reranker]
+    RERANK --> EXPAND[Bounded Parent Expansion]
     PARENT --> EXPAND
-    EXPAND --> LLM[Qwen3 legal]
-    LLM --> API[FastAPI / evaluation / submission]
+    EXPAND --> LLM[Qwen3-1.7B Vietnamese Legal]
+    LLM --> API[FastAPI Orchestrator + React UI]
 ```
 
-Luồng chuẩn là **retrieve children → rerank → mở rộng parent có giới hạn →
-LLM**. Không thay child bằng nguyên parent trước rerank.
+### Các tầng kỹ thuật chính
 
-## Corpus `processed_v3`
+1. **Legal ETL & Parent–Child Chunking (`src/udsc2026/ingestion/`):** Đọc đa định dạng nguồn (`JSON`, `JSONL`, `PDF`, `DOCX`, `TXT`), chuẩn hóa Unicode tiếng Việt, phân tích phân cấp pháp lý (`Luật → Chương → Mục → Điều → Khoản → Điểm`) với cơ chế fallback an toàn khi văn bản thiếu cấu trúc chuẩn. Tách riêng **Child chunks** (ngắn, tối ưu độ chính xác retrieval) và **Parent contexts** (đầy đủ điều khoản để LLM hiểu trọn vẹn ngữ cảnh).
+2. **Hybrid Dense + Sparse Retrieval (`src/udsc2026/retrieval/`):** Kết hợp **Dense Retrieval** (embedding `DEk21_hcmute_embedding_v2`, hỗ trợ cả `Qdrant` cho production và `FAISS` cho chạy nhanh local/GPU) với **Sparse BM25** (tách từ tiếng Việt bằng `pyvi`, giữ nguyên ký hiệu điều/khoản).
+3. **Cross-Encoder Reranking & Fine-Tuning (`src/udsc2026/retrieval/reranking/`, `src/udsc2026/training/`):** Tái xếp hạng top-K ứng viên bằng `BAAI/bge-reranker-v2-m3` (fine-tuned với hard-negative mining & conflict-anchor loss) hoặc `Qwen/Qwen3-VL-Reranker-2B` ở cấp độ chunk/document.
+4. **Grounded QA & Citation Verification (`src/udsc2026/qa/`):** `ParentContextExpander` mở rộng ngữ cảnh trong ngân sách token giới hạn (`max_parent_tokens: 2048`, `max_total_tokens: 7000`), nạp prompt template có version từ `prompts/`, gọi **Local LLM** (`Qwen3-1.7B-Vietnamese-Legal-GRPO`), và kiểm chứng citation đầu ra qua `CitationParser` đối chiếu với chunk nguồn.
+5. **FastAPI Orchestration & Web UI (`src/udsc2026/api/`, `frontend/`):** `RAGOrchestrator` điều phối toàn bộ luồng bất đồng bộ kèm Redis cache (fallback in-memory), đo latency từng stage và phục vụ giao diện demo **React 19 + TypeScript + Vite**.
 
-| Hạng mục | Giá trị đã audit |
+---
+
+## Dữ liệu & Mô hình chính thức
+
+### Corpus `data/processed_v3`
+
+| Hạng mục | Giá trị đã kiểm định |
 | --- | ---: |
-| Documents | 8.532 |
-| Chunks | 1.270.356 |
-| Parents | 184.548 |
-| Synthetic benchmark nội bộ | 100 câu, 7 loại câu hỏi |
-| Dung lượng | 2.905.166.051 bytes (2,706 GiB) |
-| Missing source token / bigram | 0 / 0 |
-| Duplicate / orphan / invalid / empty chunk | 0 |
-| Oversized chunk / missing metadata | 0 / 0 |
+| Số văn bản pháp luật (Documents) | **8.532** |
+| Số đoạn con (Child chunks) | **1.270.356** |
+| Số ngữ cảnh cha (Parent stores) | **184.548** |
+| Synthetic benchmark nội bộ | **100 câu hỏi**, 7 nhóm cấu trúc |
+| Missing / Duplicate / Orphan / Empty chunk | **0** |
 
-Hash chuẩn:
+### Danh mục mô hình (`< 4B` tham số, Local Open-Weights)
 
-```text
-processed_corpus_tree_hash: 80fb33ff1133ce2583097cc5a98ddc9739240a60bfe11c979892d5412dcda647
-benchmark_sha256:           80f27b47e81aa40b25ca55ab2fe7fb7edd8fc65388f41fdae841a48a104892d3
-source_chunk_corpus_sha256: d2aa542f1f45ad9f310bceb43063aed3058d2e81edbb15ecf18525c3c6d6bbc7
-```
+| Vai trò | Checkpoint HuggingFace | Tham số | Local Path | Công dụng |
+| --- | --- | ---: | --- | --- |
+| **Embedding** | [`huyydangg/DEk21_hcmute_embedding_v2`](https://huggingface.co/huyydangg/DEk21_hcmute_embedding_v2) | ~135M | `models/dek21-v2` | Vector hóa query và child chunk (768-d, cosine) |
+| **Reranker (Task 1)** | [`BAAI/bge-reranker-v2-m3`](https://huggingface.co/BAAI/bge-reranker-v2-m3) | ~568M | `models/reranker` | Cross-encoder chấm điểm & fine-tune xếp hạng LegalIR |
+| **Reranker (VL/Doc)** | [`Qwen/Qwen3-VL-Reranker-2B`](https://huggingface.co/Qwen/Qwen3-VL-Reranker-2B) | ~2.0B | `models/qwen3-vl-reranker-2b` | Reranking đa phương thức / tài liệu dài |
+| **Generator (LLM)** | [`thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2`](https://huggingface.co/thangvip/qwen3-1.7b-vietnamese-legal-grpo-phase-2) | 1.7B | `models/qwen3-legal` | Sinh câu trả lời pháp luật kèm trích dẫn chuẩn |
 
-Corpus có `integrity_gate_passed=true`. Báo cáo semantic vẫn ghi nhận 20 context
-chính thức có `passage` rỗng ngay từ nguồn BTC; hệ thống giữ placeholder và cảnh
-báo, không tự tạo nội dung. Chi tiết nằm trong:
+Xem chi tiết tại [Model Registry](docs/models/model_registry.md).
 
-- `data/processed_v3/metadata/processing_manifest.json`;
-- `data/processed_v3/metadata/disk_audit_report.json`;
-- `data/processed_v3/metadata/validation_report.json`.
+---
 
-Có 1.359 document được gắn cờ review cấu trúc nhưng nội dung vẫn được giữ bằng
-structured/partial/fallback chunks; đây không phải số document bị loại. Benchmark
-100 câu là bộ synthetic dùng để smoke và so sánh nội bộ, không phải test chính
-thức. Chỉ kết luận reranker cải thiện sau khi máy GPU tạo `comparison.md`.
+## Phân công thành viên
 
-Dữ liệu lớn không nằm trong Git. Khi chuyển sang máy khác, copy nguyên cả năm
-thư mục `documents`, `chunks`, `parents`, `benchmarks`, `metadata` bên trong
-`data/processed_v3`; không trộn với corpus cũ. Xem [Data README](data/README.md).
+Dự án được tổ chức theo 5 vai trò chuyên môn (chi tiết kiến trúc và quy ước nằm trong `docs/`):
 
-## Bắt đầu nhanh
+| Thành viên | Vai trò chính | Phạm vi phụ trách trong mã nguồn |
+| --- | --- | --- |
+| **Hoàng Long** | Integration & Orchestration | `src/udsc2026/api/`, `contracts/`, `RAGOrchestrator`, Redis cache, health/readiness probes |
+| **Trung Nghĩa** | Retrieval Specialist | `src/udsc2026/retrieval/{dense,sparse,hybrid}/`, `infrastructure/{embedding,vector_db}/` (Qdrant, FAISS, BM25) |
+| **Thế Quân** | QA & Local LLM Specialist | `src/udsc2026/qa/`, `infrastructure/llm/`, `prompts/`, chống hallucination & kiểm chứng citation |
+| **Trung Khang** | Data Engineering & Synthetic Benchmark | `src/udsc2026/ingestion/`, structure parser, parent–child chunking, corpus audit (`processed_v3`) |
+| **Nguyên Khang** | Reranking, Evaluation, MLOps & Web UI | `src/udsc2026/retrieval/reranking/`, `evaluation/`, `docker/`, `frontend/` (React/Vite UI) |
 
-Khuyến nghị Python 3.11. Với PowerShell trên Windows:
+---
+
+## Cài đặt & Chạy local
+
+### Yêu cầu môi trường
+- **Python**: `3.10 – 3.12` (khuyến nghị **Python 3.11**)
+- **Node.js**: `^20.19.0` hoặc `>=22.12.0` (cho Web UI)
+- **Docker & Docker Compose** (tùy chọn, để chạy Qdrant + Redis + Backend đóng gói)
+
+### 1. Cài đặt Python environment
 
 ```powershell
 git clone https://github.com/solvarhuynh/UIT-Data-Science-Challenge-2026.git
 cd UIT-Data-Science-Challenge-2026
+
 py -3.11 -m venv .venv
-Set-ExecutionPolicy -Scope Process Bypass
 .\.venv\Scripts\Activate.ps1
+
 python -m pip install --upgrade pip
 python -m pip install -c requirements_runtime.txt -e ".[llm,rerank,retrieval,models]"
 python -m pip install -r requirements_dev.txt
-$env:PYTHONPATH = "$PWD\src"
 ```
 
-Tải model nếu cần chạy local:
+### 2. Cấu hình & Tải mô hình local
 
 ```powershell
-python download_models.py
+Copy-Item .env.example .env
+python download_models.py --profile all
 ```
 
-Các lệnh kiểm tra nhỏ và test tự động có thể chạy ngay sau khi cài dependency.
-Các file lớn trong `data/`, `artifacts/` và trọng số trong `models/` thường được
-quản lý ngoài Git; hãy đọc manifest trước khi sao chép hoặc xóa.
+*(Tùy chọn chỉ tải model cho Task 1: `python download_models.py --profile task1`)*
 
-## Chạy từng thành phần
+### 3. Khởi chạy Backend & Frontend
 
-### Index dense/FAISS
-
-```powershell
-python scripts/data_prep/index_chunks.py `
-  --chunks-dir data/processed_v3/chunks `
-  --config-env gpu `
-  --vector-db-type faiss `
-  --skip-bm25 `
-  --force
-```
-
-### Sinh candidate và benchmark reranker
-
-```powershell
-python scripts/evaluation/generate_dense_candidates.py `
-  --benchmark data/processed_v3/benchmarks/synthetic_qa.jsonl `
-  --config-env gpu `
-  --candidate-k 50 `
-  --output artifacts/tv2/dense_predictions.jsonl `
-  --manifest artifacts/tv2/dense_run_manifest.json
-
-python scripts/evaluation/benchmark_reranker.py `
-  --benchmark data/processed_v3/benchmarks/synthetic_qa.jsonl `
-  --candidates artifacts/tv2/dense_predictions.jsonl `
-  --model models/qwen3-vl-reranker-2b `
-  --device cpu `
-  --batch-size 8 `
-  --max-length 1024 `
-  --candidate-k 50 `
-  --top-n 5 `
-  --output-dir artifacts/task1/reranker-evaluation
-```
-
-Kết quả được ghi tại thư mục output do lệnh chỉ định; hãy lưu kèm manifest model
-và corpus để có thể tái lập.
-
-### Backend và dịch vụ phụ trợ
-
-```powershell
-docker compose up -d qdrant redis
-uvicorn udsc2026.api.app:app --reload
-```
-
-Endpoint kiểm tra:
-
-```text
-GET  /health
-GET  /ready
-POST /api/v1/query
-```
-
-Hoặc build toàn bộ backend bằng Docker:
+**Cách A — Chạy bằng Docker Compose (Backend + Qdrant + Redis):**
 
 ```powershell
 docker compose up -d --build
 ```
 
-### Frontend
-
-Yêu cầu Node.js `^20.19.0` hoặc `>=22.12.0`.
+**Cách B — Chạy trực tiếp trên máy local:**
 
 ```powershell
-cd "frontend/giao dien"
-npm install
+# Terminal 1: Khởi chạy Qdrant & Redis (hoặc dùng FAISS local)
+docker compose up -d qdrant redis
+
+# Terminal 2: Chạy FastAPI Backend
+make run-backend
+# hoặc: uvicorn udsc2026.api.app:app --reload --host 127.0.0.1 --port 8000
+
+# Terminal 3: Chạy React Frontend
+cd frontend
+npm ci
 npm run dev
 ```
 
-Frontend phục vụ demo; không nằm trên đường chấm điểm chính.
+---
 
-## Kiểm tra chất lượng
+## Hướng dẫn sử dụng (Usage)
+
+### 1. Xử lý dữ liệu & Đánh chỉ mục (Data Prep & Indexing)
 
 ```powershell
-python -m pytest -v --basetemp .pytest_runtime -p no:cacheprovider
-python -m ruff check src tests scripts
-python -m mypy src scripts
+# Chạy ETL & tách parent-child chunks
+python scripts/data_prep/run_ingestion.py --input-dir data/raw --output-dir data/processed_v3
+
+# Đánh chỉ mục Dense Vector (FAISS hoặc Qdrant) & Sparse BM25
+python scripts/data_prep/index_chunks.py --chunks-dir data/processed_v3/chunks --config-env gpu --vector-db-type faiss --force
+python scripts/data_prep/build_bm25.py --chunks-dir data/processed_v3/chunks --output data/vector_store/bm25/index.json
 ```
 
-Các kiểm tra trọng yếu gồm schema/contract, ingestion zero-loss, cache/index
-versioning, parent expansion, reranker, metric LegalIR/LegalQA, API và submission.
+### 2. Huấn luyện / Fine-tune (Training)
+
+```powershell
+# Task 1: Hard-negative mining & Fine-tune BGE-Reranker-v2-m3
+python scripts/training/mine_task1_negatives.py
+python scripts/training/finetune_task1_bge_reranker_v3.py
+
+# Task 2: Fine-tune Qwen LoRA / Parent Cross-Encoder / Answer Selector
+python scripts/training/finetune_task2_qwen_lora.py
+python scripts/training/train_legal_qa_parent_crossencoder.py
+```
+
+### 3. Suy luận & Đánh giá (Inference & Evaluation)
+
+```powershell
+# Sinh candidate & Benchmark Reranker
+python scripts/evaluation/generate_dense_candidates.py `
+  --benchmark data/processed_v3/benchmarks/synthetic_qa.jsonl `
+  --config-env gpu `
+  --candidate-k 50 `
+  --output artifacts/dense_predictions.jsonl
+
+python scripts/evaluation/benchmark_reranker.py `
+  --benchmark data/processed_v3/benchmarks/synthetic_qa.jsonl `
+  --candidates artifacts/dense_predictions.jsonl `
+  --model models/qwen3-vl-reranker-2b `
+  --top-n 5
+
+# Đánh giá chuẩn LegalIR (Task 1) và LegalQA (Task 2)
+python scripts/evaluation/evaluate_legal_ir.py --help
+python scripts/evaluation/evaluate_legal_qa.py --help
+
+# Chạy pipeline Task 1 end-to-end hoặc sinh câu trả lời Task 2
+python scripts/inference/run_legal_ir.py --help
+python scripts/inference/generate_legal_qa_answers.py --help
+```
+
+---
+
+## Hợp đồng API
+
+Backend FastAPI cung cấp các endpoint chuẩn hóa tại `http://127.0.0.1:8000`:
+
+| Method | Endpoint | Mô tả |
+| :--- | :--- | :--- |
+| `GET` | `/health` | Kiểm tra tiến trình FastAPI đang hoạt động |
+| `GET` | `/ready` | Kiểm tra trạng thái sẵn sàng của model, VectorDB (Qdrant/FAISS) và Redis |
+| `POST` | `/api/v1/query` | Truy vấn RAG end-to-end: trả về câu trả lời kèm danh sách `citations` và thời gian từng stage |
+
+---
+
+## Kiểm thử & Chất lượng
+
+Repository đi kèm bộ test tự động (`unit`, `integration`, `retrieval`) và pipeline kiểm tra chất lượng tĩnh (`ruff`, `mypy`, `pydocstyle`, `bandit`):
+
+```powershell
+# Chạy toàn bộ unit & integration tests (không cần GPU/model weights)
+python -m pytest -v --basetemp .pytest_runtime -p no:cacheprovider
+
+# Chạy offline smoke check cho toàn bộ cấu hình & contracts
+python scripts/ci_cd/smoke_test.py --mode host
+
+# Chạy kiểm tra chất lượng mã nguồn (Lint, Typecheck, Docstyle, Security)
+python scripts/ci_cd/quality_gate.py
+```
+
+---
 
 ## Cấu trúc repository
 
 ```text
 .
-├── configs/                         Cấu hình base, development và GPU
-├── data/                            Raw/processed/index local; file lớn không commit
-│   └── processed_v3/                Corpus chính thức đã audit
+├── configs/                         # Cấu hình YAML (base, development, gpu, task1_baseline, task1_top1)
+├── docker/
+│   ├── backend.Dockerfile           # Multi-stage Dockerfile cho FastAPI backend
+│   └── frontend.Dockerfile          # Dockerfile cho React/Vite frontend
 ├── docs/
-│   ├── algorithms/                  Ghi chú thuật toán
-│   ├── architecture/                Kiến trúc hệ thống
-│   ├── competition/                 Tài liệu và quy định cuộc thi
-│   ├── members/                     Kế hoạch, setup và runbook của TV1–TV5
-│   ├── models/                      Registry và ghi chú model
-│   ├── project/                     Thiết kế hệ thống, API, data pipeline, Git workflow
-│   ├── task1/                       Tài liệu Workflow A/B và kết quả Task1
-│   │   ├── 0.939/                   Tài liệu deployment/reference 0.939
-│   │   ├── workflow_a/              Workflow A đã đóng
-│   │   └── workflow_b/              Workflow B của TV2 và TV4
-│   └── Scoring-Program-Task-*/      Scoring program LegalIR/LegalQA
-├── experiments/                     Thử nghiệm tách theo thành viên
-├── frontend/                        Web UI demo
-├── models/                          Model local; không commit weight lớn
-├── outputs/                         Log chạy local/GPU
-├── prompts/                         System prompt và RAG template có version
-├── reports/task1/                   Manifest, ledger và kết quả audit/evaluation
-│   └── workflow_b/
-│       ├── tv2/                     Artifact B2a và reranker của TV2
-│       └── tv4/                     Artifact B1 và LTR của TV4
+│   ├── algorithms/                  # Ghi chú thuật toán retrieval & chunking
+│   ├── architecture/                # Thiết kế ETL pipeline & FastAPI guidelines
+│   ├── assets/                      # Banner SVG cho tài liệu
+│   ├── models/                      # Model registry & tối ưu LLM
+│   └── project/                     # System design, API contract, coding convention
+├── frontend/                        # Ứng dụng Web demo (React 19 + TypeScript + Vite)
+├── prompts/                         # System prompts & RAG templates có quản lý version
 ├── scripts/
-│   ├── analysis/                    Phân tích/audit dữ liệu và workflow
-│   ├── beam/                        Runner và thí nghiệm Task1 trên Beam
-│   │   ├── task1_v2/                Module V2
-│   │   └── task1_v3_residual/       Module V3 residual policy/ranking
-│   ├── ci_cd/                       Script CI/CD
-│   ├── data_prep/                   Ingestion và indexing
-│   ├── evaluation/                  Candidate generation, metric và reranker benchmark
-│   ├── gpu/                         Preflight và pipeline GPU
-│   ├── maintenance/                 Script bảo trì repository
-│   ├── misc/                        Tiện ích không thuộc workflow chính
-│   ├── modal/                       Job và helper chạy trên Modal
-│   ├── packaging/                   Đóng gói artifact/submission
-│   ├── submission/                  Writer/validator submission LegalIR và LegalQA
-│   ├── task1/                       Script Task1 tiện ích
-│   ├── training/                    Fine-tune/training script
-│   ├── utils/                       Helper dùng chung
-│   ├── validation/                  Validator dữ liệu và submission
-│   └── warmup/                      Script warmup/preflight
-├── src/udsc2026/                    Mã nguồn production
-├── tests/                           Unit, integration và contract tests
-├── download_models.py               Tải model về thư mục models/
-└── pyproject.toml                   Dependency và cấu hình tooling
+│   ├── ci_cd/                       # Smoke test, quality gate & CI script
+│   ├── data_prep/                   # ETL ingestion, chunk repair, FAISS/Qdrant/BM25 indexing
+│   ├── evaluation/                  # Đánh giá LegalIR, LegalQA, benchmark reranker, tuning
+│   ├── gpu/                         # GPU preflight & runner
+│   ├── inference/                   # Pipeline suy luận, ensemble & kiểm định submission
+│   └── training/                    # Fine-tune BGE Reranker (Task 1), Qwen LoRA / DPO / Selector (Task 2)
+├── src/
+│   └── udsc2026/
+│       ├── api/                     # FastAPI app, Redis/in-memory cache, RAGOrchestrator
+│       ├── contracts/               # Pydantic schemas (API, chunk, health, QA, retrieval)
+│       ├── evaluation/              # Metrics & evaluator cho LegalIR & LegalQA
+│       ├── infrastructure/          # Embedding, LLM, Reranker clients & Qdrant/FAISS adapters
+│       ├── ingestion/               # Readers, cleaners, legal structure parser & chunker
+│       ├── qa/                      # PromptBuilder, QAEngine & CitationParser
+│       ├── retrieval/               # Dense, Sparse (BM25), Hybrid fusion, Reranking & ParentContext
+│       └── training/                # Core training utilities (Task 1 chunk training v3)
+├── tests/
+│   ├── fixtures/                    # Mock corpus & fixtures cho kiểm thử offline
+│   ├── integration/                 # Kiểm thử luồng ingestion & API
+│   ├── retrieval/                   # Kiểm thử BM25, Dense & Hybrid retriever
+│   └── unit/                        # Unit tests cho config, contracts, QA, reranking & evaluation
+├── .env.example                     # Mẫu biến môi trường runtime
+├── .gitignore
+├── docker-compose.yml               # Orchestration: Backend + Qdrant + Redis
+├── download_models.py               # Script tải model HuggingFace kèm resolved SHA manifest
+├── LICENSE
+├── Makefile                         # Các lệnh chuẩn hóa (install, test, lint, run-backend, run-frontend)
+├── pyproject.toml                   # Package metadata, dependencies & tool configs
+└── README.md
 ```
 
-## Phân công
+---
 
-| Thành viên | Phạm vi chính |
-| --- | --- |
-| TV1 | FastAPI, orchestration, cache, logging và integration |
-| TV2 | Embedding, dense/BM25 retrieval, FAISS/Qdrant và hybrid fusion |
-| TV3 | Qwen3, QA engine, prompt, citation và anti-hallucination |
-| TV4 | ETL, legal parser, parent–child chunking và benchmark data |
-| TV5 | Reranking, evaluation, GPU/MLOps, submission và UI demo |
+## Giấy phép
 
-## Tài liệu chính
-
-- [System Design](docs/project/10_system_design.md)
-- [Data Pipeline](docs/project/11_data_pipeline.md)
-- [API Contract](docs/project/api_contract.md)
-- [Git Workflow](docs/project/git_workflow.md)
-- [Docker Deployment](docs/project/12_docker_deployment.md)
-- [TV1](docs/members/tv1/tv1.md)
-- [TV2 Setup](docs/members/tv2/tv2_setup.md)
-- [TV3 Setup](docs/members/tv3/tv3_setup.md)
-- [TV4 Setup](docs/members/tv4/tv4_setup.md)
-- [TV5 Setup](docs/members/tv5/tv5_setup.md)
-- [Prompt Registry](prompts/README.md)
-
-## Quy tắc làm việc
-
-- Không commit raw data, processed corpus, vector store, model weights hoặc cache.
-- Không đổi model/corpus chính thức mà không cập nhật manifest và benchmark.
-- Không tái sử dụng index/candidate khi corpus hash hoặc model revision thay đổi.
-- Mọi thay đổi contract phải kèm test và cập nhật tài liệu liên quan.
-- Không force-push nhánh thành viên; hợp nhất bằng merge/fast-forward có kiểm tra.
-
-## Cập nhật Task1 trên nhánh TV2
-
-Các nhóm công việc đã hoàn tất và được commit trên `tv2` gồm: tái tổ chức tài liệu
-Task1/Workflow A/B; khóa downloader và provenance cho Qwen3-Reranker; các audit
-B2a-0 (context, GPU gate và long-document root cause); artifact Workflow A/B;
-progress log; cùng tooling đóng gói submission. Các kết quả vẫn giữ nguyên
-điều kiện không dùng Fold0/public labels cho các audit tương ứng.
-
-### Phục hồi các output lớn ngoài Git - [link](https://drive.google.com/file/d/1WA_FQNOgkIXVWZig_ocZcogF2aTyyx4A/view?usp=drive_link)
-
-GitHub giới hạn file 100 MB, vì vậy các output lớn được gom vào
-`task1_large_outputs.zip` ở thư mục gốc và thư mục giải nén cục bộ
-`artifacts/task1/large_outputs/` (đã được `.gitignore`). ZIP chứa các file với
-tên gốc; cần đặt từng file về đúng đường dẫn sau trước khi chạy lại công cụ:
-
-```text
-step2p4_proxy_predictions.jsonl       -> reports/task1/workflow_a/
-step2p5_fused_scores.jsonl            -> reports/task1/workflow_a/
-step2p5_p1_inner_full_action_scores.jsonl -> reports/task1/workflow_a/
-step2p1f_full_action_scores.jsonl     -> reports/task1/workflow_a/
-step2p1a_median_scores.jsonl           -> reports/task1/workflow_a/
-step2f2_full_action_scores.jsonl       -> reports/task1/workflow_a/
-step2p4_proxy_inner_oof_predictions.jsonl -> reports/task1/workflow_a/
-f1_actions.npz ... f4_actions.npz     -> reports/task1/workflow_b/tv4/b1/recovery/workflow_b_b1_recovery/
-```
-
-Sau khi giải nén, kiểm tra `artifacts/task1/large_outputs/MANIFEST.txt` để đối
-chiếu kích thước và SHA256. Không commit thư mục output hoặc file ZIP này.
+Mã nguồn được phát hành theo giấy phép [LICENSE](LICENSE). Trọng số mô hình (`models/`), dữ liệu lớn (`data/`), cache và file `.env` được loại trừ khỏi Git theo `.gitignore`.
