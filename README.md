@@ -305,8 +305,3 @@ python scripts/ci_cd/quality_gate.py
 └── README.md
 ```
 
----
-
-## Giấy phép
-
-Mã nguồn được phát hành theo giấy phép [LICENSE](LICENSE). Trọng số mô hình (`models/`), dữ liệu lớn (`data/`), cache và file `.env` được loại trừ khỏi Git theo `.gitignore`.
