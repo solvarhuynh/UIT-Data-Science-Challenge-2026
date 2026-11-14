@@ -1,0 +1,1317 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * HCMUTE-SHIPCODE — Vietnamese Legal Intelligence design system.
+ * Brand colors derived from the official logo: deep navy ink, golden yellow,
+ * Vietnamese flag red. Neutrals are warm (paper-like) in light mode and
+ * deep charcoal in dark mode.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 3px);
+  --radius-md: calc(var(--radius) - 1px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-ink: var(--ink);
+  --color-ink-foreground: var(--ink-foreground);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-flag: var(--flag);
+  --color-flag-foreground: var(--flag-foreground);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-success: var(--success);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --font-sans: "Be Vietnam Pro", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Bitter", "Noto Serif", Georgia, serif;
+  --shadow-panel:
+    0 1px 2px oklch(0.24 0.04 260 / 0.04), 0 12px 32px -18px oklch(0.24 0.04 260 / 0.28);
+  --shadow-lift: 0 1px 2px oklch(0.24 0.04 260 / 0.06), 0 6px 18px -12px oklch(0.24 0.04 260 / 0.3);
+}
+
+:root {
+  --radius: 0.5rem;
+
+  --background: oklch(0.978 0.006 85);
+  --foreground: oklch(0.245 0.041 262);
+  --surface: oklch(0.992 0.004 90);
+  --surface-2: oklch(0.958 0.008 88);
+
+  --card: oklch(1 0.002 90);
+  --card-foreground: oklch(0.245 0.041 262);
+  --popover: oklch(1 0.002 90);
+  --popover-foreground: oklch(0.245 0.041 262);
+
+  /* Deep navy is the primary action color; gold is reserved for references. */
+  --primary: oklch(0.265 0.048 264);
+  --primary-foreground: oklch(0.985 0.005 85);
+
+  /* Deep navy ink from the logo type block */
+  --ink: oklch(0.265 0.048 264);
+  --ink-foreground: oklch(0.975 0.008 85);
+  --brand: oklch(0.808 0.155 79);
+  --brand-foreground: oklch(0.235 0.045 264);
+
+  /* Vietnamese flag red — restrained secondary accent */
+  --flag: oklch(0.577 0.213 27.4);
+  --flag-foreground: oklch(0.985 0.005 85);
+
+  --secondary: oklch(0.952 0.01 86);
+  --secondary-foreground: oklch(0.265 0.048 264);
+  --muted: oklch(0.952 0.01 86);
+  --muted-foreground: oklch(0.495 0.024 264);
+  --accent: oklch(0.945 0.018 84);
+  --accent-foreground: oklch(0.265 0.048 264);
+  --destructive: oklch(0.577 0.213 27.4);
+  --destructive-foreground: oklch(0.985 0.005 85);
+  --success: oklch(0.63 0.13 155);
+
+  --border: oklch(0.895 0.012 85);
+  --input: oklch(0.888 0.012 85);
+  --ring: oklch(0.72 0.13 79);
+
+  --sidebar: oklch(0.963 0.009 87);
+  --sidebar-foreground: oklch(0.265 0.048 264);
+  --sidebar-border: oklch(0.893 0.012 85);
+  --sidebar-accent: oklch(0.932 0.014 84);
+  --sidebar-accent-foreground: oklch(0.245 0.041 262);
+}
+
+.dark {
+  --background: oklch(0.185 0.017 264);
+  --foreground: oklch(0.945 0.008 85);
+  --surface: oklch(0.215 0.02 264);
+  --surface-2: oklch(0.248 0.022 264);
+
+  --card: oklch(0.222 0.021 264);
+  --card-foreground: oklch(0.945 0.008 85);
+  --popover: oklch(0.228 0.021 264);
+  --popover-foreground: oklch(0.945 0.008 85);
+
+  --primary: oklch(0.822 0.158 80);
+  --primary-foreground: oklch(0.205 0.03 264);
+
+  --ink: oklch(0.93 0.01 85);
+  --ink-foreground: oklch(0.205 0.03 264);
+  --brand: oklch(0.822 0.158 80);
+  --brand-foreground: oklch(0.205 0.03 264);
+
+  --flag: oklch(0.65 0.192 27.5);
+  --flag-foreground: oklch(0.985 0.005 85);
+
+  --secondary: oklch(0.262 0.022 264);
+  --secondary-foreground: oklch(0.945 0.008 85);
+  --muted: oklch(0.262 0.022 264);
+  --muted-foreground: oklch(0.705 0.019 264);
+  --accent: oklch(0.288 0.026 264);
+  --accent-foreground: oklch(0.955 0.008 85);
+  --destructive: oklch(0.65 0.192 27.5);
+  --destructive-foreground: oklch(0.985 0.005 85);
+  --success: oklch(0.7 0.14 155);
+
+  --border: oklch(0.315 0.02 264);
+  --input: oklch(0.335 0.02 264);
+  --ring: oklch(0.68 0.12 80);
+
+  --sidebar: oklch(0.205 0.019 264);
+  --sidebar-foreground: oklch(0.93 0.008 85);
+  --sidebar-border: oklch(0.302 0.02 264);
+  --sidebar-accent: oklch(0.268 0.023 264);
+  --sidebar-accent-foreground: oklch(0.955 0.008 85);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    background-image:
+      linear-gradient(90deg, color-mix(in oklab, var(--brand) 2.2%, transparent), transparent 18%),
+      linear-gradient(180deg, transparent, color-mix(in oklab, var(--foreground) 1.4%, transparent));
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--brand) 45%, transparent);
+    color: var(--foreground);
+  }
+}
+
+/* Subtle paper-fibre texture: warmer and less dashboard-like than a dot grid. */
+@utility paper {
+  background-image:
+    repeating-linear-gradient(
+      7deg,
+      color-mix(in oklab, var(--foreground) 2.4%, transparent) 0,
+      color-mix(in oklab, var(--foreground) 2.4%, transparent) 1px,
+      transparent 1px,
+      transparent 12px
+    ),
+    repeating-linear-gradient(
+      96deg,
+      color-mix(in oklab, var(--brand) 1.8%, transparent) 0,
+      color-mix(in oklab, var(--brand) 1.8%, transparent) 1px,
+      transparent 1px,
+      transparent 19px
+    );
+}
+
+.vietnam-flag {
+  position: relative;
+  display: inline-block;
+  aspect-ratio: 3 / 2;
+  border-radius: 2px;
+  isolation: isolate;
+  vertical-align: -0.125em;
+}
+
+.vietnam-flag-cloth {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  border-radius: inherit;
+  transform-origin: left center;
+}
+
+.vietnam-flag-surface {
+  position: absolute;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  border-radius: inherit;
+  background: linear-gradient(155deg, #e22b23 0%, #da251d 56%, #b81716 100%);
+  box-shadow:
+    inset 0 0 0 1px rgb(104 10 10 / 0.22),
+    inset 0 1px 0 rgb(255 255 255 / 0.16);
+}
+
+.vietnam-flag-surface::before {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  content: "";
+  background:
+    repeating-linear-gradient(
+      8deg,
+      rgb(255 255 255 / 0.035) 0,
+      rgb(255 255 255 / 0.035) 1px,
+      transparent 1px,
+      transparent 3px
+    ),
+    repeating-linear-gradient(
+      98deg,
+      rgb(83 0 0 / 0.025) 0,
+      rgb(83 0 0 / 0.025) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
+
+.vietnam-flag-star {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  left: 50%;
+  width: 42%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  background: #ffde00;
+  clip-path: polygon(
+    50% 0,
+    61% 35%,
+    98% 35%,
+    68% 56%,
+    79% 93%,
+    50% 71%,
+    21% 93%,
+    32% 56%,
+    2% 35%,
+    39% 35%
+  );
+  filter: drop-shadow(0 1px 0 rgb(111 52 0 / 0.18));
+}
+
+.vietnam-flag-animated::before {
+  position: absolute;
+  z-index: -1;
+  top: -0.22rem;
+  bottom: -0.32rem;
+  left: -0.16rem;
+  width: 0.16rem;
+  border-radius: 999px;
+  content: "";
+  background: linear-gradient(90deg, #75451b, #d8aa57 45%, #815021);
+  box-shadow: 1px 0 2px rgb(55 22 4 / 0.22);
+}
+
+.vietnam-flag-animated::after {
+  position: absolute;
+  z-index: 2;
+  top: -0.31rem;
+  left: -0.235rem;
+  width: 0.31rem;
+  aspect-ratio: 1;
+  border: 1px solid rgb(100 52 10 / 0.38);
+  border-radius: 50%;
+  content: "";
+  background: radial-gradient(circle at 36% 30%, #ffe59a, #c78b2d 68%, #81501b);
+  box-shadow: 0 1px 2px rgb(65 29 5 / 0.2);
+}
+
+.vietnam-flag-animated .vietnam-flag-cloth {
+  visibility: hidden;
+}
+
+.vietnam-flag-motion {
+  position: absolute;
+  z-index: 1;
+  top: -20%;
+  left: -25%;
+  display: block;
+  width: 150%;
+  max-width: none;
+  height: auto;
+  user-select: none;
+  pointer-events: none;
+}
+
+.brand-lockup {
+  gap: 0.625rem;
+}
+
+.brand-logo-shell {
+  display: grid;
+  flex: none;
+  place-items: center;
+  padding: 3px;
+  border: 1px solid color-mix(in oklab, var(--brand) 22%, var(--sidebar-border));
+  border-radius: 0.5rem;
+  background: color-mix(in oklab, white 96%, var(--brand) 4%);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.72) inset,
+    0 4px 10px -9px color-mix(in oklab, var(--foreground) 38%, transparent);
+}
+
+.brand-lockup-copy {
+  animation: sidebar-copy-in 140ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+
+.brand-lockup-subtitle {
+  line-height: 1;
+}
+
+.brand-lockup-rule {
+  width: 1rem;
+  height: 2px;
+  flex: none;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--flag), var(--brand), transparent);
+}
+
+.sidebar-shell {
+  position: relative;
+  contain: layout paint;
+  isolation: isolate;
+  background-color: var(--sidebar);
+  background-image:
+    linear-gradient(155deg, color-mix(in oklab, var(--brand) 4%, transparent), transparent 26%),
+    repeating-linear-gradient(
+      8deg,
+      color-mix(in oklab, var(--foreground) 1.15%, transparent) 0,
+      color-mix(in oklab, var(--foreground) 1.15%, transparent) 1px,
+      transparent 1px,
+      transparent 16px
+    );
+}
+
+.sidebar-shell::before {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  content: "";
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--flag) 86%, transparent) 0,
+    color-mix(in oklab, var(--brand) 78%, transparent) 5.5rem,
+    transparent 15rem
+  );
+  pointer-events: none;
+}
+
+.sidebar-shell[data-motion-ready="false"] {
+  transition-duration: 0ms !important;
+}
+
+.sidebar-brand-header {
+  position: relative;
+  background: linear-gradient(
+    108deg,
+    color-mix(in oklab, var(--brand) 3.5%, transparent),
+    transparent 42%
+  );
+}
+
+.sidebar-brand-header::after {
+  position: absolute;
+  right: 0.875rem;
+  bottom: -1px;
+  left: 0.875rem;
+  height: 1px;
+  content: "";
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--flag) 34%, transparent),
+    color-mix(in oklab, var(--brand) 28%, transparent),
+    transparent 62%
+  );
+  pointer-events: none;
+}
+
+.sidebar-collapse-control {
+  color: color-mix(in oklab, var(--sidebar-foreground) 78%, var(--muted-foreground));
+  border: 1px solid color-mix(in oklab, var(--sidebar-border) 72%, white 28%);
+  background: color-mix(in oklab, var(--sidebar-accent) 74%, white 26%);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.72) inset,
+    0 1px 2px rgb(15 23 42 / 0.07),
+    0 7px 16px -13px rgb(15 23 42 / 0.48);
+  transition:
+    color 150ms ease,
+    border-color 150ms ease,
+    background-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.sidebar-collapse-control:hover {
+  color: var(--sidebar-foreground);
+  border-color: color-mix(in oklab, var(--brand) 24%, var(--sidebar-border));
+  background: color-mix(in oklab, var(--sidebar-accent) 88%, var(--brand) 12%);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.8) inset,
+    0 2px 4px rgb(15 23 42 / 0.1),
+    0 9px 18px -13px rgb(15 23 42 / 0.56);
+  transform: translateY(-1px);
+}
+
+.sidebar-collapse-control:active {
+  box-shadow:
+    0 1px 2px rgb(15 23 42 / 0.08) inset,
+    0 1px 2px rgb(15 23 42 / 0.05);
+  transform: scale(0.94);
+}
+
+.dark .sidebar-collapse-control {
+  color: color-mix(in oklab, var(--sidebar-foreground) 82%, var(--muted-foreground));
+  border-color: color-mix(in oklab, var(--sidebar-border) 82%, white 18%);
+  background: color-mix(in oklab, var(--sidebar-accent) 88%, white 12%);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.08) inset,
+    0 5px 14px -11px rgb(0 0 0 / 0.82);
+}
+
+.dark .sidebar-collapse-control:hover {
+  color: var(--sidebar-foreground);
+  border-color: color-mix(in oklab, var(--brand) 34%, var(--sidebar-border));
+  background: color-mix(in oklab, var(--sidebar-accent) 86%, var(--brand) 14%);
+}
+
+.sidebar-brand-reopen {
+  transition:
+    background-color 150ms ease,
+    transform 150ms ease;
+}
+
+.sidebar-brand-reopen:hover {
+  background: color-mix(in oklab, var(--sidebar-accent) 72%, transparent);
+}
+
+.sidebar-brand-reopen:active {
+  transform: scale(0.97);
+}
+
+.sidebar-reopen-cue {
+  position: absolute;
+  right: 1px;
+  bottom: 1px;
+  display: grid;
+  width: 1rem;
+  height: 1rem;
+  place-items: center;
+  border: 1px solid color-mix(in oklab, var(--brand) 48%, var(--sidebar));
+  border-radius: 999px;
+  color: oklch(0.985 0.005 85);
+  background: oklch(0.265 0.048 264);
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.2);
+}
+
+.sidebar-new-chat {
+  position: relative;
+  overflow: hidden;
+  color: oklch(0.985 0.005 85);
+  background: oklch(0.265 0.048 264);
+  box-shadow: 0 5px 13px -10px rgb(15 23 42 / 0.82);
+  transition:
+    transform 150ms ease,
+    box-shadow 150ms ease,
+    background-color 150ms ease;
+}
+
+.sidebar-new-chat::after {
+  position: absolute;
+  top: 0;
+  right: 0.75rem;
+  left: 0.75rem;
+  height: 1px;
+  content: "";
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--flag) 86%, transparent),
+    color-mix(in oklab, var(--brand) 92%, transparent),
+    transparent
+  );
+}
+
+.sidebar-new-chat:hover {
+  background: oklch(0.3 0.052 264);
+  box-shadow: 0 7px 16px -11px rgb(15 23 42 / 0.9);
+  transform: translateY(-1px);
+}
+
+.sidebar-new-chat:active {
+  box-shadow: 0 3px 9px -8px rgb(15 23 42 / 0.75);
+  transform: translateY(0);
+}
+
+.sidebar-nav-item,
+.sidebar-history-item {
+  position: relative;
+}
+
+.sidebar-nav-item-active,
+.sidebar-history-item-active {
+  background: color-mix(in oklab, var(--sidebar-accent) 84%, var(--brand) 16%);
+  box-shadow: 0 1px 0 color-mix(in oklab, white 52%, transparent) inset;
+}
+
+.sidebar-nav-item-active::before {
+  position: absolute;
+  top: 0.65rem;
+  bottom: 0.65rem;
+  left: 0;
+  width: 2px;
+  border-radius: 999px;
+  content: "";
+  background: var(--brand);
+}
+
+.sidebar-nav-icon {
+  color: color-mix(in oklab, var(--sidebar-foreground) 78%, transparent);
+  transition:
+    color 150ms ease,
+    background-color 150ms ease;
+}
+
+.sidebar-nav-icon-active {
+  color: color-mix(in oklab, var(--brand) 88%, var(--sidebar-foreground));
+  background: color-mix(in oklab, var(--brand) 13%, transparent);
+}
+
+.sidebar-history-panel {
+  opacity: 1;
+  transition: opacity 90ms ease;
+}
+
+.sidebar-expanded-hidden {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar-history-item-active {
+  box-shadow: none;
+}
+
+.sidebar-history-menu {
+  opacity: 0;
+}
+
+.sidebar-history-row:is(:hover, :focus-within) .sidebar-history-menu,
+.sidebar-history-row[data-active="true"] .sidebar-history-menu {
+  opacity: 1;
+}
+
+.sidebar-footer {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--sidebar) 72%, transparent),
+    color-mix(in oklab, var(--sidebar-accent) 38%, var(--sidebar))
+  );
+}
+
+.sidebar-utility-button svg {
+  color: color-mix(in oklab, var(--sidebar-foreground) 72%, var(--brand));
+}
+
+.sidebar-team-icon {
+  color: color-mix(in oklab, var(--brand) 74%, var(--sidebar-foreground));
+  background: color-mix(in oklab, var(--brand) 12%, var(--sidebar-accent));
+}
+
+.sidebar-team-card:hover .sidebar-team-icon {
+  color: color-mix(in oklab, var(--brand) 90%, var(--sidebar-foreground));
+}
+
+.dark .sidebar-new-chat {
+  border: 1px solid color-mix(in oklab, var(--brand) 20%, var(--sidebar-border));
+  background: oklch(0.275 0.032 264);
+}
+
+.dark .sidebar-new-chat:hover {
+  background: oklch(0.305 0.036 264);
+}
+
+.dark .sidebar-nav-item-active,
+.dark .sidebar-history-item-active {
+  background: color-mix(in oklab, var(--sidebar-accent) 88%, var(--brand) 12%);
+  box-shadow: none;
+}
+
+@media (hover: none) {
+  .sidebar-history-menu {
+    opacity: 0.68;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brand-lockup-copy {
+    animation: none;
+  }
+
+  .vietnam-flag-animated .vietnam-flag-cloth {
+    visibility: visible;
+  }
+
+  .vietnam-flag-motion {
+    display: none;
+  }
+
+  .sidebar-new-chat,
+  .sidebar-collapse-control,
+  .sidebar-brand-reopen,
+  .sidebar-history-panel {
+    transition: none;
+  }
+}
+
+@keyframes sidebar-copy-in {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.vietnam-topbar {
+  position: relative;
+}
+
+.vietnam-topbar::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 1px;
+  content: "";
+  background: linear-gradient(
+    90deg,
+    transparent 3%,
+    color-mix(in oklab, var(--flag) 64%, transparent) 38%,
+    color-mix(in oklab, var(--brand) 72%, transparent) 62%,
+    transparent 97%
+  );
+  pointer-events: none;
+}
+
+.topbar-vietnam-context {
+  gap: 0.45rem;
+  border: 1px solid color-mix(in oklab, var(--brand) 26%, var(--border));
+  border-radius: 999px;
+  padding: 0.28rem 0.55rem;
+  color: var(--foreground);
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  font-size: 0.65625rem;
+  font-weight: 600;
+  letter-spacing: 0.035em;
+  box-shadow: inset 0 1px 0 color-mix(in oklab, white 58%, transparent);
+}
+
+.dark .topbar-vietnam-context {
+  box-shadow: inset 0 1px 0 color-mix(in oklab, white 12%, transparent);
+}
+
+.welcome-vietnam {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-top: clamp(0.85rem, 2.2vh, 1.7rem);
+  padding-bottom: clamp(0.65rem, 1.6vh, 1.2rem);
+}
+
+.welcome-shell {
+  position: relative;
+  background-color: var(--background);
+}
+
+.welcome-shell::after {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  content: "";
+  background:
+    radial-gradient(
+      92% 30% at -12% 108%,
+      transparent 58%,
+      color-mix(in oklab, var(--flag) 10%, transparent) 59% 68%,
+      transparent 69%
+    ),
+    radial-gradient(
+      86% 27% at 112% 106%,
+      transparent 58%,
+      color-mix(in oklab, var(--brand) 13%, transparent) 59% 68%,
+      transparent 69%
+    );
+  mask-image: linear-gradient(to bottom, transparent 18%, black 72%);
+  pointer-events: none;
+}
+
+.welcome-shell::before {
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  left: 50%;
+  width: clamp(28rem, 45vw, 40rem);
+  aspect-ratio: 1;
+  content: "";
+  transform: translate(-50%, -50%) rotate(0deg);
+  transform-origin: center;
+  background: url("/dong-son-drum.png") center / contain no-repeat;
+  filter: sepia(1) saturate(1.9) hue-rotate(348deg) brightness(0.78);
+  mix-blend-mode: multiply;
+  opacity: 0.075;
+  pointer-events: none;
+  animation: trong-dong-turn 110s linear infinite;
+}
+
+.dark .welcome-shell::before {
+  filter: invert(0.82) sepia(1) saturate(1.45) hue-rotate(350deg) brightness(0.88);
+  mix-blend-mode: screen;
+  opacity: 0.045;
+}
+
+.welcome-stage {
+  position: relative;
+  z-index: 1;
+}
+
+.welcome-title {
+  text-wrap: balance;
+  font-kerning: normal;
+}
+
+.logo-archive-frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0.4rem;
+  border: 1px solid color-mix(in oklab, var(--brand) 40%, var(--border));
+  border-radius: 4px;
+  background: white;
+  box-shadow:
+    0 0 0 4px color-mix(in oklab, var(--background) 92%, transparent),
+    0 0 0 5px color-mix(in oklab, var(--flag) 24%, var(--border));
+}
+
+.logo-archive-inner {
+  position: relative;
+  overflow: hidden;
+  border-radius: 2px;
+}
+
+.logo-archive-inner::after {
+  position: absolute;
+  inset: -45% auto -45% -35%;
+  width: 22%;
+  content: "";
+  transform: rotate(18deg);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--brand) 26%, white),
+    transparent
+  );
+  opacity: 0.65;
+  pointer-events: none;
+  animation: son-mai-glint 6.5s ease-in-out infinite;
+}
+
+.welcome-vietnam-flag {
+  position: absolute;
+  z-index: 3;
+  top: -0.7rem;
+  left: -1.85rem;
+  width: 3.6rem;
+  transform: rotate(-4deg);
+  filter: drop-shadow(0 7px 7px color-mix(in oklab, var(--flag) 22%, transparent));
+}
+
+.vietnam-legal-mark {
+  position: absolute;
+  right: -1.15rem;
+  bottom: -0.35rem;
+  display: grid;
+  width: 2.8rem;
+  height: 2.8rem;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--brand) 76%, #b87520);
+  border-radius: 50%;
+  color: color-mix(in oklab, var(--flag) 84%, #67151a);
+  background:
+    radial-gradient(circle at 34% 22%, rgb(255 255 255 / 0.96), transparent 38%),
+    linear-gradient(145deg, #fffdf6 0%, #faefda 62%, #efd5a4 100%);
+  box-shadow:
+    0 0 0 3px color-mix(in oklab, var(--background) 94%, transparent),
+    0 7px 16px -12px color-mix(in oklab, var(--ink) 58%, transparent),
+    inset 0 1px 0 rgb(255 255 255 / 0.9);
+}
+
+.vietnam-legal-mark::before {
+  position: absolute;
+  inset: 2px;
+  content: "";
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    from -4deg,
+    color-mix(in oklab, var(--brand) 48%, transparent) 0 2deg,
+    transparent 2deg 18deg
+  );
+  opacity: 0.55;
+  -webkit-mask: radial-gradient(circle, transparent 0 70%, #000 72% 100%);
+  mask: radial-gradient(circle, transparent 0 70%, #000 72% 100%);
+  pointer-events: none;
+}
+
+.vietnam-legal-mark::after {
+  position: absolute;
+  inset: 0.34rem;
+  content: "";
+  border: 1px solid color-mix(in oklab, var(--brand) 58%, #c68a2b);
+  border-radius: 50%;
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.vietnam-legal-scale {
+  position: absolute;
+  z-index: 2;
+  top: 15%;
+  width: 55%;
+  height: 55%;
+  stroke-width: 1.75;
+  filter: drop-shadow(0 1px 0 rgb(255 255 255 / 0.72));
+}
+
+.vietnam-legal-lotus {
+  position: absolute;
+  z-index: 3;
+  bottom: 10%;
+  left: 50%;
+  width: 52%;
+  height: 23%;
+  transform: translateX(-50%);
+}
+
+.vietnam-lotus-petal {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  display: block;
+  width: 40%;
+  height: 78%;
+  border: 1px solid color-mix(in oklab, var(--brand) 74%, #b76e17);
+  border-radius: 78% 18% 72% 22%;
+  background: linear-gradient(
+    145deg,
+    color-mix(in oklab, #fff7dc 78%, white),
+    color-mix(in oklab, var(--brand) 22%, #f1d190)
+  );
+  transform-origin: 50% 100%;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7);
+}
+
+.vietnam-lotus-petal-left {
+  transform: translateX(-96%) rotate(-31deg);
+}
+
+.vietnam-lotus-petal-center {
+  z-index: 2;
+  bottom: 5%;
+  width: 34%;
+  height: 100%;
+  border-radius: 74% 74% 48% 48%;
+  transform: translateX(-50%);
+}
+
+.vietnam-lotus-petal-right {
+  transform: translateX(-4%) rotate(31deg) scaleX(-1);
+}
+
+.welcome-provenance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: clamp(0.6rem, 1.6vh, 1rem);
+  color: var(--muted-foreground);
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.105em;
+  text-transform: uppercase;
+}
+
+.welcome-provenance i {
+  width: 0.25rem;
+  height: 0.25rem;
+  transform: rotate(45deg);
+  background: color-mix(in oklab, var(--brand) 76%, var(--flag));
+}
+
+.welcome-composer {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+}
+
+.viet-divider {
+  display: flex;
+  width: 6.5rem;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.viet-divider span {
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(90deg, transparent, var(--brand));
+}
+
+.viet-divider span:last-child {
+  transform: rotate(180deg);
+}
+
+.viet-divider i {
+  width: 0.42rem;
+  height: 0.42rem;
+  transform: rotate(45deg);
+  border: 1px solid var(--flag);
+  background: color-mix(in oklab, var(--brand) 55%, var(--background));
+}
+
+.legal-record {
+  box-shadow: 0 7px 22px -20px color-mix(in oklab, var(--ink) 60%, transparent);
+}
+
+@keyframes trong-dong-turn {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+@keyframes son-mai-glint {
+  0%,
+  72% {
+    left: -35%;
+  }
+  88%,
+  100% {
+    left: 125%;
+  }
+}
+
+@media (max-width: 767px) {
+  .welcome-shell::before {
+    width: min(34rem, 130vw);
+    opacity: 0.055;
+  }
+
+  .vietnam-legal-mark {
+    right: -0.9rem;
+    bottom: -0.28rem;
+    width: 2.45rem;
+    height: 2.45rem;
+  }
+
+  .welcome-vietnam-flag {
+    top: -0.5rem;
+    left: -1.15rem;
+    width: 2.8rem;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 899px) {
+  .topbar-vietnam-context > span:last-child {
+    display: none;
+  }
+}
+
+@media (max-height: 760px) {
+  .welcome-vietnam {
+    padding-top: 0.55rem;
+    padding-bottom: 0.35rem;
+  }
+
+  .welcome-logo {
+    width: 72px !important;
+    height: 72px !important;
+  }
+
+  .vietnam-legal-mark {
+    right: -0.85rem;
+    bottom: -0.25rem;
+    width: 2.35rem;
+    height: 2.35rem;
+  }
+
+  .welcome-vietnam-flag {
+    top: -0.4rem;
+    left: -1rem;
+    width: 2.65rem;
+  }
+
+  .welcome-kicker {
+    margin-top: 0.45rem;
+  }
+
+  .welcome-title {
+    margin-top: 0.45rem;
+    font-size: 1.7rem;
+  }
+
+  .welcome-description {
+    margin-top: 0.3rem;
+    font-size: 0.8rem;
+  }
+
+  .welcome-provenance {
+    margin-top: 0.45rem;
+  }
+
+  .welcome-suggestions {
+    margin-top: 0.6rem;
+  }
+
+  .welcome-suggestions li button {
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+  }
+
+  .welcome-legal-note {
+    display: none;
+  }
+}
+
+@media (max-height: 650px) {
+  .welcome-description,
+  .welcome-provenance {
+    display: none;
+  }
+
+  .welcome-suggestions li:nth-child(n + 4) {
+    display: none;
+  }
+}
+
+@media (max-width: 360px) and (max-height: 650px) {
+  .welcome-vietnam {
+    justify-content: flex-start;
+    padding: 0.25rem 0.875rem 0;
+  }
+
+  .welcome-logo {
+    width: 56px !important;
+    height: 56px !important;
+  }
+
+  .logo-archive-frame {
+    padding: 0.25rem;
+  }
+
+  .vietnam-legal-mark {
+    right: -0.68rem;
+    bottom: -0.2rem;
+    width: 1.95rem;
+    height: 1.95rem;
+  }
+
+  .welcome-vietnam-flag {
+    top: -0.3rem;
+    left: -0.8rem;
+    width: 2.2rem;
+  }
+
+  .viet-divider {
+    margin-top: 0.35rem;
+  }
+
+  .welcome-kicker {
+    margin-top: 0.3rem;
+    font-size: 0.54rem;
+    letter-spacing: 0.13em;
+  }
+
+  .welcome-title {
+    margin-top: 0.35rem;
+    font-size: 1.4rem;
+  }
+
+  .welcome-suggestions {
+    margin-top: 0.35rem;
+  }
+
+  .welcome-suggestions > p {
+    margin-bottom: 0.2rem;
+    font-size: 0.57rem;
+  }
+
+  .welcome-suggestions li button {
+    gap: 0.45rem;
+    padding: 0.35rem 0.25rem;
+    font-size: 0.73rem;
+    line-height: 1.3;
+  }
+
+  .welcome-suggestions li button > span:first-child {
+    width: 1.5rem;
+    font-size: 0.68rem;
+  }
+}
+
+@media (max-height: 430px) {
+  .welcome-vietnam {
+    justify-content: flex-start;
+    padding-top: 0.2rem;
+    padding-bottom: 0;
+  }
+
+  .welcome-logo {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  .logo-archive-frame {
+    padding: 0.2rem;
+  }
+
+  .viet-divider,
+  .welcome-suggestions {
+    display: none;
+  }
+
+  .welcome-kicker {
+    margin-top: 0.25rem;
+    font-size: 0.5rem;
+    letter-spacing: 0.12em;
+  }
+
+  .welcome-title {
+    margin-top: 0.25rem;
+    font-size: 1.2rem;
+    line-height: 1.15;
+  }
+
+  .welcome-vietnam-flag {
+    top: -0.25rem;
+    left: -0.7rem;
+    width: 1.9rem;
+  }
+
+  .vietnam-legal-mark {
+    display: none;
+  }
+}
+
+@utility rule-line {
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--brand) 85%, transparent),
+    color-mix(in oklab, var(--flag) 55%, transparent)
+  );
+}
+
+@utility scroll-slim {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--foreground) 18%, transparent) transparent;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background-color: color-mix(in oklab, var(--foreground) 18%, transparent);
+    background-clip: content-box;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in oklab, var(--foreground) 30%, transparent);
+  }
+
+  &::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+}
+
+.conversation-scroll {
+  -ms-overflow-style: none;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+}
+
+.conversation-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+@utility prose-legal {
+  & h3 {
+    font-family: var(--font-serif);
+    font-size: 1.0625rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-top: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  & p {
+    line-height: 1.78;
+    margin-bottom: 0.9rem;
+  }
+  & ul {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+  & li {
+    line-height: 1.7;
+    padding-left: 1.15rem;
+    position: relative;
+  }
+  & li::before {
+    content: "";
+    position: absolute;
+    left: 0.15rem;
+    top: 0.72em;
+    width: 5px;
+    height: 5px;
+    border-radius: 1px;
+    background: color-mix(in oklab, var(--brand) 90%, transparent);
+  }
+  & strong {
+    font-weight: 600;
+  }
+}
+
+@keyframes scanline {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+@keyframes citation-flash {
+  0%,
+  100% {
+    background-color: transparent;
+  }
+  25% {
+    background-color: color-mix(in oklab, var(--brand) 55%, transparent);
+  }
+}
+
+.citation-flash {
+  animation: citation-flash 1.2s ease-in-out 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

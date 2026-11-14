@@ -1,26 +1,42 @@
-# HCMUTE-SHIPCODE Frontend
+# HCMUTE-SHIPCODE — Trợ lý pháp luật Việt Nam
 
-Giao diện tra cứu và hỏi đáp pháp luật Việt Nam của đội HCMUTE-SHIPCODE nằm
-trong thư mục `giao dien`.
+Giao diện tra cứu và hỏi đáp pháp luật của đội HCMUTE-SHIPCODE. Ứng dụng tập trung
+vào ba trải nghiệm chính:
 
-## Chạy local
+- hỏi đáp dựa trên căn cứ pháp lý được truy hồi;
+- tra cứu văn bản theo luật, số hiệu, điều, khoản và điểm;
+- kiểm tra nguồn trích dẫn và điểm truy hồi ngay bên cạnh câu trả lời.
+
+## Chạy dự án
 
 Yêu cầu Node.js `^20.19.0` hoặc `>=22.12.0`.
 
 ```powershell
-cd "frontend/giao dien"
 npm install
 npm run dev
 ```
 
-## Kiểm tra trước khi phát hành
+Build bản phát hành:
 
 ```powershell
-cd "frontend/giao dien"
-npm run lint
 npm run build
 ```
 
-Frontend gọi `POST /api/v1/query`. Khi backend chưa sẵn sàng, ứng dụng sử dụng
-dữ liệu mẫu để phục vụ trình diễn. Chi tiết về công nghệ, cấu trúc và cách kết
-nối backend được mô tả trong `giao dien/README.md`.
+## Kết nối backend
+
+Frontend gọi `POST /api/v1/query`. Khi backend chưa sẵn sàng, ứng dụng tự dùng
+dữ liệu mẫu tiếng Việt để phục vụ trình diễn. Phần kết nối được tách riêng trong
+`src/lib/legal/api.ts`.
+
+## Công nghệ
+
+- TanStack Start và React
+- TypeScript
+- Tailwind CSS
+- shadcn/ui
+- Motion
+
+Logo chính thức nằm tại `LOGO SHIPCODE.png`.
+
+Họa tiết nền trống đồng Đông Sơn sử dụng bản minh họa CC0 từ Wikimedia Commons:
+`public/dong-son-drum.png`.
