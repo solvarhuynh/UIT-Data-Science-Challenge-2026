@@ -579,6 +579,11 @@ def _validate_question_manifest_record(
         _validate_raw_question(question)
     if "answer" in record:
         answer = record["answer"]
+        # Official phase-question files use JSON null before labels are
+        # released. Coverage loading accepts that organizer shape while the
+        # labeled Warm-up loader above continues to require gold arrays.
+        if answer is None:
+            return record
         if not isinstance(answer, list):
             raise TypeError(f"{location} answer must be an array of document IDs")
         if not answer:

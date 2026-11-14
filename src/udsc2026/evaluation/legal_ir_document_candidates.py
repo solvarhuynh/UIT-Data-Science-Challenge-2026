@@ -75,8 +75,8 @@ def union_document_candidates(
 ) -> list[LegalIRDocumentCandidate]:
     """Union all retrieval sources by doc ID before expensive reranking."""
 
-    if candidate_depth not in (50, 100, 150, 200):
-        raise ValueError("candidate_depth must be one of 50, 100, 150, 200")
+    if candidate_depth not in (50, 100, 150, 200, 300, 500):
+        raise ValueError("candidate_depth must be one of 50, 100, 150, 200, 300, 500")
     if evidence_limit not in (1, 2):
         raise ValueError("evidence_limit must be 1 or 2")
     grouped: dict[str, list[DocumentEvidence]] = {}
@@ -141,8 +141,11 @@ class CrossEncoderDocumentReranker:
     ) -> Sequence[float]:
         """Score deterministic formatted evidence for each document."""
 
-        return self._client.score(
-            query, tuple(format_document_evidence(item) for item in candidates)
+        return tuple(
+            float(score)
+            for score in self._client.score(
+                query, tuple(format_document_evidence(item) for item in candidates)
+            )
         )
 
 

@@ -260,6 +260,7 @@ class LLMClient:
             normalized,
             tokenize=False,
             add_generation_prompt=True,
+            enable_thinking=False,
         )
         if not isinstance(rendered, str) or not rendered.strip():
             raise RuntimeError("tokenizer returned an empty chat prompt")

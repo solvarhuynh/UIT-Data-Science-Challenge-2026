@@ -489,9 +489,14 @@ def _validate_question_manifest_record(
         _validate_unicode_scalar_string(question)
     if "answer" in record:
         answer = record["answer"]
-        if not isinstance(answer, str):
-            raise TypeError(f"{location} answer must be a string")
-        _validate_unicode_scalar_string(answer)
+        # Organizer public/test manifests retain this field but encode
+        # unreleased references as JSON null. This loader derives IDs only, so
+        # null is valid metadata here; prediction and warm-up loaders remain
+        # strict and continue to require strings.
+        if answer is not None:
+            if not isinstance(answer, str):
+                raise TypeError(f"{location} answer must be a string or null")
+            _validate_unicode_scalar_string(answer)
     return record
 
 
@@ -510,8 +515,9 @@ def load_legal_qa_question_ids(path: str | Path) -> List[str]:
     """Load exact coverage from Warm-up, phase input, or an ID manifest.
 
     Supported JSON roots are the organizer mapping
-    ``id -> {question, optional answer}``, an array of opaque string IDs, or an
-    array of objects with ``id`` and optional ``question``/``answer`` fields.
+    ``id -> {question, optional nullable answer}``, an array of opaque string
+    IDs, or an array of objects with ``id`` and optional nullable
+    ``question``/``answer`` fields.
     This loader only derives coverage; it never rewrites question or answer
     text and does not expose reference answers as predictions.
     """

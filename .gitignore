@@ -26,215 +26,63 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# The Python template rule above must not hide the frontend runtime modules.
-!frontend/giao dien/src/lib/
-!frontend/giao dien/src/lib/**
-
-# PyInstaller
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
 # Unit test / coverage reports
 htmlcov/
 .tox/
 .nox/
 .coverage
 .coverage.*
-.cache
+.cache/
 nosetests.xml
 coverage.xml
 *.cover
 *.py.cover
 .hypothesis/
 .pytest_cache/
+.pytest_tmp*/
+.pytest_runtime/
 cover/
 
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
-
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-.pybuilder/
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-.python-version
-
-# Competition rules file
-UIT_DSC2026.md
-docs/member/tv3_execution_plan.md
-
-# pipenv
-#Pipfile.lock
-
-# UV
-#uv.lock
-
-# poetry
-#poetry.lock
-#poetry.toml
-
-# pdm
-#pdm.lock
-#pdm.toml
-.pdm-python
-.pdm-build/
-
-# pixi
-#pixi.lock
-.pixi
-
-# PEP 582
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
+# Environments & secrets
 .env
-.envrc
-scripts/task1/gemini_api_keys.local.txt
+.env.local
+.env.*.local
 .venv
 env/
 venv/
 ENV/
-env.bak/
-venv.bak/
 
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
+# Tooling & IDE caches
 .mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# pytype static type analyzer
-.pytype/
-
-# Cython debug symbols
-cython_debug/
-
-# PyCharm
-#.idea/
-
-# Abstra
-.abstra/
-
-# Visual Studio Code
-# .vscode/
-
-# Ruff stuff:
 .ruff_cache/
-
-# PyPI configuration file
-.pypirc
-
-# Cursor
-.cursorignore
-.cursorindexingignore
-
-# Marimo
-marimo/_static/
-marimo/_lsp/
-__marimo__/
-
-# Project-specific ignores from cam_nang.md
 .DS_Store
-/models/
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Large data, vector stores, and local model weights
 data/raw/
+data/processed*/
 data/vector_store/
+data/task1/
+data/task2/
+models/
 artifacts/
 outputs/
+logs/
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.onnx
 
-# Local TV2 verification artifacts
-.pytest_tmp*/
-.pytest_runtime/
-data/processed/metadata/index_errors.json
-
-# Local Beam scratch/backups
-beam*.bak*
-beam*.save
-beam*_backup*.py
-beam*_tmp*.py
-scripts/beam/beam*.bak*
-scripts/beam/beam*.save
-scripts/beam/beam*_backup*.py
-scripts/beam/beam*_tmp*.py
-scripts/beam/*.before_*
-
-# Ignore documentation files
-cam_nang.md
-PROJECT_STATUS.md
-
-# Ignore raw data and prossessed data
-data/
-
-# Large Task1 outputs archived outside GitHub's file-size limits.
-artifacts/task1/large_outputs/
-task1_large_outputs.zip
-
-# Canonical True-S2 worklist is retained locally; GitHub rejects files >100 MB.
-reports/task1/workflow_b/tv2/b2a/manifests/b2a_qwen_true_s2_top3_worklist.jsonl
-
-# Large Task 1 outputs and archives outside GitHub's 100MB limit
-reports/task1/full_document_legal_field_retrieval/full_document_legal_field_retrieval_candidates.jsonl
-reports/task1/workflow_c/shared/c2/execution/.worker_jobs/
-.cline_pytest_tmp/
-task1_large_files.zip
-
-
-# Private Task1: large generated data; keep manifests/state/logs tracked.
-private_task1/retrieval/candidates/
-private_task1/retrieval/preflight/
-private_task1/experiments/
-private_task1/rerank/worklists/
-private_task1/rerank/scores/
-private_task1/submissions/
-
-.tmp_pv1_bge_ft/
-
-# Local Phase 2B remote-sync payload; archived locally, not suitable for GitHub.
-_tmp_phase2b_remote_sync/
-_tmp_phase2b_remote_sync.zip
+# Frontend build & dependencies
+frontend/node_modules/
+frontend/dist/
+frontend/.output/
+frontend/.tanstack/
