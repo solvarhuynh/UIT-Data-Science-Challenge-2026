@@ -1370,7 +1370,7 @@ def align_predictions(
 def run_evaluate(args: argparse.Namespace) -> list[Path]:
     """Evaluate with the organizer-compatible local METEOR and ROUGE-L code."""
 
-    from scripts.submission.supervised_legal_qa_third_parent import (
+    from scripts.inference.supervised_legal_qa_third_parent import (
         _OFFICIAL_STEMMER,
         _official_meteor,
         _official_rouge_l,
