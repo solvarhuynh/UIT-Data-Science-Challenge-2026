@@ -97,8 +97,8 @@ class QAEngine:
         self,
         question: str,
         contexts: list[RetrievalHit],
-        prompt_version: str = "legal_qa_v1",
-        rag_template: str = "default_rag_v1",
+        prompt_version: str = "legal_qa_v4",
+        rag_template: str = "default_rag_v4",
         trace_id: Optional[str] = None,
     ) -> QAResponse:
         """Generate a grounded legal answer with citation verification.

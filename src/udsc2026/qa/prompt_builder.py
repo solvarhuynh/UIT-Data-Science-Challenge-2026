@@ -31,7 +31,7 @@ class PromptBuilder:
         prompt = builder.build_prompt(
             question="Quyền của người lao động là gì?",
             contexts=retrieval_hits,
-            prompt_version="legal_qa_v1",
+            prompt_version="legal_qa_v4",
         )
     """
 
@@ -54,8 +54,8 @@ class PromptBuilder:
         self,
         question: str,
         contexts: list[RetrievalHit],
-        prompt_version: str = "legal_qa_v1",
-        rag_template: str = "default_rag_v1",
+        prompt_version: str = "legal_qa_v4",
+        rag_template: str = "default_rag_v4",
     ) -> str:
         """Render a complete chat prompt for the LLM.
 
@@ -88,8 +88,8 @@ class PromptBuilder:
         self,
         question: str,
         contexts: list[RetrievalHit],
-        prompt_version: str = "legal_qa_v1",
-        rag_template: str = "default_rag_v1",
+        prompt_version: str = "legal_qa_v4",
+        rag_template: str = "default_rag_v4",
     ) -> list[dict[str, str]]:
         """Render separate system/user turns for tokenizer chat templates."""
 
@@ -111,7 +111,7 @@ class PromptBuilder:
         without coupling the engine to file-system details.
 
         Args:
-            prompt_version: The version string (e.g. ``"legal_qa_v1"``).
+            prompt_version: The version string (e.g. ``"legal_qa_v4"``).
 
         Returns:
             The same version string – extended in future to include a hash.
