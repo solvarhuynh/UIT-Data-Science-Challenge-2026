@@ -7,13 +7,18 @@ name = "udsc2026"
 version = "0.1.0"
 requires-python = ">=3.10,<3.13"
 dependencies = [
-    "fastapi>=0.112,<1.0",
     "pydantic>=2.8",
     "pyyaml>=6.0",
-    "uvicorn>=0.30,<1.0",
+    "numpy>=1.26,<2.0",
+    "scikit-learn>=1.5,<2.0",
 ]
 
 [project.optional-dependencies]
+data = [
+    "charset-normalizer>=3.3,<4.0",
+    "pdfplumber>=0.11,<1.0",
+    "python-docx>=1.1,<2.0",
+]
 llm = [
     "accelerate>=1.1,<2.0",
     "peft>=0.17,<1.0",
@@ -60,7 +65,7 @@ gpu = [
 [tool.ruff]
 line-length = 88
 target-version = "py310"
-src = ["src", "tests", "scripts", "experiments"]
+src = ["src", "scripts"]
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "E501", "F", "I"]
@@ -100,7 +105,7 @@ include_trailing_comma = true
 force_grid_wrap = 0
 use_parentheses = true
 ensure_newline_before_comments = true
-src_paths = ["src", "frontend", "tests"]
+src_paths = ["src", "scripts"]
 skip_glob = ["*/migrations/*", "*/__pycache__/*"]
 
 [tool.mypy]
@@ -119,10 +124,6 @@ warn_no_return = true
 warn_unreachable = true
 strict_equality = true
 show_error_codes = true
-
-[[tool.mypy.overrides]]
-module = ["tests.*", "migrations.*"]
-ignore_errors = true
 
 [[tool.mypy.overrides]]
 module = [
@@ -148,7 +149,7 @@ module = [
 ignore_missing_imports = true
 
 [tool.bandit]
-exclude_dirs = ["tests", "migrations", "__pycache__"]
+exclude_dirs = ["__pycache__"]
 skips = ["B101", "B601"]
 
 [tool.pydocstyle]
@@ -159,4 +160,4 @@ convention = "google"
     "D213",
     "D301",
 ]
-match-dir = "(?!tests)(?!migrations).*"
+match-dir = ".*"

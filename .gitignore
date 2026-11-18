@@ -66,6 +66,7 @@ Thumbs.db
 .ipynb_checkpoints/
 
 # Large data, vector stores, and local model weights
+data/
 data/raw/
 data/processed*/
 data/vector_store/
@@ -80,9 +81,16 @@ logs/
 *.bin
 *.safetensors
 *.onnx
+*.gguf
+*.faiss
+*.index
+*.db
+*.sqlite
+*.sqlite3
+*.zip
+*.tar.gz
 
-# Frontend build & dependencies
-frontend/node_modules/
-frontend/dist/
-frontend/.output/
-frontend/.tanstack/
+# Local reference / scratch directories
+tra-cuu/
+docs/*
+!docs/comparisons/

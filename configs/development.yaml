@@ -1,7 +1,0 @@
-environment: development
-
-embedding:
-  device: cpu
-
-vector_db:
-  type: faiss
