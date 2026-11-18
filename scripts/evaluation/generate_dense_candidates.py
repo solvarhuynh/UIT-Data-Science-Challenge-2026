@@ -27,7 +27,7 @@ from udsc2026.evaluation import (  # noqa: E402
 from udsc2026.evaluation.models import PredictionSample  # noqa: E402
 from udsc2026.contracts.retrieval import RetrievalHit  # noqa: E402
 from udsc2026.infrastructure.config import load_config  # noqa: E402
-from udsc2026.infrastructure.embedding.bkai_client import (  # noqa: E402
+from udsc2026.infrastructure.embedding.client import (  # noqa: E402
     EmbeddingClient,
 )
 from udsc2026.infrastructure.vector_db.factory import (  # noqa: E402

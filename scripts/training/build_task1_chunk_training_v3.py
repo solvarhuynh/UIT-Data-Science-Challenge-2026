@@ -11,6 +11,10 @@ from collections import Counter
 from pathlib import Path
 from typing import Sequence
 
+SOURCE_ROOT = Path(__file__).resolve().parents[2] / "src"
+if str(SOURCE_ROOT) not in sys.path:
+    sys.path.insert(0, str(SOURCE_ROOT))
+
 from udsc2026.training.task1_chunk_training_v3 import RankBands, build_training_record
 
 
