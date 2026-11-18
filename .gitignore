@@ -45,8 +45,7 @@ cover/
 
 # Environments & secrets
 .env
-.env.local
-.env.*.local
+.env.*
 .venv
 env/
 venv/
@@ -65,13 +64,13 @@ Thumbs.db
 # Jupyter Notebook
 .ipynb_checkpoints/
 
-# Large data, vector stores, and local model weights
+# Large data, vector stores, and downloaded model weights
 data/
 data/raw/
 data/processed*/
 data/vector_store/
-data/task1/
-data/task2/
+data/retrieval/
+data/answers/
 models/
 artifacts/
 outputs/
@@ -90,7 +89,14 @@ logs/
 *.zip
 *.tar.gz
 
-# Local reference / scratch directories
+# Reference and scratch directories
 tra-cuu/
 docs/*
 !docs/comparisons/
+!docs/models/
+!docs/models/**
+
+TASKS.md
+AGENT.md
+GUIDE.md
+RULE.md
