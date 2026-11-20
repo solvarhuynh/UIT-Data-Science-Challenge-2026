@@ -121,8 +121,8 @@ def _preflight_reranker_tokenizer() -> None:
 )
 def generate_rankings(
     dataset: str = "train",
-    candidate_k: int = 200,
-    rerank_k: int = 100,
+    candidate_k: int = 500,
+    rerank_k: int = 200,
     resume: bool = False,
 ) -> None:
     if dataset not in {"train", "public"}:
@@ -231,8 +231,8 @@ def generate_rankings(
 )
 def evaluate_or_package(
     dataset: str = "train",
-    candidate_k: int = 200,
-    rerank_k: int = 100,
+    candidate_k: int = 500,
+    rerank_k: int = 200,
 ) -> None:
     if dataset not in {"train", "public"}:
         raise ValueError("dataset must be 'train' or 'public'")
@@ -246,7 +246,7 @@ def evaluate_or_package(
     )
     output_root = Path("data/predictions/selected/legalir") / dataset
     variant_name = f"candidate_k{candidate_k}_rerank_k{rerank_k}"
-    if (candidate_k, rerank_k) != (200, 100):
+    if (candidate_k, rerank_k) != (500, 200):
         output_root /= variant_name
     dense = output_root / "dense.jsonl"
     reranked = output_root / "reranked.jsonl"
@@ -455,8 +455,8 @@ def evaluate_or_package(
 @app.local_entrypoint()
 def main(
     dataset: str = "train",
-    candidate_k: int = 200,
-    rerank_k: int = 100,
+    candidate_k: int = 500,
+    rerank_k: int = 200,
     resume: bool = False,
 ) -> None:
     generate_rankings.remote(
