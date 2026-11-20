@@ -364,6 +364,65 @@ def run_pipeline(
             check=True,
             cwd=VOLUME_PATH,
         )
+        selector_dir = candidate_root / "selector"
+        subprocess.run(
+            [
+                sys.executable,
+                "/workspace/scripts/answers/evaluation/select_answers.py",
+                "--questions",
+                str(questions),
+                "--references",
+                str(references),
+                "--qwen",
+                str(answers),
+                "--extractive",
+                str(extractive),
+                "--fold-manifest",
+                "data/splits/answers/folds.json",
+                "--output-dir",
+                str(selector_dir),
+            ],
+            check=True,
+            cwd=VOLUME_PATH,
+        )
+        selector_predictions = selector_dir / "selector_oof_predictions.json"
+        selector_report = report_root / "selector_metrics.json"
+        subprocess.run(
+            [
+                sys.executable,
+                "/workspace/scripts/answers/evaluation/score_answers.py",
+                "--references",
+                str(references),
+                "--predictions",
+                str(selector_predictions),
+                "--output",
+                str(selector_report),
+            ],
+            check=True,
+            cwd=VOLUME_PATH,
+        )
+        for baseline, comparison in (
+            (extractive_report, "selector_vs_extractive.json"),
+            (score_report, "selector_vs_qwen.json"),
+        ):
+            subprocess.run(
+                [
+                    sys.executable,
+                    "/workspace/scripts/shared/compare_results.py",
+                    "--task",
+                    "legal-qa",
+                    "--baseline",
+                    str(baseline),
+                    "--candidate",
+                    str(selector_report),
+                    "--questions",
+                    str(questions),
+                    "--output",
+                    str(report_root / comparison),
+                ],
+                check=True,
+                cwd=VOLUME_PATH,
+            )
     else:
         package = Path("data/submissions/answers/submission.zip")
         package.parent.mkdir(parents=True, exist_ok=True)
