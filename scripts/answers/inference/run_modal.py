@@ -125,10 +125,16 @@ def run_pipeline(
     dataset: str = "train",
     limit: int = 500,
     save_every: int = 100,
+    candidate_k: int = 500,
+    rerank_k: int = 200,
     resume: bool = False,
 ) -> None:
     if save_every <= 0 or save_every > 500:
         raise ValueError("save-every must be from 1 to 500")
+    if candidate_k <= 0 or rerank_k <= 0 or rerank_k > candidate_k:
+        raise ValueError(
+            "candidate-k and rerank-k must be positive, with rerank-k <= candidate-k"
+        )
     if dataset not in {"train", "public"}:
         raise ValueError("dataset must be 'train' or 'public'")
 
@@ -152,6 +158,7 @@ def run_pipeline(
     else:
         selected_records = list(source_payload.items())
         run_name = "public"
+    run_name = f"{run_name}/candidate_k{candidate_k}_rerank_k{rerank_k}"
     candidate_root = Path("data/predictions/selected/legalqa") / run_name
     candidate_root.mkdir(parents=True, exist_ok=True)
     questions = candidate_root / "questions.json"
@@ -189,7 +196,7 @@ def run_pipeline(
         "--config-env",
         "gpu",
         "--candidate-k",
-        "50",
+        str(candidate_k),
         "--query-batch-size",
         "64",
         "--save-every",
@@ -218,9 +225,9 @@ def run_pipeline(
         "--model",
         "models/aiteam-vietnamese-reranker",
         "--candidate-k",
-        "50",
+        str(candidate_k),
         "--rerank-k",
-        "20",
+        str(rerank_k),
         "--batch-size",
         "8",
         "--max-length",
@@ -394,8 +401,15 @@ def main(
     dataset: str = "train",
     limit: int = 500,
     save_every: int = 100,
+    candidate_k: int = 500,
+    rerank_k: int = 200,
     resume: bool = False,
 ) -> None:
     run_pipeline.remote(
-        dataset=dataset, limit=limit, save_every=save_every, resume=resume
+        dataset=dataset,
+        limit=limit,
+        save_every=save_every,
+        candidate_k=candidate_k,
+        rerank_k=rerank_k,
+        resume=resume,
     )
