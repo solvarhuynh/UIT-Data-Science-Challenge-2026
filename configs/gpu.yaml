@@ -1,26 +1,29 @@
-# RTX 5060 Ti 16 GB profile used for offline indexing, reranking, and QA.
+# GPU profile for AITeam retrieval, reranking, and LegalQA generation.
 environment: gpu
 
 parent_context:
   enabled: true
-  parents_dir: data/processed_v3/parents
+  parents_dir: data/processed/parents
   max_cached_documents: 256
   max_parent_tokens: 3072
   max_total_tokens: 10000
 
 embedding:
-  model_path: ./models/dek21-v2
-  model_id: huyydangg/DEk21_hcmute_embedding_v2
+  model_path: ./models/aiteam-vietnamese-embedding-v2
+  model_id: AITeamVN/Vietnamese_Embedding_v2
   device: cuda
-  batch_size: 128
-  max_length: 256
-  output_dimension: 768
+  batch_size: 8
+  max_length: 2048
+  query_max_length: 256
+  document_max_length: 2048
+  output_dimension: 1024
   normalize_embeddings: true
-  window_long_texts: true
+  preprocessor: identity
+  window_long_texts: false
   window_overlap_tokens: 32
 
 llm:
-  model_path: ./models/qwen3-legal
+  model_path: ./models/qwen3.5-2b
   backend: transformers
   device: cuda
   dtype: bfloat16
@@ -29,13 +32,12 @@ llm:
   temperature: 0.1
   top_p: 0.9
   repetition_penalty: 1.05
-  stream: false
   timeout_seconds: 180.0
 
 vector_db:
   type: faiss
-  faiss_index_path: data/vector_store/faiss
-  collection_name: legal_chunks_dek21_v2_768
+  faiss_index_path: data/vector/faiss
+  collection_name: legal_chunks_aiteam_vietnamese_embedding_v2_1024
 
 hybrid:
   candidate_k: 50
@@ -43,10 +45,9 @@ hybrid:
 
 reranker:
   enabled: true
-  model_name_or_path: ./models/reranker
+  model_name_or_path: ./models/aiteam-vietnamese-reranker
   device: cuda
   batch_size: 8
   max_length: 1024
   top_n: 5
-  local_files_only: true
   use_fp16: true

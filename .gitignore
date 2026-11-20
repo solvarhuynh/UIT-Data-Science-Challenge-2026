@@ -91,12 +91,7 @@ logs/
 
 # Reference and scratch directories
 tra-cuu/
-docs/*
-!docs/comparisons/
-!docs/models/
-!docs/models/**
-
-TASKS.md
-AGENT.md
-GUIDE.md
-RULE.md
+docs/algorithms/
+docs/architecture/
+docs/assets/
+docs/project/

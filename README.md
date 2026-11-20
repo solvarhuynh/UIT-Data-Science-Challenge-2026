@@ -1,90 +1,90 @@
-# UDSC 2026 — LegalIR và LegalQA
+# UDSC 2026
 
-Mã nguồn thi UIT Data Science Challenge 2026 của HCMUTE-SHIPCODE. Repo tập trung vào hai đường chạy: truy hồi `document_id` cho LegalIR và sinh câu trả lời có căn cứ cho LegalQA. Mã được tổ chức theo `src/udsc2026` (thư viện), `scripts/` (CLI), `configs/` và `prompts/`. Dữ liệu BTC, chỉ mục, checkpoint và dự đoán được giữ ngoài Git.
+Hệ thống truy hồi tài liệu pháp luật, sinh câu trả lời có dẫn chứng và tạo gói theo schema của Ban tổ chức.
 
-## Trạng thái có thể kiểm chứng
+## Mô hình
 
-- Các CLI đánh giá và đóng gói submission đã được kiểm tra `--help` trên Python 3.12.6. Đây là kiểm tra nhập module và tham số, **chưa phải** chạy end-to-end.
-- Checkout hiện thiếu `data/raw/btc/LegalIR/train.json`, selected contexts và manifest corpus `data/processed_v3/metadata/manifest.json`; vì vậy chưa thể xác nhận lại điểm hoặc train hợp lệ. `data/` hiện có một bản processed corpus ở ngay thư mục gốc, nhưng manifest của bản này ghi `semantic_completeness_gate_passed=false` và `quality_gate_passed=false`; chưa được dùng làm V3 canonical.
-- `scripts/inference/run_legal_ir.py` cũ chỉ tìm artifact cache rồi báo stage đã qua; nó không chạy retrieval/reranking. Đường chạy thật là các CLI riêng ở dưới.
-- Điểm, bài học từ sáu repo và chín poster nằm ở [GUIDE.md](GUIDE.md); chỉ dẫn cho agent ở [AGENT.md](AGENT.md). Các báo cáo từng đội ở `docs/comparisons/`.
+- Embedding: `AITeamVN/Vietnamese_Embedding_v2` (1.024 chiều; truy vấn 256 token, tài liệu 2.048 token).
+- Reranker: `AITeamVN/Vietnamese_Reranker`.
+- Sinh câu trả lời: `Qwen/Qwen3.5-2B`.
+
+Trọng số nằm trong `models/`; cấu hình trong `configs/`. Dữ liệu, index và kết quả được giữ trong `data/`, ngoài Git.
 
 ## Cài đặt
 
-Python 3.10–3.12. Trên máy dùng GPU, cài bản PyTorch/CUDA phù hợp với driver trước khi cài các extra nặng.
+Yêu cầu Python 3.12. Trong PowerShell:
 
 ```powershell
-py -3.11 -m venv .venv
+py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -e .
-python -m pip install -e ".[data,retrieval,models]"
+python -m pip install --upgrade pip
+python -m pip install -e ".[answers,data,modal,models]"
+python scripts/shared/download_models.py --profile all
 ```
 
-Cho LLM/reranker, cài thêm `.[llm,rerank]`. Model được nạp từ `models/` theo `configs/gpu.yaml`; repo không chứa weights. `python download_models.py --help` liệt kê profile tải model. Không tải model hoặc build lại corpus trước khi xác minh nguồn BTC và dung lượng.
+Đăng nhập Modal và gắn Volume tên `udsc`. Đưa dữ liệu đã chuẩn bị cùng ba thư mục model vào Volume theo cùng cấu trúc `data/` và `models/` của repo.
 
-## Dữ liệu và chỉ mục
+## Dựng index
 
-Đặt dữ liệu BTC theo schema gốc dưới `data/raw/btc/`. Chạy ETL vào **candidate**, xem audit/manifest, rồi mới promotion sang `data/processed_v3`; không ghi đè V3 đã fingerprint.
+Runner yêu cầu A10 hoặc L4; Modal đã cấp L4 cho LegalIR hiện tại. Index phải hoàn tất đủ 1.270.356 chunks và có manifest hợp lệ trước khi chạy retrieval.
 
 ```powershell
-python scripts/data_prep/run_ingestion.py --raw-directory data/raw/btc --processed-root data/processed_candidate
-python scripts/data_prep/index_chunks.py --chunks-dir data/processed_v3/chunks --config-env gpu --vector-db-type faiss
-python scripts/data_prep/build_bm25.py --chunks data/processed_v3/chunks --output data/vector_store/bm25/index.json
+python -m modal run --detach scripts/data_prep/run_modal_index.py --batch-size 16 --checkpoint-chunks 100000
 ```
 
-## Task 1 — LegalIR
+Lượt dựng index chạy ở chế độ detach để việc đóng terminal không hủy job. Theo dõi trạng thái trong Modal dashboard hoặc `python -m modal app logs <APP_ID>`. Nếu job dừng ngoài checkpoint, chạy lại cùng lệnh kèm `--resume`; index chỉ tiếp tục khi hash nguồn, model, cấu hình và corpus khớp checkpoint đã lưu.
 
-Metric chính là macro Recall@5 trên **document ID**; macro Precision là tie-break. Không chọn model theo chunk recall đơn lẻ. Giữ tách biệt train và validation theo nhóm câu hỏi chuẩn hóa.
+Nếu index đã hoàn tất nhưng bước kiểm tra/ghi checksum sau đó bị lỗi, chạy CPU finalizer để hoàn tất manifest mà không dựng lại embeddings:
 
 ```powershell
-python scripts/evaluation/build_strict_legal_ir_cv.py --input data/raw/btc/LegalIR/train.json --output-dir artifacts/task1/cv
-python scripts/evaluation/generate_dense_candidates.py --help
-python scripts/evaluation/benchmark_reranker.py --help
-python scripts/evaluation/analyze_legal_ir_candidates.py --help
+python -m modal run --detach scripts/data_prep/run_modal_index.py --finalize-only
 ```
 
-Sau khi có dense và BGE predictions cùng ID set, tạo ensemble. Ở fold validation, `--exclude-question-sources` phải trỏ đến nguồn ID validation để không dùng nhãn của chính fold.
+## LegalIR
+
+Chạy 5-fold đánh giá trên train:
 
 ```powershell
-python scripts/inference/build_legal_ir_ensemble.py --questions data/task1/questions.json --dense artifacts/task1/dense.jsonl --reranked artifacts/task1/bge.jsonl --labeled data/raw/btc/LegalIR/train.json --exclude-question-sources data/task1/questions.json --contexts-dir data/raw/btc/LegalIR/selected-contexts --output artifacts/task1/predictions.json
-python scripts/evaluation/evaluate_legal_ir.py --references data/task1/references.json --predictions artifacts/task1/predictions.json --output artifacts/task1/evaluation.json
-python scripts/evaluation/compare_runs.py --task legal-ir --baseline artifacts/task1/baseline_report.json --candidate artifacts/task1/evaluation.json --questions data/task1/questions.json --output artifacts/task1/uplift.json
-python scripts/inference/write_legal_ir_submission.py --input artifacts/task1/predictions.json --questions data/task1/questions.json --output artifacts/task1/submission.zip
-python scripts/inference/validate_legal_ir_submission.py --input artifacts/task1/submission.zip --questions data/task1/questions.json
+python -m modal run scripts/retrieval/inference/run_modal.py --dataset train
 ```
 
-Các đường dẫn `data/task1/questions.json` và `references.json` là input do người chạy cung cấp theo phase, không có sẵn trong repo. Khi suy luận tập test, không dùng `--exclude-question-sources` để loại toàn bộ train labels; chỉ loại nguồn trùng ID với tập đang đánh giá. Không dùng nhãn test/public/private để fit hoặc tune.
-
-## Task 2 — LegalQA
-
-Đánh giá retrieval evidence trước khi tinh chỉnh generator. `build_extractive_legal_qa.py` là baseline không cần LLM; `generate_legal_qa_answers.py` dùng contexts đã xếp hạng và checkpoint local.
+Tạo và kiểm tra gói cho câu hỏi public:
 
 ```powershell
-python scripts/inference/build_extractive_legal_qa.py --dense artifacts/task2/dense.jsonl --reranked artifacts/task2/reranked.jsonl --parents-dir data/processed_v3/parents --output artifacts/task2/extractive.json
-python scripts/inference/generate_legal_qa_answers.py --questions data/task2/questions.json --contexts artifacts/task2/dense.jsonl --output artifacts/task2/answers.json --diagnostics artifacts/task2/diagnostics.json --config configs/gpu.yaml
-python scripts/evaluation/evaluate_legal_qa.py --references data/task2/references.json --predictions artifacts/task2/answers.json --output artifacts/task2/candidate_report.json
-python scripts/evaluation/compare_runs.py --task legal-qa --baseline artifacts/task2/baseline_report.json --candidate artifacts/task2/candidate_report.json --questions data/task2/questions.json --output artifacts/task2/uplift.json
-python scripts/inference/write_legal_qa_submission.py --input artifacts/task2/answers.json --questions data/task2/questions.json --output artifacts/task2/submission.zip
-python scripts/inference/validate_legal_qa_submission.py --input artifacts/task2/submission.zip --questions data/task2/questions.json
+python -m modal run scripts/retrieval/inference/run_modal.py --dataset public
 ```
 
-Task 2 ưu tiên METEOR; scorer nội bộ không được gọi là điểm Private. `compare_runs.py` lấy bootstrap theo nhóm câu hỏi và chỉ mở cổng nội bộ khi có ít nhất 100 nhóm, gain dương và `P(Δ>0) ≥ 0,70`; đây không phải xác suất Private. Đảm bảo tổng tham số model đang hoạt động thỏa rule cuộc thi. Các lệnh đánh giá/đóng gói đã qua smoke với dữ liệu nhỏ tạm thời; inference/training chưa chạy end-to-end do thiếu input và weights.
+Runner lấy 200 ứng viên dense cho mỗi câu, chấm lại 100 ứng viên đầu bằng AITeam Reranker, rồi đo coverage@K và đối chiếu dense-only, reranker-only, hybrid RRF trên cùng pool qua 5 folds cùng paired grouped bootstrap. Gói cuối giữ 5 tài liệu/câu. Hybrid dùng trọng số dense/reranker/BM25 là `0,5/1,0/0,3` với `RRF k=60`; gói public được lưu dưới `data/submissions/retrieval/` trên Volume.
 
-## Cấu trúc
+## LegalQA
 
-```text
-configs/             Cấu hình baseline và GPU
-docs/comparisons/    Sáu báo cáo so sánh repo đối thủ
-prompts/             Prompt LegalQA được chọn
-scripts/data_prep/   ETL và đánh chỉ mục
-scripts/evaluation/  Scorer, grouped CV, phân tích candidate
-scripts/inference/   Ensemble, QA, đóng gói và kiểm định submission
-scripts/training/    Fine-tune có kiểm soát
-src/udsc2026/       Contracts, ingestion, retrieval, evaluation, QA
+Sinh và chấm câu train:
+
+```powershell
+python -m modal run scripts/answers/inference/run_modal.py --dataset train --limit 500 --save-every 100
 ```
 
-Mỗi thay đổi metric cần lưu input hash, corpus manifest, checkpoint, split, scorer và dự đoán từng query. Chỉ chi GPU sau khi baseline và cổng xác suất cải thiện trong [AGENT.md](AGENT.md) có dữ liệu để đánh giá.
+500 câu được chọn ngẫu nhiên cố định theo seed 2026. Runner chấm Qwen và baseline trích dẫn trên cùng câu hỏi, sau đó ghi paired grouped bootstrap `P(Δ METEOR > 0)`. Nếu kết quả có ích, mở rộng sang 7.000 câu bằng `--limit 7000`.
 
-## Giấy phép
+Sinh và đóng gói 1.000 câu public:
 
-Xem [LICENSE](LICENSE).
+```powershell
+python -m modal run scripts/answers/inference/run_modal.py --dataset public --save-every 100
+```
+
+Các checkpoint được ghi theo từng 100 câu. Gói LegalQA được kiểm tra số ID và schema trước khi lưu tại `data/submissions/answers/submission.zip` trên Volume.
+
+## Kết quả và giới hạn đánh giá
+
+- LegalIR được chấm bằng Recall/Precision theo scorer BTC; mục tiêu tham khảo là macro Recall ít nhất 0,95.
+- LegalQA báo METEOR và ROUGE-L riêng theo scorer BTC; mục tiêu 0,65 phải được hiểu theo metric được chỉ rõ trong báo cáo, không tự gộp hai metric.
+- Kết quả train là chẩn đoán trên dữ liệu có nhãn, không phải ước lượng chắc chắn cho tập ẩn. Public chỉ dùng để tạo gói, không dùng chọn model hay tham số.
+- `P(Δ > 0)` từ bootstrap nhóm là xác suất theo các mẫu bootstrap trên benchmark đã đo, không phải xác suất hiệu năng trên leaderboard riêng.
+
+## Bố cục
+
+- `src/udsc2026/`: hợp đồng dữ liệu, ingestion, retrieval, sinh câu trả lời và đánh giá.
+- `scripts/data_prep/`: xử lý dữ liệu và dựng index.
+- `scripts/retrieval/`: sinh/rerank candidates, đánh giá và đóng gói LegalIR.
+- `scripts/answers/`: sinh, chấm và đóng gói LegalQA.
+- `configs/`, `prompts/`: cấu hình và mẫu prompt đang dùng.
