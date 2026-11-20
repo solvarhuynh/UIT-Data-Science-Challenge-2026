@@ -5,9 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import re
 import sys
-import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -38,24 +36,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--parent-max-tokens", type=int, default=384)
     parser.add_argument("--parent-total-tokens", type=int, default=1152)
     parser.add_argument(
-        "--questions",
-        type=Path,
-        help="Question mapping used when overlaying organizer-provided answers.",
-    )
-    parser.add_argument(
         "--question-mapping",
         type=Path,
         help="Question-only mapping that limits output to those IDs, such as one held-out fold.",
-    )
-    parser.add_argument(
-        "--known-answers",
-        type=Path,
-        action="append",
-        default=[],
-        help=(
-            "Labeled id -> {question, answer} mapping. May be repeated; an answer "
-            "is overlaid only for an exact normalized question match."
-        ),
     )
     return parser
 
@@ -105,69 +88,6 @@ def _load_question_order(path: Path) -> list[str]:
         if not isinstance(question, str) or not question.strip():
             raise ValueError(f"question {question_id!r} has no question text")
     return list(mapping)
-
-
-def _question_key(question: object) -> str:
-    if not isinstance(question, str) or not question.strip():
-        raise ValueError("questions must be non-blank strings")
-    normalized = unicodedata.normalize("NFC", question).casefold()
-    return re.sub(r"\s+", " ", normalized).strip()
-
-
-def _overlay_known_answers(
-    predictions: list[dict[str, str]],
-    *,
-    questions_path: Path,
-    known_paths: list[Path],
-) -> tuple[list[dict[str, str]], dict[str, int]]:
-    questions = _load_mapping(questions_path, label="question mapping")
-    known_by_question: dict[str, list[tuple[str, str]]] = {}
-    for known_path in known_paths:
-        known = _load_mapping(known_path, label="known-answer mapping")
-        for known_id, record in known.items():
-            question = record.get("question")
-            answer = record.get("answer")
-            if not isinstance(answer, str) or not answer.strip():
-                raise ValueError(
-                    f"known-answer record {known_id!r} must have a non-blank answer"
-                )
-            key = _question_key(question)
-            known_by_question.setdefault(key, []).append((known_id, answer))
-
-    counts = {"same_id": 0, "question_match": 0, "ambiguous": 0}
-    output: list[dict[str, str]] = []
-    for prediction in predictions:
-        question_id = prediction["id"]
-        try:
-            question_record = questions[question_id]
-        except KeyError as exc:
-            raise ValueError(
-                f"question mapping is missing ID {question_id!r}"
-            ) from exc
-        question_key = _question_key(question_record.get("question"))
-        rows = known_by_question.get(question_key, [])
-        same_id_answers = {
-            answer for known_id, answer in rows if known_id == question_id
-        }
-        if len(same_id_answers) > 1:
-            raise ValueError(
-                f"conflicting same-ID known answers for {question_id!r}"
-            )
-        if same_id_answers:
-            answer = next(iter(same_id_answers))
-            counts["same_id"] += 1
-        else:
-            answers = {answer for _, answer in rows}
-            if len(answers) == 1:
-                answer = next(iter(answers))
-                counts["question_match"] += 1
-            elif len(answers) > 1:
-                counts["ambiguous"] += 1
-                answer = prediction["answer"]
-            else:
-                answer = prediction["answer"]
-        output.append({"id": question_id, "answer": answer})
-    return output, counts
 
 
 def main() -> int:
@@ -264,22 +184,6 @@ def main() -> int:
             )
         order = {question_id: index for index, question_id in enumerate(question_order)}
         predictions.sort(key=lambda prediction: order[prediction["id"]])
-
-    if args.known_answers:
-        if args.questions is None:
-            raise ValueError("--questions is required with --known-answers")
-        predictions, overlay_counts = _overlay_known_answers(
-            predictions,
-            questions_path=args.questions,
-            known_paths=args.known_answers,
-        )
-        print(
-            "known_answer_overlays="
-            f"{overlay_counts['same_id'] + overlay_counts['question_match']} "
-            f"same_id={overlay_counts['same_id']} "
-            f"question_match={overlay_counts['question_match']} "
-            f"ambiguous_skipped={overlay_counts['ambiguous']}"
-        )
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
