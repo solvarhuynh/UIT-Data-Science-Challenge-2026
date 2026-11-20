@@ -1,4 +1,4 @@
-"""Embedding infrastructure for local retrieval models."""
+"""Embedding infrastructure for configured retrieval models."""
 
 from typing import TYPE_CHECKING, Any
 

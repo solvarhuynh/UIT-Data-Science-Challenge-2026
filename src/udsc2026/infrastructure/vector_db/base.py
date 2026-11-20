@@ -62,7 +62,7 @@ def validate_query_vector(query_vector: list[float]) -> list[float]:
 
 
 def chunk_payload(chunk: LegalChunk) -> dict[str, Any]:
-    """Map a chunk to the payload shared by Qdrant and FAISS side stores."""
+    """Map a legal chunk to its persisted FAISS payload."""
     return {
         "chunk_id": chunk.chunk_id,
         "parent_id": chunk.parent_id,

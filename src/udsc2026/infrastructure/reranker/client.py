@@ -6,6 +6,7 @@ import math
 from collections.abc import Sequence
 from importlib import import_module
 from numbers import Real
+from pathlib import Path
 from threading import Lock
 from typing import Any, Protocol, runtime_checkable
 
@@ -43,10 +44,8 @@ class RerankerClient(Protocol):
 class CrossEncoderClient:
     """Score query-document pairs with a lazily loaded CrossEncoder.
 
-    ``model_name_or_path`` may be a local directory or a Hugging Face model ID.
-    By default, ``local_files_only=True`` prevents network downloads; a Hub ID
-    must already exist in the local cache unless remote download is explicitly
-    enabled.  Importing this module and constructing the client never imports
+    ``model_name_or_path`` must be a configured model directory. Importing this
+    module and constructing the client never imports
     ``sentence_transformers`` or loads weights.  Loading happens on the first
     non-empty call to :meth:`score`, which keeps lightweight services and unit
     tests independent of the optional ML dependency.
@@ -59,20 +58,21 @@ class CrossEncoderClient:
         device: str | None = None,
         batch_size: int = 32,
         max_length: int = 512,
-        local_files_only: bool = True,
         use_fp16: bool = False,
     ) -> None:
-        """Initialize a local cross-encoder reranking model."""
+        """Initialize a cross-encoder from the configured checkpoint reranking model."""
         if not isinstance(model_name_or_path, str) or not model_name_or_path.strip():
             raise ValueError("model_name_or_path must be a non-empty string")
         if device is not None and (not isinstance(device, str) or not device.strip()):
             raise ValueError("device must be None or a non-empty string")
         _validate_positive_integer(batch_size, "batch_size")
         _validate_positive_integer(max_length, "max_length")
-        if not isinstance(local_files_only, bool):
-            raise ValueError("local_files_only must be a boolean")
         if not isinstance(use_fp16, bool):
             raise ValueError("use_fp16 must be a boolean")
+        if not Path(model_name_or_path).is_dir():
+            raise FileNotFoundError(
+                f"configured reranker model directory not found: {model_name_or_path}"
+            )
         if (
             use_fp16
             and device is not None
@@ -84,7 +84,6 @@ class CrossEncoderClient:
         self.device = device.strip() if device is not None else None
         self.batch_size = batch_size
         self.max_length = max_length
-        self.local_files_only = local_files_only
         self.use_fp16 = use_fp16
         self._model: Any | None = None
         self._load_lock = Lock()
@@ -152,7 +151,6 @@ class CrossEncoderClient:
                 self.model_name_or_path,
                 device=self.device,
                 max_length=self.max_length,
-                local_files_only=self.local_files_only,
                 use_fp16=self.use_fp16,
             )
         try:
@@ -172,11 +170,11 @@ class CrossEncoderClient:
                 "CrossEncoder. Upgrade it to a compatible version."
             ) from exc
 
-        automodel_args: dict[str, Any] = {}
+        model_kwargs: dict[str, Any] = {}
         if self.use_fp16:
             try:
                 torch = import_module("torch")
-                automodel_args["torch_dtype"] = torch.float16
+                model_kwargs["torch_dtype"] = torch.float16
             except (AttributeError, ImportError) as exc:
                 raise RerankerDependencyError(
                     "FP16 reranking requires a compatible PyTorch installation"
@@ -187,14 +185,12 @@ class CrossEncoderClient:
                 self.model_name_or_path,
                 device=self.device,
                 max_length=self.max_length,
-                local_files_only=self.local_files_only,
-                automodel_args=automodel_args,
+                model_kwargs=model_kwargs,
             )
         except Exception as exc:
             raise RerankerModelLoadError(
                 "Could not load cross-encoder from "
-                f"'{self.model_name_or_path}'. Verify the local path or Hugging "
-                "Face model ID, model files, cache/network access, and device."
+                f"'{self.model_name_or_path}': {type(exc).__name__}: {exc}"
             ) from exc
 
 
@@ -266,7 +262,6 @@ def _load_qwen3_vl_reranker(
     *,
     device: str | None,
     max_length: int,
-    local_files_only: bool,
     use_fp16: bool,
 ) -> _Qwen3VLReranker:
     """Load Qwen3-VL with Transformers, without importing it at module import."""
@@ -284,12 +279,8 @@ def _load_qwen3_vl_reranker(
         model = Qwen3VLForConditionalGeneration.from_pretrained(
             model_name_or_path,
             torch_dtype=dtype,
-            local_files_only=local_files_only,
         ).to(target_device)
-        processor = AutoProcessor.from_pretrained(
-            model_name_or_path,
-            local_files_only=local_files_only,
-        )
+        processor = AutoProcessor.from_pretrained(model_name_or_path)
         processor.tokenizer.model_max_length = max_length
         model.eval()
         return _Qwen3VLReranker(model, processor, target_device, max_length)

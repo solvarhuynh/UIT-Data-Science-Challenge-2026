@@ -28,7 +28,7 @@ class ParentContextSettings(BaseModel):
     )
 
     enabled: bool = True
-    parents_dir: str = Field(default="data/processed_v3/parents", min_length=1)
+    parents_dir: str = Field(default="data/processed/parents", min_length=1)
     max_cached_documents: int = Field(default=128, gt=0)
     max_parent_tokens: int = Field(default=2048, gt=0)
     max_total_tokens: int = Field(default=7000, gt=0)

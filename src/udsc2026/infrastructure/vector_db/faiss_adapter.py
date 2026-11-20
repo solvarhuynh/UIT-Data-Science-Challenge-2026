@@ -87,6 +87,16 @@ class FaissAdapter(VectorDBAdapter):
                 raise ValueError(f"invalid FAISS payload file: {payload_file}") from exc
             if not isinstance(raw_store, dict):
                 raise ValueError("FAISS payload file must contain a JSON object")
+            legacy_fields = {"index_sha256", "distance", "payloads"}
+            if set(raw_store) == legacy_fields:
+                # The restored 2026 index predates the explicit size/count fields.
+                # Derive them from the checksum-verified FAISS file below.
+                raw_store = {
+                    **raw_store,
+                    "schema_version": _INDEX_SCHEMA_VERSION,
+                    "vector_size": loaded_index.d,
+                    "vector_count": loaded_index.ntotal,
+                }
             expected_fields = {
                 "schema_version",
                 "index_sha256",
@@ -257,6 +267,47 @@ class FaissAdapter(VectorDBAdapter):
         self.payloads = {}
         self.distance = distance
         self._bulk_chunk_ids = set()
+
+    def begin_bulk_resume(
+        self,
+        name: str,
+        vector_size: int,
+        distance: str = "cosine",
+    ) -> None:
+        """Continue appending to a verified persisted partial collection."""
+
+        if self._bulk_previous is not None:
+            raise RuntimeError("a FAISS bulk operation is already active")
+        validated_name = validate_collection_name(name)
+        validate_vector_size(vector_size)
+        if distance not in _SUPPORTED_DISTANCES:
+            raise ValueError("FAISS adapter supports cosine/dot distance only")
+        if self.collection_name != validated_name:
+            raise ValueError("partial FAISS collection name does not match")
+        if self.index is None or self.index.d != vector_size:
+            raise ValueError(
+                "partial FAISS index is missing or has the wrong dimension"
+            )
+        if self.distance != distance:
+            raise ValueError("partial FAISS index distance does not match")
+
+        self._bulk_previous = (
+            self.root,
+            self.collection_name,
+            self.index,
+            self.payloads,
+            self.distance,
+        )
+        self._bulk_chunk_ids = {
+            payload["chunk_id"] for payload in self.payloads.values()
+        }
+
+    def checkpoint_bulk(self) -> None:
+        """Persist an active bulk collection while keeping it open for appends."""
+
+        if self._bulk_previous is None or self.index is None:
+            raise RuntimeError("no FAISS bulk operation is active")
+        self._persist()
 
     def append_bulk(
         self,

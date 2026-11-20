@@ -19,11 +19,10 @@ _ENVIRONMENT_FIELDS = {
     "RERANKER_BATCH_SIZE": "batch_size",
     "RERANKER_MAX_LENGTH": "max_length",
     "RERANKER_TOP_N": "top_n",
-    "RERANKER_LOCAL_FILES_ONLY": "local_files_only",
     "RERANKER_USE_FP16": "use_fp16",
 }
 _INTEGER_FIELDS = {"batch_size", "max_length", "top_n"}
-_BOOLEAN_FIELDS = {"enabled", "local_files_only", "use_fp16"}
+_BOOLEAN_FIELDS = {"enabled", "use_fp16"}
 
 
 class RerankerSettings(BaseModel):
@@ -38,14 +37,13 @@ class RerankerSettings(BaseModel):
 
     enabled: bool = True
     model_name_or_path: str = Field(
-        default="./models/reranker",
+        default="./models/aiteam-vietnamese-reranker",
         min_length=1,
     )
     device: str | None = "cpu"
     batch_size: int = Field(default=16, gt=0)
     max_length: int = Field(default=512, gt=0)
     top_n: int = Field(default=10, gt=0)
-    local_files_only: bool = True
     use_fp16: bool = False
 
     @field_validator("use_fp16")
@@ -78,7 +76,6 @@ class RerankerSettings(BaseModel):
             device=self.device,
             batch_size=self.batch_size,
             max_length=self.max_length,
-            local_files_only=self.local_files_only,
             use_fp16=self.use_fp16,
         )
 

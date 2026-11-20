@@ -1,1 +1,1 @@
-"""Dense, sparse, hybrid, and reranking retrieval components."""
+"""Dense, hybrid, and reranking retrieval components."""

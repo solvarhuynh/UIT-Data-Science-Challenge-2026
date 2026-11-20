@@ -1,4 +1,4 @@
-"""Vietnamese tokenizer preserving legally meaningful exact-match terms."""
+"""Vietnamese tokenization that preserves exact legal references."""
 
 import re
 
@@ -12,12 +12,7 @@ _PROTECTED = re.compile(
 
 
 def tokenize_vi(text: str) -> list[str]:
-    """Tokenize Vietnamese while preserving accents and legal citation phrases.
-
-    BM25 relies on exact term matching.  Keeping ``Điều 10`` as one token makes
-    an exact query for that article more precise than splitting it into
-    ``điều`` and ``10``; the remaining terms are lowercased normally.
-    """
+    """Tokenize Vietnamese while retaining legal citation phrases as terms."""
     if text is None or not text.strip():
         return []
     tokens: list[str] = []
