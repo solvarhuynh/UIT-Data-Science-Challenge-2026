@@ -1,4 +1,4 @@
-"""Build a CPU-only four-source ranking ensemble for DSC2026 LegalIR.
+"""Build a CPU-only dense, reranker, and BM25 ranking ensemble for LegalIR.
 
 The output is the internal ``[{"id": ..., "documents": [...]}]`` hand-off
 accepted by ``scripts/retrieval/submission/package_submission.py``. Dense and reranked rankings are
@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, NoReturn, Sequence
 
 import numpy as np
-from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 SOURCE_ROOT = PROJECT_ROOT / "src"
@@ -32,7 +32,6 @@ from udsc2026.evaluation.reporting import write_run_manifest
 
 
 OUTPUT_DOCUMENTS = 5
-KNN_NEIGHBORS = 20
 BM25_TOP_K = 100
 BM25_K1 = 0.7
 BM25_B = 0.3
@@ -42,20 +41,10 @@ _WORD_RE = re.compile(r"(?u)\b\w+\b")
 
 
 @dataclass(frozen=True)
-class LabeledQuestion:
-    """One validated question and its relevant document IDs."""
-
-    question_id: str
-    question: str
-    documents: tuple[str, ...]
-
-
-@dataclass(frozen=True)
 class BuildStats:
     """Small set of counters printed by the CLI."""
 
-    exact_matches: int
-    overlay_documents_added: int
+    question_count: int
 
 
 def _reject_json_constant(value: str) -> NoReturn:
@@ -130,104 +119,6 @@ def _load_questions(path: Path) -> dict[str, str]:
             record, label=f"question {question_id!r}"
         )
     return result
-
-
-def _load_exclusions(paths: Sequence[Path]) -> tuple[set[str], set[str]]:
-    excluded: set[str] = set()
-    excluded_questions: set[str] = set()
-    for path in paths:
-        payload = _load_json(path)
-        if isinstance(payload, dict):
-            values: list[tuple[object, object | None]] = [
-                (raw_id, record) for raw_id, record in payload.items()
-            ]
-        elif isinstance(payload, list):
-            values = []
-            for index, item in enumerate(payload):
-                if isinstance(item, str):
-                    values.append((item, None))
-                elif isinstance(item, dict):
-                    raw_id = item.get("id", item.get("question_id"))
-                    if raw_id is None:
-                        raise ValueError(
-                            f"{path}[{index}] needs an 'id' or 'question_id'"
-                        )
-                    values.append((raw_id, item))
-                else:
-                    raise TypeError(
-                        f"{path}[{index}] must be a string or question object"
-                    )
-        else:
-            raise TypeError(
-                f"exclusion source {path} must be an object or an array"
-            )
-        for value, record in values:
-            excluded.add(_validate_opaque_id(value, label="excluded question ID"))
-            if isinstance(record, dict) and isinstance(record.get("question"), str):
-                normalized = normalize_question(record["question"])
-                if normalized:
-                    excluded_questions.add(normalized)
-    return excluded, excluded_questions
-
-
-def _load_labeled_questions(
-    paths: Sequence[Path],
-    excluded_ids: set[str],
-    excluded_questions: set[str],
-) -> list[LabeledQuestion]:
-    if not paths:
-        raise ValueError("at least one --labeled mapping is required")
-    by_id: dict[str, LabeledQuestion] = {}
-    order: list[str] = []
-    for path in paths:
-        payload = _load_json(path)
-        if not isinstance(payload, dict) or not payload:
-            raise ValueError(f"labeled mapping must be a non-empty object: {path}")
-        for raw_id, record in payload.items():
-            question_id = _validate_opaque_id(raw_id, label="labeled question ID")
-            if question_id in excluded_ids:
-                continue
-            question = _question_text(
-                record, label=f"labeled question {question_id!r}"
-            )
-            if normalize_question(question) in excluded_questions:
-                continue
-            assert isinstance(record, dict)
-            raw_documents = record.get("answer")
-            if not isinstance(raw_documents, list) or not raw_documents:
-                raise ValueError(
-                    f"labeled question {question_id!r} needs a non-empty answer array"
-                )
-            documents = tuple(
-                _document_id(value, label=f"answer for {question_id!r}")
-                for value in raw_documents
-            )
-            if len(documents) != len(set(documents)):
-                raise ValueError(f"answer for {question_id!r} contains duplicates")
-            if len(documents) > OUTPUT_DOCUMENTS:
-                raise ValueError(
-                    f"answer for {question_id!r} exceeds {OUTPUT_DOCUMENTS} documents"
-                )
-            candidate = LabeledQuestion(question_id, question, documents)
-            previous = by_id.get(question_id)
-            if previous is None:
-                by_id[question_id] = candidate
-                order.append(question_id)
-            elif previous != candidate:
-                raise ValueError(
-                    f"conflicting duplicate labeled question ID {question_id!r}"
-                )
-    if not order:
-        raise ValueError("question-source exclusions removed every labeled question")
-    deduplicated: list[LabeledQuestion] = []
-    seen_pairs: set[tuple[str, tuple[str, ...]]] = set()
-    for question_id in order:
-        record = by_id[question_id]
-        pair = (normalize_question(record.question), record.documents)
-        if pair not in seen_pairs:
-            seen_pairs.add(pair)
-            deduplicated.append(record)
-    return deduplicated
 
 
 def _load_contexts(contexts_dir: Path) -> tuple[list[str], list[str]]:
@@ -349,67 +240,6 @@ def _load_prediction_rankings(
     return rows, chunk_pools
 
 
-def normalize_question(text: str) -> str:
-    """Normalize a question conservatively for exact-label matching."""
-
-    normalized = unicodedata.normalize("NFKC", text).casefold()
-    normalized = _NON_WORD_RE.sub(" ", normalized)
-    return " ".join(normalized.split())
-
-
-def _build_knn_rankings(
-    questions: dict[str, str], labeled: Sequence[LabeledQuestion]
-) -> dict[str, list[str]]:
-    vectorizer = TfidfVectorizer(
-        analyzer="word",
-        ngram_range=(1, 2),
-        sublinear_tf=True,
-        norm="l2",
-        dtype=np.float32,
-    )
-    try:
-        labeled_matrix = vectorizer.fit_transform(
-            [record.question for record in labeled]
-        )
-    except ValueError as exc:
-        raise ValueError(f"cannot build labeled-question TF-IDF: {exc}") from exc
-    query_ids = list(questions)
-    query_matrix = vectorizer.transform([questions[item] for item in query_ids])
-    similarities = (query_matrix @ labeled_matrix.T).tocsr()
-
-    rankings: dict[str, list[str]] = {}
-    for row_index, question_id in enumerate(query_ids):
-        row = similarities.getrow(row_index)
-        neighbors = [
-            (int(index), float(score))
-            for index, score in zip(row.indices, row.data)
-            if score > 0.0
-        ]
-        neighbors.sort(
-            key=lambda pair: (-pair[1], labeled[pair[0]].question_id)
-        )
-        neighbors = neighbors[:KNN_NEIGHBORS]
-        document_scores: dict[str, tuple[float, int]] = {}
-        for neighbor_rank, (label_index, score) in enumerate(neighbors, 1):
-            for document_id in labeled[label_index].documents:
-                old_score, old_rank = document_scores.get(
-                    document_id, (-math.inf, 10**9)
-                )
-                if score > old_score or (
-                    score == old_score and neighbor_rank < old_rank
-                ):
-                    document_scores[document_id] = (score, neighbor_rank)
-        rankings[question_id] = sorted(
-            document_scores,
-            key=lambda document_id: (
-                -document_scores[document_id][0],
-                document_scores[document_id][1],
-                document_id,
-            ),
-        )
-    return rankings
-
-
 def _build_bm25_rankings(
     questions: dict[str, str],
     document_ids: Sequence[str],
@@ -497,26 +327,6 @@ def _build_bm25_rankings(
     return rankings
 
 
-def _exact_label_map(
-    labeled: Sequence[LabeledQuestion],
-) -> dict[str, list[str]]:
-    mapping: dict[str, list[str]] = {}
-    for record in labeled:
-        normalized = normalize_question(record.question)
-        if not normalized:
-            continue
-        documents = mapping.setdefault(normalized, [])
-        for document_id in record.documents:
-            if document_id not in documents:
-                documents.append(document_id)
-        if len(documents) > OUTPUT_DOCUMENTS:
-            raise ValueError(
-                "normalized duplicate labeled questions disagree on more than "
-                f"{OUTPUT_DOCUMENTS} unique documents: {record.question_id!r}"
-            )
-    return mapping
-
-
 def _weighted_rrf(
     rankings: Sequence[Sequence[str]],
     weights: Sequence[float],
@@ -589,16 +399,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--questions", type=Path, required=True)
     parser.add_argument("--dense", type=Path, required=True)
     parser.add_argument("--reranked", type=Path, required=True)
-    parser.add_argument(
-        "--labeled",
-        type=Path,
-        action="append",
-        default=[],
-        help=(
-            "Optional organizer mapping id -> {question, answer:[doc IDs]}; "
-            "required when nearest-question ranking or exact-label overlay is enabled."
-        ),
-    )
     parser.add_argument("--contexts-dir", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--manifest", type=Path)
@@ -606,18 +406,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--components-output",
         type=Path,
         help=(
-            "Optional cached JSON with per-ID dense/reranker/KNN/BM25 rankings; "
-            "use it to retune RRF without rescanning the context corpus."
-        ),
-    )
-    parser.add_argument(
-        "--exclude-question-sources",
-        type=Path,
-        action="append",
-        default=[],
-        help=(
-            "Repeatable mapping/ID-list whose IDs are removed from --labeled. "
-            "Pass the validation query source to prevent self-label leakage."
+            "Optional cached JSON with per-ID dense, reranker, and BM25 rankings."
         ),
     )
     parser.add_argument(
@@ -625,17 +414,8 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Use the selected question IDs from larger candidate files, as in OOF folds.",
     )
-    parser.add_argument(
-        "--exact-label-overlay",
-        action="store_true",
-        help=(
-            "For normalized exact question matches, force all known gold docs "
-            "into top 5."
-        ),
-    )
     parser.add_argument("--dense-weight", type=float, default=0.00)
     parser.add_argument("--reranker-weight", type=float, default=1.00)
-    parser.add_argument("--knn-weight", type=float, default=0.00)
     parser.add_argument("--bm25-weight", type=float, default=0.00)
     parser.add_argument("--rrf-k", type=int, default=60)
     parser.add_argument(
@@ -651,7 +431,6 @@ def run(args: argparse.Namespace) -> tuple[list[dict[str, object]], BuildStats]:
     weights = (
         args.dense_weight,
         args.reranker_weight,
-        args.knn_weight,
         args.bm25_weight,
     )
     if any(not math.isfinite(value) or value < 0.0 for value in weights):
@@ -667,8 +446,6 @@ def run(args: argparse.Namespace) -> tuple[list[dict[str, object]], BuildStats]:
         args.questions,
         args.dense,
         args.reranked,
-        *args.labeled,
-        *args.exclude_question_sources,
     ]
     manifest_path = args.manifest or args.output.with_suffix(".manifest.json")
     destinations = [args.output, manifest_path]
@@ -687,36 +464,8 @@ def run(args: argparse.Namespace) -> tuple[list[dict[str, object]], BuildStats]:
 
     questions = _load_questions(args.questions)
     materialize_components = args.components_output is not None
-    needs_labeled = (
-        args.knn_weight > 0.0
-        or args.exact_label_overlay
-        or materialize_components
-    )
-    if needs_labeled and not args.labeled:
-        raise ValueError(
-            "--labeled is required when nearest-question ranking, exact-label "
-            "overlay, or component caching is enabled"
-        )
-    if needs_labeled:
-        excluded_ids, excluded_questions = _load_exclusions(
-            args.exclude_question_sources
-        )
-        labeled = _load_labeled_questions(
-            args.labeled,
-            excluded_ids,
-            excluded_questions,
-        )
-    else:
-        labeled = []
     document_ids, passages = _load_contexts(args.contexts_dir)
     allowed_documents = set(document_ids)
-    for record in labeled:
-        unknown = set(record.documents) - allowed_documents
-        if unknown:
-            raise ValueError(
-                f"labeled question {record.question_id!r} references unknown "
-                f"documents {sorted(unknown)}"
-            )
 
     question_ids = list(questions)
     dense, dense_chunks = _load_prediction_rankings(
@@ -740,30 +489,18 @@ def run(args: argparse.Namespace) -> tuple[list[dict[str, object]], BuildStats]:
             )
 
     if (
-        args.knn_weight > 0.0
-        or materialize_components
-    ):
-        knn = _build_knn_rankings(questions, labeled)
-    else:
-        knn = {question_id: [] for question_id in questions}
-    if (
         args.bm25_weight > 0.0
         or materialize_components
     ):
         bm25 = _build_bm25_rankings(questions, document_ids, passages)
     else:
         bm25 = {question_id: [] for question_id in questions}
-    exact_labels = _exact_label_map(labeled) if args.exact_label_overlay else {}
-
     output: list[dict[str, object]] = []
     components: list[dict[str, object]] = []
-    exact_matches = 0
-    overlay_documents_added = 0
     for question_id, question in questions.items():
         source_rankings = (
             dense[question_id],
             reranked[question_id],
-            knn[question_id],
             bm25[question_id],
         )
         fused = _weighted_rrf(source_rankings, weights, args.rrf_k)
@@ -772,13 +509,6 @@ def run(args: argparse.Namespace) -> tuple[list[dict[str, object]], BuildStats]:
                 f"fusion for {question_id!r} produced only {len(fused)} documents"
             )
         selected = fused[:OUTPUT_DOCUMENTS]
-        known = exact_labels.get(normalize_question(question), [])
-        if known:
-            exact_matches += 1
-            overlay_documents_added += len(set(known) - set(selected))
-            selected = (known + [item for item in selected if item not in known])[
-                :OUTPUT_DOCUMENTS
-            ]
         if len(selected) != OUTPUT_DOCUMENTS or len(selected) != len(set(selected)):
             raise AssertionError(f"invalid final ranking for {question_id!r}")
         if not set(selected) <= allowed_documents:
@@ -789,7 +519,6 @@ def run(args: argparse.Namespace) -> tuple[list[dict[str, object]], BuildStats]:
                 "id": question_id,
                 "dense": dense[question_id],
                 "reranker": reranked[question_id],
-                "knn": knn[question_id][: args.component_top_k],
                 "bm25": bm25[question_id],
             }
         )
@@ -806,30 +535,21 @@ def run(args: argparse.Namespace) -> tuple[list[dict[str, object]], BuildStats]:
             "questions_sha256": _sha256(args.questions),
             "dense_predictions_sha256": _sha256(args.dense),
             "reranked_predictions_sha256": _sha256(args.reranked),
-            "labeled_sources": [
-                {"path": str(path), "sha256": _sha256(path)}
-                for path in args.labeled
-            ],
-            "excluded_sources": [
-                {"path": str(path), "sha256": _sha256(path)}
-                for path in args.exclude_question_sources
-            ],
             "contexts_dir": str(args.contexts_dir),
             "output_sha256": _sha256(args.output),
             "question_count": len(output),
             "weights": {
                 "dense": args.dense_weight,
                 "reranker": args.reranker_weight,
-                "nearest_question": args.knn_weight,
                 "bm25": args.bm25_weight,
             },
             "rrf_k": args.rrf_k,
             "component_top_k": args.component_top_k,
-            "exact_label_overlay": args.exact_label_overlay,
+            "label_free_inference": True,
         },
         manifest_path,
     )
-    return output, BuildStats(exact_matches, overlay_documents_added)
+    return output, BuildStats(len(output))
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -840,9 +560,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"LegalIR ensemble error: {exc}", file=sys.stderr)
         return 2
     print(
-        f"questions={len(output)} documents_per_question={OUTPUT_DOCUMENTS} "
-        f"exact_matches={stats.exact_matches} "
-        f"overlay_added={stats.overlay_documents_added}"
+        f"questions={stats.question_count} documents_per_question={OUTPUT_DOCUMENTS}"
     )
     print(args.output)
     print(args.manifest or args.output.with_suffix(".manifest.json"))
