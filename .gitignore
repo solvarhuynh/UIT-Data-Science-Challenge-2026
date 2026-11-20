@@ -66,11 +66,6 @@ Thumbs.db
 
 # Large data, vector stores, and downloaded model weights
 data/
-data/raw/
-data/processed*/
-data/vector_store/
-data/retrieval/
-data/answers/
 models/
 artifacts/
 outputs/
@@ -91,7 +86,8 @@ logs/
 
 # Reference and scratch directories
 tra-cuu/
-docs/algorithms/
-docs/architecture/
-docs/assets/
-docs/project/
+/AGENTS.md
+/TASKS.md
+/RULE.md
+/GUIDE.md
+docs/
