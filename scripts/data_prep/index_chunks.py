@@ -1,4 +1,4 @@
-"""Build reproducible dense and optional BM25 indexes from TV4 JSONL chunks."""
+"""Build a reproducible dense vector index from processed legal text chunks."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import logging
+import os
 import subprocess
 import sys
 import time
@@ -45,28 +46,22 @@ def resolve_batch_size(
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--chunks-dir", default="data/processed_v3/chunks")
-    parser.add_argument("--config-env", default="development")
-    parser.add_argument("--vector-db-type", choices=("qdrant", "faiss"))
-    parser.add_argument("--bm25-index-path")
+    parser.add_argument("--chunks-dir", default="data/processed/chunks")
+    parser.add_argument("--config-env", default="base")
+    parser.add_argument("--vector-db-type", choices=("faiss",))
     parser.add_argument(
         "--error-report",
         type=Path,
-        default=Path("artifacts/tv2/diagnostics/index_errors.json"),
+        default=Path("data/reports/indexing/index_errors.json"),
         help=(
             "Operational indexing error report. It must stay outside the "
             "immutable processed corpus."
         ),
     )
     parser.add_argument(
-        "--skip-bm25",
-        action="store_true",
-        help="Build dense only; useful when BM25 is built in a separate pass.",
-    )
-    parser.add_argument(
         "--max-chunks",
         type=_positive_int,
-        help="Bound input size for a smoke run.",
+        help="Limit chunks included in an indexing pass.",
     )
     parser.add_argument(
         "--batch-size",
@@ -77,6 +72,27 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         "--force",
         action="store_true",
         help="Rebuild even when the source/model manifest matches.",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume from a matching committed FAISS checkpoint.",
+    )
+    parser.add_argument(
+        "--checkpoint-chunks",
+        type=_positive_int,
+        default=100_000,
+        help="Persist a resumable FAISS checkpoint after this many new chunks.",
+    )
+    parser.add_argument(
+        "--commit-modal-volume",
+        action="store_true",
+        help="Commit the mounted Modal Volume after each durable checkpoint.",
+    )
+    parser.add_argument(
+        "--modal-volume-name",
+        default="udsc",
+        help="Volume name used with --commit-modal-volume.",
     )
     return parser.parse_args(argv)
 
@@ -114,17 +130,47 @@ def calculate_corpus_hash(chunks: Iterable[Any]) -> str:
 
 
 def calculate_model_hash(model_path: str, config: dict[str, Any]) -> str:
+    model_revision = config.get("revision")
+    model_manifest = _load_download_manifest() or {}
+    manifest_models = model_manifest.get("models", {})
+    if isinstance(manifest_models, dict):
+        for model in manifest_models.values():
+            if not isinstance(model, dict):
+                continue
+            if model.get("repo_id") == config.get("model_id"):
+                model_revision = model.get("resolved_revision", model_revision)
+                break
     identity = {
         "model_path": model_path,
         "model_id": config.get("model_id"),
+        "model_revision": model_revision,
+        "embedding_implementation_sha256": _file_sha256(
+            REPO_ROOT / "src/udsc2026/infrastructure/embedding/client.py"
+        ),
         "max_length": config.get("max_length", 256),
+        "query_max_length": config.get(
+            "query_max_length", config.get("max_length", 256)
+        ),
+        "document_max_length": config.get(
+            "document_max_length", config.get("max_length", 256)
+        ),
         "output_dimension": config.get("output_dimension"),
         "normalize_embeddings": config.get("normalize_embeddings", True),
+        "preprocessor": config.get("preprocessor", "pyvi"),
         "window_long_texts": config.get("window_long_texts", False),
         "window_overlap_tokens": config.get("window_overlap_tokens", 32),
     }
     encoded = json.dumps(identity, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _file_sha256(path: Path) -> str:
+    """Hash one implementation file without loading it into memory."""
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
 
 
 def source_fingerprint(chunks_dir: str | Path, max_chunks: int | None) -> str:
@@ -139,6 +185,22 @@ def source_fingerprint(chunks_dir: str | Path, max_chunks: int | None) -> str:
         digest.update(str(stat.st_mtime_ns).encode())
     digest.update(str(max_chunks).encode())
     return digest.hexdigest()
+
+
+def _combined_file_hash(paths: Sequence[Path]) -> str:
+    digest = hashlib.sha256()
+    for path in paths:
+        digest.update(path.as_posix().encode("utf-8"))
+        digest.update(bytes.fromhex(_file_sha256(path)))
+    return digest.hexdigest()
+
+
+def _config_hash(environment: str) -> str:
+    config_dir = Path(os.environ.get("UDSC2026_CONFIG_DIR", "configs"))
+    paths = [config_dir / "base.yaml"]
+    if environment != "base":
+        paths.append(config_dir / f"{environment}.yaml")
+    return _combined_file_hash(paths)
 
 
 def git_commit() -> str | None:
@@ -223,20 +285,35 @@ def is_current_manifest(path: Path, expected: dict[str, Any]) -> bool:
         "source_fingerprint",
         "corpus_hash",
         "model_hash",
+        "config_sha256",
+        "indexing_implementation_sha256",
+        "embedding_implementation_sha256",
+        "preprocessor",
         "vector_db_type",
         "collection_name",
         "max_chunks",
+        "batch_size",
+        "complete",
     )
-    return all(actual.get(key) == expected.get(key) for key in keys)
+    if not all(actual.get(key) == expected.get(key) for key in keys):
+        return False
+    index_path = path.with_name("index.faiss")
+    payload_path = path.with_name("payloads.json")
+    return (
+        index_path.is_file()
+        and payload_path.is_file()
+        and actual.get("index_sha256") == _file_sha256(index_path)
+        and actual.get("payload_sha256") == _file_sha256(payload_path)
+    )
 
 
 def write_manifest(path: Path, manifest: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
-    temporary.write_text(
-        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
+    with temporary.open("w", encoding="utf-8", newline="\n") as stream:
+        stream.write(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n")
+        stream.flush()
+        os.fsync(stream.fileno())
     temporary.replace(path)
 
 
@@ -244,7 +321,7 @@ def _vector_manifest_path(config: dict[str, Any], vector_type: str) -> Path:
     collection = str(config["collection_name"])
     if vector_type == "faiss":
         return Path(config["faiss_index_path"]) / collection / "manifest.json"
-    return Path("data/vector_store/qdrant") / collection / "manifest.json"
+    raise ValueError(f"unsupported vector database type: {vector_type}")
 
 
 def _load_download_manifest() -> dict[str, Any] | None:
@@ -277,6 +354,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     from udsc2026.infrastructure.config import load_config
     from udsc2026.infrastructure.embedding.client import EmbeddingClient
+    from udsc2026.infrastructure.modal_volume import commit_mounted_volume_sync
     from udsc2026.infrastructure.vector_db.factory import get_vector_db_adapter
 
     config = load_config(args.config_env)
@@ -286,10 +364,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         vector_config["type"] = args.vector_db_type
     config["vector_db"] = vector_config
 
-    model_path = str(embedding_config.get("model_path", "./models/dek21-v2"))
+    model_path = str(
+        embedding_config.get(
+            "model_path", "./models/aiteam-vietnamese-embedding-v2"
+        )
+    )
     vector_type = str(vector_config.get("type", "faiss"))
     collection_name = str(vector_config["collection_name"])
     batch_size = resolve_batch_size(args.batch_size, embedding_config)
+    if args.force and args.resume:
+        raise ValueError("--force and --resume cannot be used together")
+    if args.commit_modal_volume and vector_type != "faiss":
+        raise ValueError("Modal checkpoints currently require FAISS")
     total_chunks = count_chunks(args.chunks_dir, args.max_chunks)
     if total_chunks == 0:
         LOGGER.error("No chunk records found in %s", args.chunks_dir)
@@ -301,11 +387,26 @@ def main(argv: Sequence[str] | None = None) -> int:
     cache_identity = {
         "source_fingerprint": source_hash,
         "model_hash": model_hash,
+        "config_sha256": _config_hash(args.config_env),
+        "indexing_implementation_sha256": _combined_file_hash(
+            [
+                REPO_ROOT / "scripts/data_prep/index_chunks.py",
+                REPO_ROOT / "src/udsc2026/infrastructure/vector_db/faiss_adapter.py",
+            ]
+        ),
+        "batch_size": batch_size,
+        "embedding_implementation_sha256": _file_sha256(
+            REPO_ROOT / "src/udsc2026/infrastructure/embedding/client.py"
+        ),
+        "preprocessor": embedding_config.get("preprocessor", "pyvi"),
         "vector_db_type": vector_type,
         "collection_name": collection_name,
         "max_chunks": args.max_chunks,
+        "complete": True,
     }
-    if not args.force:
+    manifest_path = _vector_manifest_path(vector_config, vector_type)
+    checkpoint_path = manifest_path.with_name("checkpoint.json")
+    if not args.force or args.resume:
         LOGGER.info("Checking corpus hash without loading it into RAM...")
         precheck_hash = RunningCorpusHash()
         precheck_errors: list[dict[str, Any]] = []
@@ -320,14 +421,63 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(f"Dense index is current: {manifest_path}")
             return 0
 
+    checkpoint: dict[str, Any] | None = None
+    resume_count = 0
+    if args.resume:
+        if not checkpoint_path.is_file():
+            raise FileNotFoundError(
+                f"matching incomplete index checkpoint is missing: {checkpoint_path}"
+            )
+        try:
+            checkpoint_value = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise ValueError("index checkpoint is invalid") from exc
+        if not isinstance(checkpoint_value, dict):
+            raise ValueError("index checkpoint must contain a JSON object")
+        checkpoint = checkpoint_value
+        expected_checkpoint = {
+            **cache_identity,
+            "complete": False,
+            "model_id": embedding_config.get("model_id"),
+            "embedding_dimension": embedding_config.get("output_dimension"),
+            "distance": vector_config.get("distance", "cosine"),
+        }
+        mismatches = {
+            key: {"expected": value, "actual": checkpoint.get(key)}
+            for key, value in expected_checkpoint.items()
+            if checkpoint.get(key) != value
+        }
+        if mismatches:
+            raise ValueError(f"index checkpoint inputs changed: {mismatches}")
+        raw_count = checkpoint.get("chunk_count")
+        if (
+            isinstance(raw_count, bool)
+            or not isinstance(raw_count, int)
+            or raw_count <= 0
+            or raw_count > total_chunks
+        ):
+            raise ValueError("index checkpoint has an invalid chunk count")
+        resume_count = raw_count
+
     LOGGER.info("Indexing %d chunks with %s", total_chunks, model_path)
     embedder = EmbeddingClient(
         model_path=model_path,
         device=str(embedding_config.get("device", "cpu")),
         batch_size=batch_size,
         max_length=int(embedding_config.get("max_length", 256)),
+        query_max_length=int(
+            embedding_config.get(
+                "query_max_length", embedding_config.get("max_length", 256)
+            )
+        ),
+        document_max_length=int(
+            embedding_config.get(
+                "document_max_length", embedding_config.get("max_length", 256)
+            )
+        ),
         normalize_embeddings=bool(embedding_config.get("normalize_embeddings", True)),
         output_dimension=embedding_config.get("output_dimension"),
+        preprocessor=str(embedding_config.get("preprocessor", "pyvi")),
         window_long_texts=bool(embedding_config.get("window_long_texts", False)),
         window_overlap_tokens=int(embedding_config.get("window_overlap_tokens", 32)),
     )
@@ -336,25 +486,64 @@ def main(argv: Sequence[str] | None = None) -> int:
     from udsc2026.infrastructure.vector_db.faiss_adapter import FaissAdapter
 
     faiss_db = vector_db if isinstance(vector_db, FaissAdapter) else None
+    if args.resume and faiss_db is None:
+        raise ValueError("resumable indexing requires the FAISS adapter")
+    if args.resume and faiss_db is not None:
+        assert checkpoint is not None
+        if faiss_db.index is None or faiss_db.index.ntotal != resume_count:
+            raise ValueError(
+                "FAISS checkpoint vector count does not match its manifest"
+            )
+        faiss_db.begin_bulk_resume(
+            collection_name,
+            int(checkpoint["embedding_dimension"]),
+            str(checkpoint["distance"]),
+        )
     errors: list[dict[str, Any]] = []
     corpus_hash = RunningCorpusHash()
-    processed = 0
-    bulk_started = False
+    processed = resume_count
+    bulk_started = args.resume
+    last_checkpoint = resume_count
     started = time.perf_counter()
-    progress = tqdm(total=total_chunks, desc="Embedding + indexing", unit="chunk")
+    progress = tqdm(
+        total=total_chunks,
+        initial=resume_count,
+        desc="Embedding + indexing",
+        unit="chunk",
+    )
     try:
+        chunk_iterator = iter_chunks(
+            args.chunks_dir,
+            errors,
+            max_chunks=args.max_chunks,
+        )
+        for _ in range(resume_count):
+            try:
+                chunk = next(chunk_iterator)
+            except StopIteration as exc:
+                raise ValueError(
+                    "input corpus ended before the saved checkpoint"
+                ) from exc
+            corpus_hash.update(chunk.chunk_id, chunk.text)
+        if args.resume:
+            assert checkpoint is not None
+            if corpus_hash.hexdigest() != checkpoint.get("prefix_corpus_hash"):
+                raise ValueError(
+                    "input corpus prefix does not match the FAISS checkpoint"
+                )
+
         batches = iter_batches(
-            iter_chunks(
-                args.chunks_dir,
-                errors,
-                max_chunks=args.max_chunks,
-            ),
+            chunk_iterator,
             batch_size,
         )
         for batch in batches:
-            embeddings = embedder.embed_documents(
-                [chunk.text for chunk in batch],
-                batch_size=batch_size,
+            embeddings = (
+                embedder.embed_documents(
+                    [chunk.text for chunk in batch],
+                    batch_size=batch_size,
+                )
+                if batch
+                else []
             )
             if not bulk_started:
                 vector_size = len(embeddings[0])
@@ -381,6 +570,37 @@ def main(argv: Sequence[str] | None = None) -> int:
                 corpus_hash.update(chunk.chunk_id, chunk.text)
             processed += len(batch)
             progress.update(len(batch))
+            if (
+                faiss_db is not None
+                and processed - last_checkpoint >= args.checkpoint_chunks
+            ):
+                faiss_db.checkpoint_bulk()
+                write_manifest(
+                    checkpoint_path,
+                    {
+                        **cache_identity,
+                        "complete": False,
+                        "model_id": embedding_config.get("model_id"),
+                        "embedding_dimension": faiss_db.index.d,
+                        "distance": vector_config.get("distance", "cosine"),
+                        "chunk_count": processed,
+                        "prefix_corpus_hash": corpus_hash.hexdigest(),
+                    },
+                )
+                if args.commit_modal_volume:
+                    commit_mounted_volume_sync(args.modal_volume_name)
+                last_checkpoint = processed
+        if processed != total_chunks or errors:
+            error_path = args.error_report
+            error_path.parent.mkdir(parents=True, exist_ok=True)
+            error_path.write_text(
+                json.dumps(errors, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            raise ValueError(
+                f"refusing to publish incomplete index: indexed={processed}, "
+                f"source_records={total_chunks}, invalid={len(errors)}"
+            )
         if faiss_db is not None:
             faiss_db.commit_bulk()
     except BaseException:
@@ -393,6 +613,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     if processed == 0:
         LOGGER.error("No valid chunks were indexed")
         return 1
+
+    index_file = manifest_path.with_name("index.faiss")
+    payload_file = manifest_path.with_name("payloads.json")
 
     error_path = args.error_report
     error_path.parent.mkdir(parents=True, exist_ok=True)
@@ -408,11 +631,20 @@ def main(argv: Sequence[str] | None = None) -> int:
         "corpus_hash": corpus_hash.hexdigest(),
         "model_path": model_path,
         "model_id": embedding_config.get("model_id"),
+        "batch_size": batch_size,
+        "query_max_length": embedding_config.get(
+            "query_max_length", embedding_config.get("max_length", 256)
+        ),
+        "document_max_length": embedding_config.get(
+            "document_max_length", embedding_config.get("max_length", 256)
+        ),
         "embedding_dimension": (
             faiss_db.index.d
             if faiss_db is not None and faiss_db.index is not None
             else embedding_config.get("output_dimension")
         ),
+        "index_sha256": _file_sha256(index_file),
+        "payload_sha256": _file_sha256(payload_file),
         "git_commit": git_commit(),
         "download_manifest": _load_download_manifest(),
         "invalid_record_count": len(errors),
@@ -421,28 +653,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         "elapsed_seconds": time.perf_counter() - started,
     }
     write_manifest(manifest_path, manifest)
-
-    if not args.skip_bm25:
-        from udsc2026.retrieval.sparse.bm25_retriever import BM25Retriever
-
-        LOGGER.warning(
-            "Building rank_bm25 in memory; use --skip-bm25 for the full BTC corpus"
-        )
-        bm25_path = args.bm25_index_path or config.get("sparse", {}).get(
-            "bm25_index_path",
-            "data/vector_store/bm25/legal_chunks.json",
-        )
-        bm25_errors: list[dict[str, Any]] = []
-        chunks = list(
-            iter_chunks(
-                args.chunks_dir,
-                bm25_errors,
-                max_chunks=args.max_chunks,
-            )
-        )
-        bm25 = BM25Retriever(str(bm25_path))
-        bm25.build_index(chunks)
-        bm25.save()
+    if checkpoint_path.exists():
+        checkpoint_path.unlink()
+    if args.commit_modal_volume:
+        commit_mounted_volume_sync(args.modal_volume_name)
 
     print(f"Indexed chunks: {processed}")
     print(f"Invalid records: {len(errors)}")

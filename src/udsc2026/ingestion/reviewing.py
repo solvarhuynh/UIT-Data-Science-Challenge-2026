@@ -139,7 +139,7 @@ def build_manual_review_document_report(
 def write_manual_review_breakdown(
     breakdown: ManualReviewBreakdown, output_path: str | Path
 ) -> Path:
-    """Persist the breakdown as pretty JSON for TV4 audit use."""
+    """Persist the breakdown as readable JSON for ingestion audit use."""
     target = Path(output_path)
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(

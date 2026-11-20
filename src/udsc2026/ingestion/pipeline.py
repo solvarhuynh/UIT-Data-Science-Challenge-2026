@@ -44,10 +44,6 @@ class IngestionPipelineResult(BaseModel):
     corpus_hash: Optional[str] = None
     disk_audit_path: Optional[str] = None
     processing_manifest_path: Optional[str] = None
-    synthetic_benchmark_path: Optional[str] = None
-    synthetic_benchmark_sha256: Optional[str] = None
-    synthetic_benchmark_record_count: int = 0
-    synthetic_benchmark_source_chunk_corpus_sha256: Optional[str] = None
     integrity_gate_passed: bool = False
     semantic_completeness_gate_passed: bool = False
     regex_candidate_report_path: Optional[str] = None
@@ -61,9 +57,6 @@ def run_ingestion_pipeline(
     chunk_size: int = 192,
     chunk_overlap: int = 32,
     progress_callback: Optional[Callable[[int, str], None]] = None,
-    synthetic_benchmark_count: Optional[int] = None,
-    synthetic_benchmark_seed: int = 2026,
-    synthetic_benchmark_require_all_question_types: bool = True,
 ) -> IngestionPipelineResult:
     """Run extract, clean, structure-aware chunking, and validation in order.
 
@@ -129,21 +122,6 @@ def run_ingestion_pipeline(
         source_root,
         report_path=disk_audit_path,
     )
-    benchmark_artifact = None
-    if synthetic_benchmark_count is not None and disk_audit.integrity_gate_passed:
-        # Imported lazily to keep the core ingestion package independent for
-        # callers that do not request evaluation artifacts.
-        from udsc2026.evaluation.synthetic_generator import (
-            regenerate_synthetic_benchmark,
-        )
-
-        benchmark_artifact = regenerate_synthetic_benchmark(
-            root / "chunks",
-            root / "benchmarks" / "synthetic_qa.jsonl",
-            target_count=synthetic_benchmark_count,
-            seed=synthetic_benchmark_seed,
-            require_all_question_types=(synthetic_benchmark_require_all_question_types),
-        )
     processing_manifest_path = metadata_dir / "processing_manifest.json"
     processing_manifest = {
         "schema_version": "udsc-ingestion-v3",
@@ -162,11 +140,6 @@ def run_ingestion_pipeline(
             "chunks": disk_audit.chunk_count,
             "parents": disk_audit.parent_count,
         },
-        "synthetic_benchmark": (
-            benchmark_artifact.model_dump(mode="json")
-            if benchmark_artifact is not None
-            else None
-        ),
         "integrity_gate_passed": disk_audit.integrity_gate_passed,
         "semantic_completeness_gate_passed": (
             disk_audit.semantic_completeness_gate_passed
@@ -221,20 +194,6 @@ def run_ingestion_pipeline(
         corpus_hash=corpus_hash,
         disk_audit_path=str(disk_audit_path),
         processing_manifest_path=str(processing_manifest_path),
-        synthetic_benchmark_path=(
-            benchmark_artifact.output_path if benchmark_artifact else None
-        ),
-        synthetic_benchmark_sha256=(
-            benchmark_artifact.benchmark_sha256 if benchmark_artifact else None
-        ),
-        synthetic_benchmark_record_count=(
-            benchmark_artifact.record_count if benchmark_artifact else 0
-        ),
-        synthetic_benchmark_source_chunk_corpus_sha256=(
-            benchmark_artifact.source_chunk_corpus_sha256
-            if benchmark_artifact
-            else None
-        ),
         integrity_gate_passed=disk_audit.integrity_gate_passed,
         semantic_completeness_gate_passed=(
             disk_audit.semantic_completeness_gate_passed

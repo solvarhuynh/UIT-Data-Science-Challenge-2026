@@ -1,4 +1,4 @@
-"""Run the full TV4 ingestion pipeline with safe local-machine defaults."""
+"""Convert source documents into structured and validated legal text chunks."""
 
 from __future__ import annotations
 
@@ -33,18 +33,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--chunk-size", type=_positive_int, default=192)
     parser.add_argument("--chunk-overlap", type=int, default=32)
     parser.add_argument("--progress-every", type=_positive_int, default=100)
-    parser.add_argument("--benchmark-count", type=_positive_int, default=100)
-    parser.add_argument("--benchmark-seed", type=int, default=2026)
-    parser.add_argument(
-        "--skip-benchmark",
-        action="store_true",
-        help="Do not generate the post-ingestion synthetic benchmark.",
-    )
-    parser.add_argument(
-        "--allow-missing-benchmark-types",
-        action="store_true",
-        help="Allow small exploratory corpora that cannot cover all question types.",
-    )
     return parser
 
 
@@ -62,12 +50,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(
             "ingestion error: chunk-overlap must be non-negative and less than "
             "chunk-size",
-            file=sys.stderr,
-        )
-        return 2
-    if not 100 <= args.benchmark_count <= 200:
-        print(
-            "ingestion error: benchmark-count must be between 100 and 200",
             file=sys.stderr,
         )
         return 2
@@ -102,10 +84,6 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "chunk_size": args.chunk_size,
                 "chunk_overlap": args.chunk_overlap,
                 "streaming": True,
-                "synthetic_benchmark_count": (
-                    None if args.skip_benchmark else args.benchmark_count
-                ),
-                "synthetic_benchmark_seed": args.benchmark_seed,
             },
             ensure_ascii=False,
             indent=2,
@@ -119,13 +97,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             chunk_size=args.chunk_size,
             chunk_overlap=args.chunk_overlap,
             progress_callback=report_progress,
-            synthetic_benchmark_count=(
-                None if args.skip_benchmark else args.benchmark_count
-            ),
-            synthetic_benchmark_seed=args.benchmark_seed,
-            synthetic_benchmark_require_all_question_types=(
-                not args.allow_missing_benchmark_types
-            ),
         )
     except (OSError, TypeError, ValueError) as exc:
         print(f"ingestion error: {exc}", file=sys.stderr)
