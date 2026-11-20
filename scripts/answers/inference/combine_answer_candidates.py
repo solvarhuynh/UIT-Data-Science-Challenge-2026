@@ -1,10 +1,4 @@
-"""Build a label-free LegalQA ensemble from extractive evidence and Qwen.
-
-The fixed composition rule was selected on strict held-out data, but this
-command never reads reference answers. Exact known-answer rows emitted by the
-generator are preserved verbatim; all other rows receive a bounded extractive
-prefix followed by the Qwen answer.
-"""
+"""Build a label-free LegalQA ensemble from extractive evidence and Qwen."""
 
 from __future__ import annotations
 
@@ -39,35 +33,11 @@ def _load_predictions(path: Path, *, label: str) -> list[dict[str, str]]:
     return rows
 
 
-def _load_exact_overlay_ids(path: Path | None) -> set[str]:
-    if path is None:
-        return set()
-    payload = json.loads(path.read_text(encoding="utf-8-sig"))
-    if not isinstance(payload, list):
-        raise ValueError("diagnostics must be a JSON array")
-    exact_ids: set[str] = set()
-    seen: set[str] = set()
-    for row in payload:
-        if not isinstance(row, dict):
-            raise ValueError("diagnostic rows must be JSON objects")
-        question_id = row.get("id")
-        source = row.get("source")
-        if not isinstance(question_id, str) or question_id in seen:
-            raise ValueError("diagnostics contain an invalid or duplicate ID")
-        if not isinstance(source, str):
-            raise ValueError("diagnostics contain an invalid source")
-        seen.add(question_id)
-        if source == "exact_known_answer":
-            exact_ids.add(question_id)
-    return exact_ids
-
-
 def build_ensemble(
     qwen_rows: Sequence[dict[str, str]],
     extractive_rows: Sequence[dict[str, str]],
     *,
     evidence_words: int,
-    exact_overlay_ids: set[str] | None = None,
 ) -> tuple[list[dict[str, str]], dict[str, int]]:
     """Return an aligned deterministic ensemble and compact build counts."""
 
@@ -77,25 +47,17 @@ def build_ensemble(
     extractive_ids = [row["id"] for row in extractive_rows]
     if qwen_ids != extractive_ids:
         raise ValueError("Qwen and extractive prediction IDs/order differ")
-    protected = exact_overlay_ids or set()
-    unknown = protected - set(qwen_ids)
-    if unknown:
-        raise ValueError(f"diagnostics contain unknown IDs: {sorted(unknown)[:5]}")
     output: list[dict[str, str]] = []
     truncated = 0
     for qwen, extractive in zip(qwen_rows, extractive_rows):
         question_id = qwen["id"]
-        if question_id in protected:
-            answer = qwen["answer"]
-        else:
-            words = extractive["answer"].split()
-            prefix = " ".join(words[:evidence_words])
-            truncated += int(len(words) > evidence_words)
-            answer = f"{prefix}\n{qwen['answer']}".strip()
+        words = extractive["answer"].split()
+        prefix = " ".join(words[:evidence_words])
+        truncated += int(len(words) > evidence_words)
+        answer = f"{prefix}\n{qwen['answer']}".strip()
         output.append({"id": question_id, "answer": answer})
     return output, {
         "question_count": len(output),
-        "exact_overlays_preserved": len(protected),
         "extractive_prefixes_truncated": truncated,
         "evidence_words": evidence_words,
     }
@@ -127,7 +89,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--qwen", type=Path, required=True)
     parser.add_argument("--extractive", type=Path, required=True)
-    parser.add_argument("--diagnostics", type=Path)
     parser.add_argument("--evidence-words", type=int, default=352)
     parser.add_argument("--output", type=Path, required=True)
     return parser
@@ -140,7 +101,6 @@ def run(args: argparse.Namespace) -> tuple[Path, Path]:
         qwen,
         extractive,
         evidence_words=args.evidence_words,
-        exact_overlay_ids=_load_exact_overlay_ids(args.diagnostics),
     )
     _write_json(args.output, predictions)
     manifest = args.output.with_name(f"{args.output.stem}.manifest.json")
@@ -153,7 +113,6 @@ def run(args: argparse.Namespace) -> tuple[Path, Path]:
             "output_sha256": _sha256(args.output),
             "qwen": str(args.qwen),
             "extractive": str(args.extractive),
-            "diagnostics": str(args.diagnostics) if args.diagnostics else None,
             "label_free": True,
         },
     )
