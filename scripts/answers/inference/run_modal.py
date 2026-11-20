@@ -79,6 +79,10 @@ image = (
         str(PROJECT_ROOT / "scripts" / "shared"),
         remote_path="/workspace/scripts/shared",
     )
+    .add_local_file(
+        str(PROJECT_ROOT / "data" / "splits" / "answers" / "folds.json"),
+        remote_path="/workspace/data/splits/answers/folds.json",
+    )
     .add_local_dir(str(PROJECT_ROOT / "prompts"), remote_path="/workspace/prompts")
 )
 
@@ -378,7 +382,7 @@ def run_pipeline(
                 "--extractive",
                 str(extractive),
                 "--fold-manifest",
-                "data/splits/answers/folds.json",
+                "/workspace/data/splits/answers/folds.json",
                 "--output-dir",
                 str(selector_dir),
             ],
