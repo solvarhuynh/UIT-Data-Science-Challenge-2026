@@ -1,4 +1,4 @@
-"""Estimate paired OOF uplift from validated LegalIR or LegalQA reports.
+"""Estimate paired uplift from validated LegalIR or LegalQA reports.
 
 Bootstrap units are normalized-question groups. This is an internal decision
 aid, not a calibrated probability of improving the private leaderboard.
@@ -18,11 +18,11 @@ from typing import Any, Sequence
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 
-from udsc2026.evaluation.legal_ir import (  # noqa: E402
+from udsc2026.evaluation.retrieval_metrics import (  # noqa: E402
     LegalIREvaluationReport,
     normalize_legal_ir_matching_question,
 )
-from udsc2026.evaluation.legal_qa import LegalQAEvaluationReport  # noqa: E402
+from udsc2026.evaluation.answer_metrics import LegalQAEvaluationReport  # noqa: E402
 
 
 def _read(path: Path) -> Any:
@@ -122,7 +122,7 @@ def compare(
     minimum_groups = 100
     return {
         "task": task,
-        "metric": "recall_at_5" if task == "legal-ir" else "local_meteor_diagnostic",
+        "metric": "recall_at_5" if task == "legal-ir" else "organizer_meteor",
         "scope": "paired_grouped_bootstrap_internal",
         "private_leaderboard_probability": None,
         "reference_fingerprint": base_fingerprint,

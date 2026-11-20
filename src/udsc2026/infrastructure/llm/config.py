@@ -1,4 +1,4 @@
-"""LLM configuration schema for the local Qwen3 generator."""
+"""Validated configuration for the answer generation model."""
 
 import os
 from collections.abc import Mapping
@@ -19,7 +19,6 @@ _ENVIRONMENT_FIELDS = {
     "LLM_TEMPERATURE": "temperature",
     "LLM_TOP_P": "top_p",
     "LLM_REPETITION_PENALTY": "repetition_penalty",
-    "LLM_STREAM": "stream",
     "LLM_TIMEOUT_SECONDS": "timeout_seconds",
 }
 _INTEGER_FIELDS = {"max_new_tokens"}
@@ -29,15 +28,13 @@ _FLOAT_FIELDS = {
     "repetition_penalty",
     "timeout_seconds",
 }
-_BOOLEAN_FIELDS = {"stream"}
 
 
 class LLMConfig(BaseModel):
-    """Runtime configuration for the local LLM inference backend.
+    """Runtime configuration for the internal LLM inference backend.
 
-    All generation parameters are centralised here so that experiments can
-    swap config objects without touching inference code.  Values are loaded
-    from ``configs/`` YAML at application start and injected by TV1.
+    Generation parameters are loaded from ``configs/`` YAML and validated
+    before the configured model is loaded.
     """
 
     model_config = ConfigDict(
@@ -48,9 +45,9 @@ class LLMConfig(BaseModel):
     )
 
     model_path: str = Field(
-        default="./models/qwen3-legal",
+        default="./models/qwen3.5-2b",
         min_length=1,
-        description="Absolute or relative path to the local model checkpoint.",
+        description="Absolute or relative path to the internal model checkpoint.",
     )
     backend: Literal["transformers", "vllm"] = Field(
         default="transformers",
@@ -101,10 +98,6 @@ class LLMConfig(BaseModel):
         allow_inf_nan=False,
         description="Penalise token repetition.  Values > 1 reduce looping output.",
     )
-    stream: bool = Field(
-        default=False,
-        description="Enable token-by-token streaming (requires SSE support in TV1).",
-    )
     timeout_seconds: Optional[float] = Field(
         default=60.0,
         gt=0,
@@ -139,11 +132,6 @@ def load_llm_config(
                     values[field_name] = float(raw_value)
                 except ValueError as exc:
                     raise ValueError(f"{variable} must be a number") from exc
-            elif field_name in _BOOLEAN_FIELDS:
-                normalized = raw_value.strip().casefold()
-                if normalized not in {"true", "false"}:
-                    raise ValueError(f"{variable} must be 'true' or 'false'")
-                values[field_name] = normalized == "true"
             else:
                 values[field_name] = raw_value
     return LLMConfig.model_validate(values)

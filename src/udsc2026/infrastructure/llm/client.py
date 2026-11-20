@@ -1,11 +1,13 @@
-"""Local LLM client wrapping the Qwen3 checkpoint via transformers or vLLM."""
+"""Text generation client for configured checkpoints via Transformers or vLLM."""
 
+import json
 import logging
 import queue
 import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
-from typing import Any, Generator, Optional, TypeVar, cast
+from pathlib import Path
+from typing import Any, Optional, TypeVar, cast
 
 from udsc2026.infrastructure.llm.config import LLMConfig
 
@@ -66,29 +68,32 @@ def _run_with_timeout(
 # ---------------------------------------------------------------------------
 try:
     import torch
-    from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
+    from transformers import AutoModelForCausalLM, AutoTokenizer
 
+    try:
+        from transformers import AutoModelForImageTextToText
+    except ImportError:  # Transformers releases before multimodal auto classes.
+        AutoModelForImageTextToText = None
     _TRANSFORMERS_AVAILABLE = True
 except ImportError:  # pragma: no cover
     _TRANSFORMERS_AVAILABLE = False
 
 
 class LLMClient:
-    """Load and run a local Qwen3 model for Vietnamese legal question answering.
+    """Load and run a configured model for Vietnamese legal answer generation.
 
     Usage::
 
-        config = LLMConfig(model_path="./models/qwen3-legal", device="cuda")
+        config = LLMConfig(model_path="./models/qwen3.5-2b", device="cuda")
         client = LLMClient(config)
         answer = client.generate("Câu hỏi pháp luật của bạn...")
 
-    The client is *not* thread-safe by default.  TV1 must ensure only one
-    concurrent call is made to ``generate`` per ``LLMClient`` instance when
-    using the ``transformers`` backend.
+    The client serializes concurrent calls to ``generate`` when using the
+    ``transformers`` backend.
     """
 
     def __init__(self, config: LLMConfig) -> None:
-        """Initialise the LLM client and load model weights from local disk.
+        """Initialise the LLM client and load model weights from the configured checkpoint.
 
         Args:
             config: Runtime configuration including model path, backend and
@@ -112,7 +117,7 @@ class LLMClient:
     # ------------------------------------------------------------------
 
     def _load_model(self) -> None:
-        """Load tokenizer and model weights from the local checkpoint path."""
+        """Load tokenizer and model weights from the configured checkpoint path."""
         if self._config.backend == "transformers":
             self._load_transformers()
         else:
@@ -185,7 +190,29 @@ class LLMClient:
             device,
             quantization,
         )
-        model = AutoModelForCausalLM.from_pretrained(
+        model_config_path = Path(model_path) / "config.json"
+        model_type = None
+        if model_config_path.is_file():
+            try:
+                model_config = json.loads(model_config_path.read_text(encoding="utf-8"))
+                model_type = model_config.get("model_type")
+            except (OSError, json.JSONDecodeError) as exc:
+                raise ValueError(
+                    f"Invalid model config file: {model_config_path}"
+                ) from exc
+
+        if model_type == "qwen3_5":
+            if AutoModelForImageTextToText is None:
+                raise RuntimeError(
+                    "The configured Qwen3.5 checkpoint requires a Transformers "
+                    "release that provides AutoModelForImageTextToText. Upgrade "
+                    "the pinned Transformers dependency before using this model."
+                )
+            model_loader = AutoModelForImageTextToText
+        else:
+            model_loader = AutoModelForCausalLM
+
+        model = model_loader.from_pretrained(
             model_path,
             **load_kwargs,
         )
@@ -316,132 +343,6 @@ class LLMClient:
             return False
         return True
 
-    def generate_stream(self, prompt: str) -> Generator[str, None, None]:
-        """Stream generated tokens one-by-one for SSE support.
-
-        Args:
-            prompt: The fully rendered prompt string.
-
-        Yields:
-            Successive token strings as they are decoded.
-        """
-        if self._config.backend != "transformers":
-            # Fallback: yield the full answer at once for non-streaming backends.
-            yield self.generate(prompt)
-            return
-
-        if not _TRANSFORMERS_AVAILABLE:  # pragma: no cover
-            yield self.generate(prompt)
-            return
-        if not self._generation_lock.acquire(blocking=False):
-            raise RuntimeError(
-                "LLM client is still processing an earlier generation request"
-            )
-
-        try:
-            tokenizer = self._require_tokenizer()
-            model = self._require_model()
-            inputs = tokenizer(prompt, return_tensors="pt")
-            inputs = {k: v.to(self._config.device) for k, v in inputs.items()}
-
-            poll_timeout = min(self._config.timeout_seconds or 0.5, 0.5)
-            streamer = TextIteratorStreamer(
-                tokenizer,
-                skip_prompt=True,
-                skip_special_tokens=True,
-                timeout=poll_timeout,
-            )
-            generation_kwargs = {
-                **inputs,
-                "streamer": streamer,
-                "max_new_tokens": self._config.max_new_tokens,
-                "temperature": self._config.temperature,
-                "top_p": self._config.top_p,
-                "repetition_penalty": self._config.repetition_penalty,
-                "do_sample": self._config.temperature > 0,
-            }
-            generation_kwargs.update(self._deadline_stopping_criteria())
-        except BaseException:
-            self._generation_lock.release()
-            raise
-        generation_errors: queue.Queue[BaseException] = queue.Queue(maxsize=1)
-        generation_done = threading.Event()
-        consumer_done = threading.Event()
-        release_guard = threading.Lock()
-        lock_released = False
-        timeout_seconds = self._config.timeout_seconds
-        deadline = (
-            time.monotonic() + timeout_seconds if timeout_seconds is not None else None
-        )
-
-        def release_when_finished() -> None:
-            nonlocal lock_released
-            if not generation_done.is_set() or not consumer_done.is_set():
-                return
-            with release_guard:
-                if not lock_released:
-                    lock_released = True
-                    self._generation_lock.release()
-
-        def generate_tokens() -> None:
-            try:
-                model.generate(**generation_kwargs)
-            except BaseException as exc:
-                generation_errors.put(exc)
-                streamer.end()
-            finally:
-                generation_done.set()
-                release_when_finished()
-
-        thread = threading.Thread(
-            target=generate_tokens,
-            daemon=True,
-            name="llm-stream-generation",
-        )
-        try:
-            thread.start()
-        except BaseException:
-            self._generation_lock.release()
-            raise
-        try:
-            iterator = iter(streamer)
-            while True:
-                try:
-                    token_text = next(iterator)
-                except StopIteration:
-                    break
-                except queue.Empty as exc:
-                    if not generation_errors.empty():
-                        raise RuntimeError("LLM streaming generation failed") from (
-                            generation_errors.get_nowait()
-                        )
-                    if deadline is not None and time.monotonic() >= deadline:
-                        if timeout_seconds is None:
-                            raise RuntimeError(
-                                "LLM streaming deadline exists without a timeout"
-                            ) from exc
-                        raise TimeoutError(
-                            "LLM streaming generation exceeded "
-                            f"{timeout_seconds:g} seconds"
-                        ) from exc
-                    continue
-                yield cast(str, token_text)
-        finally:
-            consumer_done.set()
-            release_when_finished()
-        if not generation_errors.empty():
-            raise RuntimeError("LLM streaming generation failed") from (
-                generation_errors.get_nowait()
-            )
-
-    def generate_stream_messages(
-        self,
-        messages: Sequence[Mapping[str, str]],
-    ) -> Generator[str, None, None]:
-        """Stream from chat turns after applying the checkpoint template."""
-
-        yield from self.generate_stream(self._render_chat_messages(messages))
-
     def _deadline_stopping_criteria(self) -> dict[str, Any]:
         """Build a transformers deadline criterion when a timeout is configured."""
 
@@ -511,64 +412,6 @@ class LLMClient:
         )
         outputs = self._require_vllm_engine().generate([prompt], params)
         return cast(str, outputs[0].outputs[0].text).strip()
-
-    @property
-    def config(self) -> LLMConfig:
-        """Return the active LLM configuration (read-only)."""
-        return self._config
-
-
-class MockLLMClient:
-    """Deterministic stub for use in unit tests and CI without GPU.
-
-    Accepts the same constructor signature as ``LLMClient`` and returns
-    a hard-coded answer so that ``QAEngine``, ``PromptBuilder``, and
-    ``CitationParser`` can be tested without loading model weights.
-    """
-
-    DEFAULT_RESPONSE = (
-        "Theo Điều 10 Bộ luật Lao động 2019, người lao động có quyền làm việc "
-        "và tự do lựa chọn việc làm. "
-        "[Bộ luật Lao động 2019, Điều 10, Khoản 1]"
-    )
-
-    def __init__(
-        self,
-        config: Optional[LLMConfig] = None,
-        fixed_response: Optional[str] = None,
-    ) -> None:
-        """Initialise the mock client.
-
-        Args:
-            config: Optional config object (stored but not used for generation).
-            fixed_response: Custom response string.  Defaults to
-                ``MockLLMClient.DEFAULT_RESPONSE``.
-        """
-        self._config = config or LLMConfig()
-        self._response = fixed_response or self.DEFAULT_RESPONSE
-
-    def generate(self, prompt: str) -> str:
-        """Return the fixed response regardless of the input prompt.
-
-        Args:
-            prompt: Ignored in the mock implementation.
-
-        Returns:
-            The pre-configured fixed response string.
-        """
-        logger.debug("MockLLMClient.generate called (prompt length=%d).", len(prompt))
-        return self._response
-
-    def generate_stream(self, prompt: str) -> Generator[str, None, None]:
-        """Yield the fixed response as a single chunk.
-
-        Args:
-            prompt: Ignored in the mock implementation.
-
-        Yields:
-            The pre-configured fixed response string as a single token.
-        """
-        yield self._response
 
     @property
     def config(self) -> LLMConfig:

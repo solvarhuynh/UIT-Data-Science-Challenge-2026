@@ -1,5 +1,6 @@
 """Shared environment-aware configuration loader."""
 
+import os
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -19,7 +20,7 @@ def _deep_merge(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any
 
 def load_config(env: str = "development") -> dict[str, Any]:
     """Load base config and deeply merge the selected environment overrides."""
-    config_dir = Path("configs")
+    config_dir = Path(os.environ.get("UDSC2026_CONFIG_DIR", "configs"))
     with (config_dir / "base.yaml").open("r", encoding="utf-8") as config_file:
         base = yaml.safe_load(config_file) or {}
     if env == "base":

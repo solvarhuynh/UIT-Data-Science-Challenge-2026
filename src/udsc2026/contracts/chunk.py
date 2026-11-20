@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class LegalChunk(BaseModel):
-    """Input contract from TV4 ingestion to TV2 retrieval indexing."""
+    """Input contract from document processing to retrieval indexing."""
 
     chunk_id: str
     parent_id: Optional[str] = None
