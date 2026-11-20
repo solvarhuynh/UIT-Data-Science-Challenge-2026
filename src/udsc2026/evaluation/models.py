@@ -28,7 +28,7 @@ class EvaluationModel(BaseModel):
 
 
 class BenchmarkSample(EvaluationModel):
-    """One reference question supplied by TV4 or adapted from an official test set."""
+    """One reference question with its answer and retrieval evidence labels."""
 
     question_id: NonEmptyString
     question: NonEmptyString

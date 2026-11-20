@@ -14,7 +14,7 @@ ReportDestination = tuple[Report, str | Path, str | Path]
 
 
 def _format_metric(value: float) -> str:
-    """Format metrics consistently without locale-sensitive output."""
+    """Format metrics consistently regardless of regional settings."""
 
     return f"{value:.6f}"
 
@@ -152,6 +152,34 @@ def _stage_text(path: Path, content: str, *, encoding: str) -> Path:
                 pass
         _best_effort_unlink(temporary_path)
         raise
+
+
+def write_run_manifest(payload: dict[str, object], path: str | Path) -> Path:
+    """Atomically write a stable JSON manifest for one completed run."""
+
+    if not isinstance(payload, dict) or not payload:
+        raise ValueError("run manifest payload must be a non-empty mapping")
+    target = Path(path)
+    if target.suffix.casefold() != ".json":
+        raise ValueError("run manifest output must use .json")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    content = (
+        json.dumps(
+            payload,
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+            allow_nan=False,
+        )
+        + "\n"
+    )
+    staged = _stage_text(target, content, encoding="utf-8")
+    try:
+        os.replace(staged, target)
+    except BaseException:
+        _best_effort_unlink(staged)
+        raise
+    return target
 
 
 def _backup_target(path: Path) -> Path:

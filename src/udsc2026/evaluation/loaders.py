@@ -6,7 +6,7 @@ from typing import Any, Dict, List, NoReturn, Sequence, Type, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
-from udsc2026.contracts.qa import QAResponse
+from udsc2026.contracts.answer import QAResponse
 from udsc2026.evaluation.models import BenchmarkSample, PredictionSample
 
 ModelT = TypeVar("ModelT", bound=BaseModel)

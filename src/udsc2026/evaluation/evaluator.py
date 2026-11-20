@@ -77,8 +77,8 @@ def evaluate_retrieval(
 ) -> EvaluationReport:
     """Evaluate ranked hits and optional answer/latency outputs.
 
-    The first three arguments intentionally match the TV5 team contract. Extra
-    metrics are keyword-only so retrieval callers do not need QA or a live model.
+    The first three arguments define the retrieval evaluation contract. Extra
+    metrics are keyword-only so retrieval callers do not need answer generation.
     """
 
     if not predictions:
@@ -245,94 +245,3 @@ def compare_reports(
         after=after,
         delta=EvaluationDelta.between(before, after),
     )
-
-
-def validate_rerank_candidate_pools(
-    before: Sequence[PredictionSample],
-    after: Sequence[PredictionSample],
-) -> None:
-    """Validate candidate provenance and ordering for a rerank comparison."""
-    before_by_id = _index_unique(before, "before predictions")
-    after_by_id = _index_unique(after, "after predictions")
-    if set(before_by_id) != set(after_by_id):
-        missing = sorted(set(before_by_id).difference(after_by_id))
-        extra = sorted(set(after_by_id).difference(before_by_id))
-        raise ValueError(
-            "rerank prediction IDs do not match baseline "
-            f"(missing={missing}, unexpected={extra})"
-        )
-
-    preserved_fields = {
-        "chunk_id",
-        "doc_id",
-        "text",
-        "score",
-        "source",
-        "law_name",
-        "article",
-        "clause",
-        "metadata",
-        "dense_score",
-        "sparse_score",
-        "hybrid_score",
-    }
-    for question_id, baseline_sample in before_by_id.items():
-        reranked_sample = after_by_id[question_id]
-        if baseline_sample.hits and not reranked_sample.hits:
-            raise ValueError(
-                f"rerank output {question_id!r} cannot be empty when the "
-                "baseline candidate pool is non-empty"
-            )
-        baseline_hits = {hit.chunk_id: hit for hit in baseline_sample.hits}
-        baseline_positions = {
-            hit.chunk_id: position for position, hit in enumerate(baseline_sample.hits)
-        }
-        previous_score: float | None = None
-        previous_baseline_position: int | None = None
-        for expected_rank, hit in enumerate(reranked_sample.hits, start=1):
-            baseline_hit = baseline_hits.get(hit.chunk_id)
-            if baseline_hit is None:
-                raise ValueError(
-                    f"rerank output {question_id!r} introduced candidate "
-                    f"{hit.chunk_id!r} that is absent from the baseline pool"
-                )
-            before_values = baseline_hit.model_dump(include=preserved_fields)
-            after_values = hit.model_dump(include=preserved_fields)
-            if before_values != after_values:
-                raise ValueError(
-                    f"rerank output {question_id!r} changed preserved fields "
-                    f"for candidate {hit.chunk_id!r}"
-                )
-            if hit.rerank_score is None or hit.final_score is None:
-                raise ValueError(
-                    f"rerank output {question_id!r} must provide rerank_score "
-                    f"and final_score for candidate {hit.chunk_id!r}"
-                )
-            if hit.rank != expected_rank:
-                raise ValueError(
-                    f"rerank output {question_id!r} has rank {hit.rank!r} for "
-                    f"candidate {hit.chunk_id!r}; expected {expected_rank}"
-                )
-            if hit.final_score != hit.rerank_score:
-                raise ValueError(
-                    f"rerank output {question_id!r} has inconsistent final_score "
-                    f"for candidate {hit.chunk_id!r}"
-                )
-            if previous_score is not None and hit.rerank_score > previous_score:
-                raise ValueError(
-                    f"rerank output {question_id!r} is not sorted by descending "
-                    "rerank_score"
-                )
-            baseline_position = baseline_positions[hit.chunk_id]
-            if (
-                previous_score is not None
-                and hit.rerank_score == previous_score
-                and previous_baseline_position is not None
-                and baseline_position <= previous_baseline_position
-            ):
-                raise ValueError(
-                    f"rerank output {question_id!r} must preserve baseline order "
-                    "for candidates with equal rerank_score"
-                )
-            previous_score = hit.rerank_score
-            previous_baseline_position = baseline_position
