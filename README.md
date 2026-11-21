@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="docs/assets/banner.svg" alt="UIT Data Science Challenge 2026 — HCMUTE-ShipCODE" width="100%" />
+  <img src="assets/banner.svg" alt="UIT Data Science Challenge 2026 - HCMUTE-ShipCODE" width="50%" />
   <h1>HCMUTE-ShipCODE · UDSC 2026</h1>
   <p><strong>Truy hồi và hỏi đáp trên văn bản pháp luật tiếng Việt, có căn cứ và kiểm chứng được.</strong></p>
   <p>
@@ -10,7 +10,7 @@
   </p>
 </div>
 
-> **Kết quả cuộc thi:** đội đạt **Top 10** UDSC 2026. Điểm cuối cùng được công bố: **Task 1 — LegalIR: 0.954**; **Task 2 — LegalQA: 0.652**.
+> **Kết quả cuộc thi:** đội đạt **Top 10** UDSC 2026. Điểm cuối cùng được công bố: **Task 1 - LegalIR: 0.954**; **Task 2 - LegalQA: 0.652**.
 
 ## Tổng quan
 
@@ -22,15 +22,21 @@ Pipeline giữ cấu trúc pháp lý trong khâu phân đoạn, kết hợp nhi�
 
 | Tác vụ | Bài toán | Điểm cuối cùng |
 |---|---|---:|
-| **Task 1 — LegalIR** | Truy hồi văn bản pháp luật liên quan | **0.954** |
-| **Task 2 — LegalQA** | Hỏi đáp pháp luật dựa trên ngữ cảnh | **0.652** |
+| **Task 1 - LegalIR** | Truy hồi văn bản pháp luật liên quan | **0.954** |
+| **Task 2 - LegalQA** | Hỏi đáp pháp luật dựa trên ngữ cảnh | **0.652** |
 | **Thứ hạng** | UIT Data Science Challenge 2026 | **Top 10** |
 
-Giấy khen của đội: [`docs/assets/UDSC.jpg`](docs/assets/UDSC.jpg).
+Giấy khen: [`assets/UDSC.jpg`](assets/UDSC.jpg).
 
-<p align="center"><img src="docs/assets/UDSC.jpg" alt="Giấy khen tại UIT Data Science Challenge 2026" width="720" /></p>
+## Nhóm thực hiện
 
-Các điểm trên là kết quả cuối cùng của đội trong cuộc thi; không phải kết quả OOF, dự đoán public hay benchmark được tái chạy trong README này.
+| Thành viên | Phạm vi |
+|---|---|
+| Hoàng Long | Tích hợp hệ thống và điều phối |
+| Trung Nghĩa (Leader) | Truy hồi thông tin |
+| Thế Quân | Hỏi đáp và mô hình ngôn ngữ |
+| Trung Khang | Kỹ thuật dữ liệu và xử lý corpus |
+| Nguyên Khang | Reranking, đánh giá và vận hành |
 
 ## Phương pháp
 
@@ -38,14 +44,14 @@ Các điểm trên là kết quả cuối cùng của đội trong cuộc thi; k
 
 Corpus gồm **8.532 tài liệu**, được xử lý thành **1.270.356 chunks** và **184.548 ngữ cảnh cha (parents)**. Bộ phân tích nhận diện các cấp pháp lý như chương, mục, điều, khoản và điểm. Chunk ngắn phục vụ truy hồi; parent context cung cấp ngữ cảnh rộng hơn cho bước trả lời.
 
-### Task 1 — LegalIR
+### Task 1 - LegalIR
 
 1. Mã hóa câu hỏi và chunks bằng `AITeamVN/Vietnamese_Embedding_v2`, tạo ứng viên dense từ FAISS.
 2. Dùng BM25 làm kênh lexical bổ sung cho số hiệu văn bản và thuật ngữ pháp lý.
 3. Hợp nhất thứ hạng bằng Reciprocal Rank Fusion (RRF), rồi chấm lại ứng viên bằng `AITeamVN/Vietnamese_Reranker`.
 4. Tổng hợp thứ hạng về tài liệu và xuất tối đa năm tài liệu cho mỗi câu hỏi.
 
-### Task 2 — LegalQA
+### Task 2 - LegalQA
 
 Pipeline truy hồi và reranking chọn bằng chứng, mở rộng ngữ cảnh từ parent store, rồi đưa câu hỏi và ngữ cảnh vào `Qwen/Qwen3.5-2B`. Prompt hướng mô hình bám sát bằng chứng và giữ thông tin trích dẫn phù hợp. Đầu ra được kiểm tra và đóng gói theo schema LegalQA.
 
@@ -95,11 +101,6 @@ python -m modal run scripts/answers/inference/run_modal.py --dataset public --sa
 
 Đây là các lệnh vận hành theo cấu hình hiện hành. Nhãn/reference chỉ dành cho scorer và chẩn đoán; candidate generation, reranking và answer generation nhận mapping câu hỏi. Kết quả mỗi lần chạy cần gắn với input, model, config, scorer và split tương ứng.
 
-## Đánh giá
-
-LegalIR dùng scorer BTC; báo cáo Recall, Precision, F1 ở mức macro và candidate coverage. So sánh biến thể cần cùng IDs, cùng candidate pool và grouped folds, kèm từng fold và paired grouped bootstrap.
-
-LegalQA được chấm riêng bằng **METEOR** (NLTK với WordNet/OMW) và **ROUGE-L** theo mã scorer BTC. Tập public dùng để tạo submission, không dùng để fit hoặc chọn tham số. Cần phân biệt điểm cuộc thi với benchmark nội bộ, OOF và chẩn đoán trên train.
 
 ## Cấu trúc repository
 
@@ -119,28 +120,16 @@ configs/                # Cấu hình pipeline
 prompts/                # Prompt sinh câu trả lời
 data/                   # Dữ liệu, index và predictions (ngoài Git)
 models/                 # Trọng số mô hình (ngoài Git)
-docs/assets/            # Banner và giấy khen
+assets/                  # Banner, logo và giấy khen
 ```
-
-## Nhóm thực hiện
-
-README cũ ghi nhận năm thành viên:
-
-| Thành viên | Phạm vi đóng góp |
-|---|---|
-| Hoàng Long | Tích hợp hệ thống và điều phối |
-| Trung Nghĩa | Truy hồi thông tin |
-| Thế Quân | Hỏi đáp và mô hình ngôn ngữ |
-| Trung Khang | Kỹ thuật dữ liệu và xử lý corpus |
-| Nguyên Khang | Reranking, đánh giá và vận hành |
 
 ## Ghi nhận
 
 - **Cuộc thi:** UIT Data Science Challenge 2026.
 - **Đội:** HCMUTE-ShipCODE.
 - **Thành tích:** Top 10; Task 1 **0.954**, Task 2 **0.652**.
-- **Giấy khen:** [`docs/assets/UDSC.jpg`](docs/assets/UDSC.jpg).
 
 ## Trích dẫn và giấy phép
 
 Khi sử dụng pipeline trong nghiên cứu, vui lòng ghi mã commit, tập dữ liệu, cấu hình mô hình và scorer dùng cho kết quả được báo cáo. Điều khoản sử dụng mã nguồn nằm trong [`LICENSE`](LICENSE); dữ liệu cuộc thi và model weights có thể có giấy phép riêng.
+
