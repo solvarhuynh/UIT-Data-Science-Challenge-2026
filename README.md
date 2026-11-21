@@ -1,18 +1,67 @@
-# UDSC 2026
+<div align="center">
+  <img src="docs/assets/banner.svg" alt="UIT Data Science Challenge 2026 — HCMUTE-ShipCODE" width="100%" />
+  <h1>HCMUTE-ShipCODE · UDSC 2026</h1>
+  <p><strong>Truy hồi và hỏi đáp trên văn bản pháp luật tiếng Việt, có căn cứ và kiểm chứng được.</strong></p>
+  <p>
+    <img src="https://img.shields.io/badge/Competition-Top%2010-2ea44f?style=flat-square" alt="Top 10" />
+    <img src="https://img.shields.io/badge/Task%201-LegalIR-2563eb?style=flat-square" alt="LegalIR" />
+    <img src="https://img.shields.io/badge/Task%202-LegalQA-7c3aed?style=flat-square" alt="LegalQA" />
+    <img src="https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&amp;logo=python&amp;logoColor=white" alt="Python 3.12" />
+  </p>
+</div>
 
-Hệ thống truy hồi tài liệu pháp luật, sinh câu trả lời có dẫn chứng và tạo gói theo schema của Ban tổ chức.
+> **Kết quả cuộc thi:** đội đạt **Top 10** UDSC 2026. Điểm cuối cùng được công bố: **Task 1 — LegalIR: 0.954**; **Task 2 — LegalQA: 0.652**.
 
-## Mô hình
+## Tổng quan
 
-- Embedding: `AITeamVN/Vietnamese_Embedding_v2` (1.024 chiều; truy vấn 256 token, tài liệu 2.048 token).
-- Reranker: `AITeamVN/Vietnamese_Reranker`.
-- Sinh câu trả lời: `Qwen/Qwen3.5-2B`.
+HCMUTE-ShipCODE xây dựng hệ thống xử lý câu hỏi pháp luật tiếng Việt cho **UIT Data Science Challenge 2026**. Hệ thống giải quyết hai tác vụ: tìm văn bản pháp luật liên quan (**LegalIR**) và sinh câu trả lời dựa trên ngữ cảnh truy hồi (**LegalQA**).
 
-Trọng số nằm trong `models/`; cấu hình trong `configs/`. Dữ liệu, index và kết quả được giữ trong `data/`, ngoài Git.
+Pipeline giữ cấu trúc pháp lý trong khâu phân đoạn, kết hợp nhiều tín hiệu truy hồi, xếp hạng lại ứng viên và tạo câu trả lời có căn cứ. Các thành phần được tổ chức thành CLI vận hành, cấu hình và công cụ đóng gói theo schema cuộc thi.
 
-## Cài đặt
+## Kết quả cuộc thi
 
-Yêu cầu Python 3.12. Trong PowerShell:
+| Tác vụ | Bài toán | Điểm cuối cùng |
+|---|---|---:|
+| **Task 1 — LegalIR** | Truy hồi văn bản pháp luật liên quan | **0.954** |
+| **Task 2 — LegalQA** | Hỏi đáp pháp luật dựa trên ngữ cảnh | **0.652** |
+| **Thứ hạng** | UIT Data Science Challenge 2026 | **Top 10** |
+
+Giấy khen của đội: [`docs/assets/UDSC.jpg`](docs/assets/UDSC.jpg).
+
+<p align="center"><img src="docs/assets/UDSC.jpg" alt="Giấy khen tại UIT Data Science Challenge 2026" width="720" /></p>
+
+Các điểm trên là kết quả cuối cùng của đội trong cuộc thi; không phải kết quả OOF, dự đoán public hay benchmark được tái chạy trong README này.
+
+## Phương pháp
+
+### Dữ liệu và xử lý văn bản
+
+Corpus gồm **8.532 tài liệu**, được xử lý thành **1.270.356 chunks** và **184.548 ngữ cảnh cha (parents)**. Bộ phân tích nhận diện các cấp pháp lý như chương, mục, điều, khoản và điểm. Chunk ngắn phục vụ truy hồi; parent context cung cấp ngữ cảnh rộng hơn cho bước trả lời.
+
+### Task 1 — LegalIR
+
+1. Mã hóa câu hỏi và chunks bằng `AITeamVN/Vietnamese_Embedding_v2`, tạo ứng viên dense từ FAISS.
+2. Dùng BM25 làm kênh lexical bổ sung cho số hiệu văn bản và thuật ngữ pháp lý.
+3. Hợp nhất thứ hạng bằng Reciprocal Rank Fusion (RRF), rồi chấm lại ứng viên bằng `AITeamVN/Vietnamese_Reranker`.
+4. Tổng hợp thứ hạng về tài liệu và xuất tối đa năm tài liệu cho mỗi câu hỏi.
+
+### Task 2 — LegalQA
+
+Pipeline truy hồi và reranking chọn bằng chứng, mở rộng ngữ cảnh từ parent store, rồi đưa câu hỏi và ngữ cảnh vào `Qwen/Qwen3.5-2B`. Prompt hướng mô hình bám sát bằng chứng và giữ thông tin trích dẫn phù hợp. Đầu ra được kiểm tra và đóng gói theo schema LegalQA.
+
+### Mô hình
+
+| Vai trò | Mô hình |
+|---|---|
+| Embedding | [`AITeamVN/Vietnamese_Embedding_v2`](https://huggingface.co/AITeamVN/Vietnamese_Embedding_v2) |
+| Reranker | [`AITeamVN/Vietnamese_Reranker`](https://huggingface.co/AITeamVN/Vietnamese_Reranker) |
+| Sinh câu trả lời | [`Qwen/Qwen3.5-2B`](https://huggingface.co/Qwen/Qwen3.5-2B) |
+
+## Tái lập pipeline
+
+### Cài đặt
+
+Yêu cầu Python 3.12. Dữ liệu và trọng số mô hình được quản lý ngoài Git; đặt theo cấu trúc `data/` và `models/` mà cấu hình yêu cầu. Pipeline GPU chạy qua Modal, ưu tiên A10 và dùng L4 dự phòng.
 
 ```powershell
 py -3.12 -m venv .venv
@@ -22,71 +71,76 @@ python -m pip install -e ".[answers,data,modal,models]"
 python scripts/shared/download_models.py --profile all
 ```
 
-Đăng nhập Modal và gắn Volume tên `udsc`. Đưa dữ liệu đã chuẩn bị cùng ba thư mục model vào Volume theo cùng cấu trúc `data/` và `models/` của repo.
+### Dựng index
 
-## Dựng index
-
-Runner yêu cầu A10 hoặc L4; Modal đã cấp L4 cho LegalIR hiện tại. Index phải hoàn tất đủ 1.270.356 chunks và có manifest hợp lệ trước khi chạy retrieval.
+Xác minh manifest index hoàn tất trước khi tạo candidates.
 
 ```powershell
 python -m modal run --detach scripts/data_prep/run_modal_index.py --batch-size 16 --checkpoint-chunks 100000
 ```
 
-Lượt dựng index chạy ở chế độ detach để việc đóng terminal không hủy job. Theo dõi trạng thái trong Modal dashboard hoặc `python -m modal app logs <APP_ID>`. Nếu job dừng ngoài checkpoint, chạy lại cùng lệnh kèm `--resume`; index chỉ tiếp tục khi hash nguồn, model, cấu hình và corpus khớp checkpoint đã lưu.
-
-Nếu index đã hoàn tất nhưng bước kiểm tra/ghi checksum sau đó bị lỗi, chạy CPU finalizer để hoàn tất manifest mà không dựng lại embeddings:
-
-```powershell
-python -m modal run --detach scripts/data_prep/run_modal_index.py --finalize-only
-```
-
-## LegalIR
-
-Chạy 5-fold đánh giá trên train:
+### Chạy LegalIR
 
 ```powershell
 python -m modal run scripts/retrieval/inference/run_modal.py --dataset train --candidate-k 500 --rerank-k 200
-```
-
-Tạo và kiểm tra gói cho câu hỏi public:
-
-```powershell
 python -m modal run scripts/retrieval/inference/run_modal.py --dataset public --candidate-k 500 --rerank-k 200
 ```
 
-Runner lấy 500 ứng viên dense cho mỗi câu, chấm lại 200 ứng viên đầu bằng AITeam Reranker, rồi đo candidate coverage và đối chiếu dense-only, reranker-only, hybrid RRF trên cùng pool qua 5 grouped folds cùng paired grouped bootstrap. Gói cuối giữ 5 tài liệu/câu. Hybrid dùng trọng số dense/reranker/BM25 là `0,5/1,0/0,3` với `RRF k=60`; gói public được lưu dưới `data/submissions/retrieval/` trên Volume.
-
-Lượt đã đo trên 7.000 câu train đạt hybrid Recall@5 `0,895552` và Precision@5 `0,190829`; candidate Recall@500 là `0,985664`. Trên cùng IDs, hybrid hơn reranker-only `0,069738` Recall tuyệt đối (`P(Δ > 0)=1,0`, 10.000 grouped bootstrap draws, 6.984 normalized-question groups). Mục tiêu Recall `0,95` chưa đạt; các con số này là train benchmark theo BTC scorer, không phải điểm private.
-
-## LegalQA
-
-Sinh và chấm câu train:
+### Chạy LegalQA
 
 ```powershell
 python -m modal run scripts/answers/inference/run_modal.py --dataset train --limit 500 --candidate-k 500 --rerank-k 200 --save-every 100
-```
-
-500 câu được chọn ngẫu nhiên cố định theo seed 2026. Runner dùng 500 dense candidates và rerank 200 passages, chấm Qwen và baseline trích dẫn trên cùng câu hỏi bằng BTC METEOR/ROUGE-L, rồi đánh giá answer selector bằng nested grouped OOF cùng paired grouped bootstrap. Báo cáo phải nêu rõ sample 500 và `population_match=false`; đây chưa phải OOF của toàn bộ 7.000 train rows. Chỉ mở rộng sang `--limit 7000` khi kết quả cùng input, scorer và folds đủ cơ sở cho quyết định đó.
-
-Sinh và đóng gói 1.000 câu public:
-
-```powershell
 python -m modal run scripts/answers/inference/run_modal.py --dataset public --save-every 100
 ```
 
-Các checkpoint được ghi theo từng 100 câu. Gói LegalQA được kiểm tra số ID và schema trước khi lưu tại `data/submissions/answers/submission.zip` trên Volume.
+Đây là các lệnh vận hành theo cấu hình hiện hành. Nhãn/reference chỉ dành cho scorer và chẩn đoán; candidate generation, reranking và answer generation nhận mapping câu hỏi. Kết quả mỗi lần chạy cần gắn với input, model, config, scorer và split tương ứng.
 
-## Kết quả và giới hạn đánh giá
+## Đánh giá
 
-- LegalIR hiện đo được Recall@5 `0,895552` trên đủ 7.000 train questions; mục tiêu tham khảo `0,95` chưa đạt.
-- LegalQA báo METEOR và ROUGE-L riêng theo scorer BTC; báo cáo train 500 câu phải giữ phạm vi sample, và mục tiêu `0,65` phải được hiểu theo metric được chỉ rõ, không tự gộp hai metric.
-- Kết quả train là chẩn đoán trên dữ liệu có nhãn, không phải ước lượng chắc chắn cho tập ẩn. Public chỉ dùng để tạo gói, không dùng chọn model hay tham số.
-- `P(Δ > 0)` từ bootstrap nhóm là xác suất theo các mẫu bootstrap trên benchmark đã đo, không phải xác suất hiệu năng trên leaderboard riêng.
+LegalIR dùng scorer BTC; báo cáo Recall, Precision, F1 ở mức macro và candidate coverage. So sánh biến thể cần cùng IDs, cùng candidate pool và grouped folds, kèm từng fold và paired grouped bootstrap.
 
-## Bố cục
+LegalQA được chấm riêng bằng **METEOR** (NLTK với WordNet/OMW) và **ROUGE-L** theo mã scorer BTC. Tập public dùng để tạo submission, không dùng để fit hoặc chọn tham số. Cần phân biệt điểm cuộc thi với benchmark nội bộ, OOF và chẩn đoán trên train.
 
-- `src/udsc2026/`: hợp đồng dữ liệu, ingestion, retrieval, sinh câu trả lời và đánh giá.
-- `scripts/data_prep/`: xử lý dữ liệu và dựng index.
-- `scripts/retrieval/`: sinh/rerank candidates, đánh giá và đóng gói LegalIR.
-- `scripts/answers/`: sinh, chấm và đóng gói LegalQA.
-- `configs/`, `prompts/`: cấu hình và mẫu prompt đang dùng.
+## Cấu trúc repository
+
+```text
+src/udsc2026/
+├── ingestion/          # Đọc, chuẩn hóa, phân tích cấu trúc và chia đoạn văn bản
+├── retrieval/          # Dense/sparse retrieval, hợp nhất, context và reranking
+├── answer_generation/  # Prompt, sinh câu trả lời và kiểm tra trích dẫn
+├── evaluation/         # Scorer, phân tích và hợp đồng submission
+└── infrastructure/     # Cấu hình, model clients và vector store
+scripts/
+├── data_prep/          # Chuẩn bị dữ liệu và dựng index
+├── retrieval/          # Inference, đánh giá và đóng gói LegalIR
+├── answers/            # Sinh, chấm và đóng gói LegalQA
+└── shared/             # Tiện ích vận hành dùng chung
+configs/                # Cấu hình pipeline
+prompts/                # Prompt sinh câu trả lời
+data/                   # Dữ liệu, index và predictions (ngoài Git)
+models/                 # Trọng số mô hình (ngoài Git)
+docs/assets/            # Banner và giấy khen
+```
+
+## Nhóm thực hiện
+
+README cũ ghi nhận năm thành viên:
+
+| Thành viên | Phạm vi đóng góp |
+|---|---|
+| Hoàng Long | Tích hợp hệ thống và điều phối |
+| Trung Nghĩa | Truy hồi thông tin |
+| Thế Quân | Hỏi đáp và mô hình ngôn ngữ |
+| Trung Khang | Kỹ thuật dữ liệu và xử lý corpus |
+| Nguyên Khang | Reranking, đánh giá và vận hành |
+
+## Ghi nhận
+
+- **Cuộc thi:** UIT Data Science Challenge 2026.
+- **Đội:** HCMUTE-ShipCODE.
+- **Thành tích:** Top 10; Task 1 **0.954**, Task 2 **0.652**.
+- **Giấy khen:** [`docs/assets/UDSC.jpg`](docs/assets/UDSC.jpg).
+
+## Trích dẫn và giấy phép
+
+Khi sử dụng pipeline trong nghiên cứu, vui lòng ghi mã commit, tập dữ liệu, cấu hình mô hình và scorer dùng cho kết quả được báo cáo. Điều khoản sử dụng mã nguồn nằm trong [`LICENSE`](LICENSE); dữ liệu cuộc thi và model weights có thể có giấy phép riêng.

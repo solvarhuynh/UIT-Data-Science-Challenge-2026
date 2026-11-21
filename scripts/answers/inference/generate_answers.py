@@ -303,6 +303,7 @@ async def _run(args: argparse.Namespace) -> None:
     diagnostics = _load_diagnostics(args.diagnostics, resume=args.resume)
     if output_exists != diagnostics_exists:
         raise ValueError("answer output and diagnostics checkpoints must both exist")
+    previous_manifest: dict[str, Any] | None = None
     if output_exists:
         if not manifest_path.is_file():
             raise ValueError("cannot resume answers without the original run manifest")
@@ -322,7 +323,34 @@ async def _run(args: argparse.Namespace) -> None:
         if previous_manifest.get("completed_count") != len(predictions):
             raise ValueError("answer rows do not match the saved generation checkpoint")
     elif manifest_path.exists():
-        raise FileExistsError(f"manifest exists without answer files: {manifest_path}")
+        if not args.resume:
+            raise FileExistsError(
+                f"answer manifest exists; use --resume only for the same run: {manifest_path}"
+            )
+        try:
+            previous_manifest = json.loads(
+                manifest_path.read_text(encoding="utf-8")
+            )
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+            raise ValueError("answer run manifest is invalid") from exc
+        if not isinstance(previous_manifest, dict):
+            raise ValueError("answer run manifest must contain a JSON object")
+        mismatches = {
+            key: {"expected": value, "actual": previous_manifest.get(key)}
+            for key, value in run_identity.items()
+            if previous_manifest.get(key) != value
+        }
+        if mismatches:
+            raise ValueError(f"answer inputs changed; refusing to resume: {mismatches}")
+        if (
+            previous_manifest.get("complete") is not False
+            or previous_manifest.get("completed_count") != 0
+            or previous_manifest.get("output_sha256") is not None
+        ):
+            raise ValueError(
+                "cannot resume without answer files unless the matching manifest "
+                "is incomplete with zero completed rows"
+            )
 
     selected_ids = {question_id for question_id, _ in questions}
     completed_ids = {item["id"] for item in predictions}
@@ -360,7 +388,11 @@ async def _run(args: argparse.Namespace) -> None:
         write_run_manifest(
             {
                 **run_identity,
-                "created_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "created_at_utc": (
+                    previous_manifest.get("created_at_utc")
+                    if previous_manifest is not None
+                    else time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                ),
                 "completed_count": len(predictions),
                 "complete": complete,
                 "output_sha256": output_hash,
