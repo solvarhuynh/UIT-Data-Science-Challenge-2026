@@ -21,6 +21,7 @@ gpu_image = (
     modal.Image.debian_slim(python_version="3.12")
     .pip_install(
         "faiss-cpu>=1.8,<2",
+        "accelerate>=1.1,<2",
         "modal==1.6.4",
         "numpy>=1.26,<2",
         "pydantic>=2.8",
@@ -46,6 +47,10 @@ gpu_image = (
     .add_local_dir(
         str(PROJECT_ROOT / "scripts" / "retrieval" / "inference"),
         remote_path="/workspace/scripts/retrieval/inference",
+    )
+    .add_local_dir(
+        str(PROJECT_ROOT / "scripts" / "retrieval" / "training"),
+        remote_path="/workspace/scripts/retrieval/training",
     )
     .add_local_dir(
         str(PROJECT_ROOT / "scripts" / "data_prep"),
@@ -81,6 +86,29 @@ cpu_image = (
     )
 )
 app = modal.App("udsc-retrieval-pipeline")
+TRAIN_POOL = Path(
+    "data/predictions/selected/legalir/train/candidate_k500_rerank_k200"
+)
+TRAIN_SPLIT = Path("data/splits/retrieval/folds.json")
+FINAL_TRAINING = Path("data/training/retrieval/production")
+PRODUCTION_ROOT = Path(
+    "data/predictions/selected/legalir/production/candidate_k500_rerank_k200"
+)
+
+
+def _legal_ir_dir() -> Path:
+    path = Path("data/raw/btc/Legall-IR")
+    if not path.is_dir():
+        raise FileNotFoundError(
+            f"canonical LegalIR directory is missing: {path}; "
+            "do not create a duplicate LegalIR directory"
+        )
+    legacy = Path("data/raw/btc/LegalIR")
+    if legacy.exists():
+        raise ValueError(
+            "duplicate LegalIR directories found; remove data/raw/btc/LegalIR"
+        )
+    return path
 
 
 def _preflight_reranker_tokenizer() -> None:
@@ -133,7 +161,7 @@ def generate_rankings(
         )
     os.chdir(VOLUME_PATH)
     _preflight_reranker_tokenizer()
-    source_questions = Path("data/raw/btc/LegalIR") / (
+    source_questions = _legal_ir_dir() / (
         "train.json" if dataset == "train" else "public-official.json"
     )
     if not source_questions.is_file():
@@ -241,13 +269,14 @@ def evaluate_or_package(
             "candidate_k and rerank_k must be positive, with rerank_k <= candidate_k"
         )
     os.chdir(VOLUME_PATH)
-    question_path = Path("data/raw/btc/LegalIR") / (
+    question_path = _legal_ir_dir() / (
         "train.json" if dataset == "train" else "public-official.json"
     )
     output_root = Path("data/predictions/selected/legalir") / dataset
     variant_name = f"candidate_k{candidate_k}_rerank_k{rerank_k}"
-    if (candidate_k, rerank_k) != (500, 200):
+    if (candidate_k, rerank_k) != (200, 100):
         output_root /= variant_name
+    questions = output_root / "questions.json"
     dense = output_root / "dense.jsonl"
     reranked = output_root / "reranked.jsonl"
     combined = output_root / "ranking.json"
@@ -284,7 +313,7 @@ def evaluate_or_package(
         subprocess.run(command, check=True, cwd=VOLUME_PATH)
 
     if dataset == "public":
-        combine(question_path, 0.5, 1.0, 0.3, combined)
+        combine(questions, 0.5, 1.0, 0.3, combined)
         package = Path("data/submissions/retrieval/submission.zip")
         package.parent.mkdir(parents=True, exist_ok=True)
         subprocess.run(
@@ -353,7 +382,7 @@ def evaluate_or_package(
             # and the corpus. They use no fold labels, so build once and split
             # by question ID instead of re-reading the large candidate files
             # and document corpus separately for each fold.
-            combine(question_path, *weights, full_predictions)
+            combine(questions, *weights, full_predictions)
             full_rows = json.loads(full_predictions.read_text(encoding="utf-8"))
             if not isinstance(full_rows, list):
                 raise ValueError("combined predictions must be a JSON array")
@@ -450,6 +479,260 @@ def evaluate_or_package(
                 cwd=VOLUME_PATH,
             )
     volume.commit()
+
+
+@app.function(
+    image=cpu_image,
+    cpu=4,
+    memory=16384,
+    timeout=8 * 60 * 60,
+    volumes={VOLUME_PATH: volume},
+)
+def aggregate_final(
+    dataset: str = "public",
+    candidate_k: int = 500,
+    rerank_k: int = 200,
+) -> None:
+    """Apply the locked CPU recipe and validate the LegalIR package."""
+
+    if dataset not in {"train", "public"}:
+        raise ValueError("dataset must be 'train' or 'public'")
+    if candidate_k <= 0 or rerank_k <= 0 or rerank_k > candidate_k:
+        raise ValueError("candidate_k and rerank_k must be positive, with rerank_k <= candidate_k")
+    os.chdir(VOLUME_PATH)
+    root = PRODUCTION_ROOT
+    questions = root / "questions.json"
+    reranked = root / "reranked.jsonl"
+    reranked_manifest = root / "reranked.manifest.json"
+    submission = root / "submission_candidates.json"
+    contexts = root / "contexts.jsonl"
+    context_manifest = root / "contexts.manifest.json"
+    source_questions = _legal_ir_dir() / (
+        "train.json" if dataset == "train" else "public-official.json"
+    )
+    subprocess.run(
+        [
+            sys.executable,
+            "/workspace/scripts/retrieval/evaluation/aggregate_production.py",
+            "--questions", str(questions),
+            "--reranked", str(reranked),
+            "--reranked-manifest", str(reranked_manifest),
+            "--submission", str(submission),
+            "--contexts", str(contexts),
+            "--context-manifest", str(context_manifest),
+            "--method", "rrf_cap2_dense_signal",
+            "--score-field", "rerank_score",
+            "--max-documents", "5",
+            "--evidence-limit", "3",
+            "--rrf-k", "60",
+            "--dense-rrf-k", "30",
+            "--dense-signal-weight", "0.30",
+        ],
+        check=True,
+        cwd=VOLUME_PATH,
+    )
+    package = Path("data/submissions/retrieval/production.zip")
+    subprocess.run(
+        [
+            sys.executable,
+            "/workspace/scripts/retrieval/submission/package_submission.py",
+            "--input", str(submission),
+            "--questions", str(source_questions),
+            "--output", str(package),
+        ],
+        check=True,
+        cwd=VOLUME_PATH,
+    )
+    subprocess.run(
+        [
+            sys.executable,
+            "/workspace/scripts/retrieval/submission/validate_package.py",
+            "--input", str(package),
+            "--questions", str(source_questions),
+        ],
+        check=True,
+        cwd=VOLUME_PATH,
+    )
+    volume.commit()
+
+
+@app.function(
+    image=gpu_image,
+    gpu=["A10", "L4"],
+    cpu=4,
+    memory=32768,
+    timeout=12 * 60 * 60,
+    volumes={VOLUME_PATH: volume},
+    max_containers=1,
+)
+def train_and_rerank_fold(fold: int, loss: str, resume: bool) -> None:
+    from udsc2026.training.provenance import read_json, sha256
+
+    os.chdir(VOLUME_PATH)
+    _preflight_reranker_tokenizer()
+    dense = TRAIN_POOL / "dense.jsonl"
+    questions = TRAIN_POOL / "questions.json"
+    dense_manifest = TRAIN_POOL / "dense.manifest.json"
+    base_manifest = TRAIN_POOL / "reranked.manifest.json"
+    metadata = read_json(dense_manifest)
+    base = read_json(base_manifest)
+    if (
+        sha256(dense) != metadata["output_sha256"]
+        or sha256(questions) != metadata["question_source_sha256"]
+        or sha256(dense_manifest) != base["candidate_manifest_sha256"]
+    ):
+        raise ValueError("cached candidates, questions and base reranker disagree")
+    training = Path("data/training/retrieval") / loss / f"fold_{fold}"
+    ranking = Path("data/predictions/selected/legalir/folds") / loss / f"fold_{fold}"
+    resume_flag = ["--resume"] if resume else []
+    subprocess.run(
+        [
+            sys.executable, "/workspace/scripts/retrieval/training/train_reranker.py",
+            "--groups-dir", "data/training/retrieval",
+            "--folds", str(TRAIN_SPLIT),
+            "--fold", str(fold),
+            "--loss", loss,
+            "--output-dir", str(training),
+            "--modal-volume", VOLUME_NAME,
+            *resume_flag,
+        ],
+        check=True,
+    )
+
+
+@app.function(
+    image=gpu_image,
+    gpu=["A10", "L4"],
+    cpu=4,
+    memory=32768,
+    timeout=24 * 60 * 60,
+    volumes={VOLUME_PATH: volume},
+    max_containers=1,
+)
+def train_and_rerank_final(
+    dataset: str = "public",
+    candidate_k: int = 500,
+    rerank_k: int = 200,
+    resume: bool = False,
+) -> None:
+    """Train on every usable grouped train query, then rank the output mapping."""
+
+    from udsc2026.training.provenance import read_json
+
+    if dataset not in {"train", "public"}:
+        raise ValueError("dataset must be 'train' or 'public'")
+    if candidate_k <= 0 or rerank_k <= 0 or rerank_k > candidate_k:
+        raise ValueError("candidate_k and rerank_k must be positive, with rerank_k <= candidate_k")
+
+    os.chdir(VOLUME_PATH)
+    _preflight_reranker_tokenizer()
+    FINAL_TRAINING.mkdir(parents=True, exist_ok=True)
+    training_report = FINAL_TRAINING / "training_report.json"
+    resume_flag = ["--resume"] if resume else []
+    subprocess.run(
+        [
+            sys.executable,
+            "/workspace/scripts/retrieval/training/train_reranker.py",
+            "--groups-dir", "data/training/retrieval",
+            "--folds", str(TRAIN_SPLIT),
+            "--all-queries",
+            "--loss", "softmax",
+            "--output-dir", str(FINAL_TRAINING),
+            "--modal-volume", VOLUME_NAME,
+            *resume_flag,
+        ],
+        check=True,
+    )
+    report = read_json(training_report)
+    if report.get("scope") != "all" or report.get("complete") is not True:
+        raise ValueError("final reranker training did not produce a complete all-query report")
+
+    source_questions = _legal_ir_dir() / (
+        "train.json" if dataset == "train" else "public-official.json"
+    )
+    source_payload = json.loads(source_questions.read_text(encoding="utf-8-sig"))
+    if not isinstance(source_payload, dict) or not source_payload:
+        raise ValueError("LegalIR question source must be a non-empty ID mapping")
+    PRODUCTION_ROOT.mkdir(parents=True, exist_ok=True)
+    questions = PRODUCTION_ROOT / "questions.json"
+    questions.write_text(
+        json.dumps(
+            {
+                question_id: {"question": record["question"]}
+                for question_id, record in source_payload.items()
+                if isinstance(record, dict) and isinstance(record.get("question"), str)
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    dense = PRODUCTION_ROOT / "dense.jsonl"
+    dense_manifest = PRODUCTION_ROOT / "dense.manifest.json"
+    reranked = PRODUCTION_ROOT / "reranked.jsonl"
+    reranked_manifest = PRODUCTION_ROOT / "reranked.manifest.json"
+    candidate_command = [
+        sys.executable,
+        "/workspace/scripts/retrieval/inference/generate_candidates.py",
+        "--config-env", "gpu",
+        "--candidate-k", str(candidate_k),
+        "--query-batch-size", "64",
+        "--save-every", "500",
+        "--commit-modal-volume", "--modal-volume-name", VOLUME_NAME,
+        "--question-mapping", str(questions.resolve()),
+        "--output", str(dense),
+        "--manifest", str(dense_manifest),
+        *resume_flag,
+    ]
+    subprocess.run(candidate_command, check=True, cwd=VOLUME_PATH)
+    rerank_command = [
+        sys.executable,
+        "/workspace/scripts/retrieval/inference/rerank_candidates.py",
+        "--questions", str(questions.resolve()),
+        "--candidates", str(dense),
+        "--candidate-manifest", str(dense_manifest),
+        "--training-report", str(training_report),
+        "--model", str(FINAL_TRAINING / "checkpoint"),
+        "--candidate-k", str(candidate_k),
+        "--rerank-k", str(rerank_k),
+        "--batch-size", "8",
+        "--max-length", str(report["max_length"]),
+        "--save-every", "500",
+        "--commit-modal-volume", "--modal-volume-name", VOLUME_NAME,
+        "--fp16",
+        "--output", str(reranked),
+        "--manifest", str(reranked_manifest),
+        *resume_flag,
+    ]
+    subprocess.run(rerank_command, check=True, cwd=VOLUME_PATH)
+    volume.commit()
+
+
+@app.local_entrypoint()
+def train_fold(fold: int, loss: str, resume: bool = False) -> None:
+    if fold not in range(5) or loss not in {"softmax", "bce"}:
+        raise ValueError("choose a fold from 0 to 4 and loss softmax or bce")
+    train_and_rerank_fold.remote(fold, loss, resume)
+
+
+@app.local_entrypoint()
+def train_final(
+    dataset: str = "public",
+    candidate_k: int = 500,
+    rerank_k: int = 200,
+    resume: bool = False,
+) -> None:
+    train_and_rerank_final.remote(dataset, candidate_k, rerank_k, resume)
+
+
+@app.local_entrypoint()
+def aggregate(
+    dataset: str = "public",
+    candidate_k: int = 500,
+    rerank_k: int = 200,
+) -> None:
+    aggregate_final.remote(dataset, candidate_k, rerank_k)
 
 
 @app.local_entrypoint()

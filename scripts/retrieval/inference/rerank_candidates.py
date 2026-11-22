@@ -25,6 +25,7 @@ from udsc2026.infrastructure.modal_volume import (  # noqa: E402
     commit_mounted_volume_sync,
 )
 from udsc2026.retrieval.reranking import CrossEncoderReranker  # noqa: E402
+from udsc2026.training.provenance import read_json, verify_checkpoint  # noqa: E402
 
 
 def _positive_int(value: str) -> int:
@@ -42,6 +43,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--model", default="models/aiteam-vietnamese-reranker")
+    parser.add_argument("--training-report", type=Path)
+    parser.add_argument("--base-reranker-manifest", type=Path)
+    parser.add_argument("--folds", type=Path)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--batch-size", type=_positive_int, default=16)
     parser.add_argument("--max-length", type=_positive_int, default=1024)
@@ -63,8 +67,8 @@ def _load_questions(path: Path) -> dict[str, str]:
     for raw_id, record in payload.items():
         if not isinstance(raw_id, str) or not raw_id.strip():
             raise ValueError("question IDs must be non-empty strings")
-        if not isinstance(record, dict):
-            raise ValueError(f"question {raw_id!r} must map to an object")
+        if not isinstance(record, dict) or set(record) != {"question"}:
+            raise ValueError(f"question {raw_id!r} must be a question-only object")
         question = record.get("question")
         if not isinstance(question, str) or not question.strip():
             raise ValueError(f"question {raw_id!r} has no question text")
@@ -124,7 +128,9 @@ def run(args: argparse.Namespace) -> int:
     questions = _load_questions(args.questions)
     if args.rerank_k > args.candidate_k:
         raise ValueError("--rerank-k must not exceed --candidate-k")
-    if Path(args.model).resolve() != Path("models/aiteam-vietnamese-reranker").resolve():
+    if not args.training_report and (
+        Path(args.model).resolve() != Path("models/aiteam-vietnamese-reranker").resolve()
+    ):
         raise ValueError("only the selected AITeam reranker is enabled for production")
     try:
         candidate_manifest = json.loads(
@@ -136,12 +142,13 @@ def run(args: argparse.Namespace) -> int:
         raise ValueError("candidate manifest must contain a JSON object")
     if candidate_manifest.get("complete") is not True:
         raise ValueError("candidate generation did not complete")
-    if candidate_manifest.get("model_id") != "AITeamVN/Vietnamese_Embedding_v2":
-        raise ValueError("candidates were not generated with the selected embedding")
     candidate_sha256 = _sha256(args.candidates)
     if candidate_manifest.get("output_sha256") != candidate_sha256:
         raise ValueError("candidate file does not match its generation manifest")
-    if candidate_manifest.get("question_source_sha256") != _sha256(args.questions):
+    questions_sha256 = _sha256(args.questions)
+    if candidate_manifest.get("model_id") != "AITeamVN/Vietnamese_Embedding_v2":
+        raise ValueError("candidates were not generated with the selected embedding")
+    if candidate_manifest.get("question_source_sha256") != questions_sha256:
         raise ValueError("candidate questions do not match the supplied question file")
 
     model_manifest_path = Path("models/download_manifest.json")
@@ -162,7 +169,7 @@ def run(args: argparse.Namespace) -> int:
     manifest_path = args.manifest or args.output.with_suffix(".manifest.json")
     run_identity: dict[str, object] = {
         "schema_version": "reranker-run-v2",
-        "questions_sha256": _sha256(args.questions),
+        "questions_sha256": questions_sha256,
         "candidate_predictions_sha256": candidate_sha256,
         "candidate_manifest_sha256": _sha256(args.candidate_manifest),
         "model": "AITeamVN/Vietnamese_Reranker",
@@ -175,18 +182,76 @@ def run(args: argparse.Namespace) -> int:
         "max_length": args.max_length,
         "fp16": args.fp16,
     }
+    if args.training_report:
+        report = read_json(args.training_report)
+        if report.get("schema_version") != "retrieval-reranker-training-v2":
+            raise ValueError("training report schema is unsupported")
+        if (
+            report.get("base_model") != run_identity["model"]
+            or report.get("base_model_revision") != run_identity["model_revision"]
+            or report.get("rerank_k") != args.rerank_k
+            or report.get("max_length") != args.max_length
+            or candidate_manifest.get("candidate_k") != args.candidate_k
+        ):
+            raise ValueError("checkpoint or inference configuration differs from training")
+        scope = report.get("scope", "fold")
+        if scope == "fold":
+            if args.folds is None or args.base_reranker_manifest is None:
+                raise ValueError(
+                    "fold checkpoint evaluation requires folds and base reranker manifest"
+                )
+            base = read_json(args.base_reranker_manifest)
+            if (
+                base.get("complete") is not True
+                or base.get("model") != run_identity["model"]
+                or base.get("model_revision") != run_identity["model_revision"]
+                or base.get("candidate_predictions_sha256") != candidate_sha256
+                or base.get("candidate_manifest_sha256")
+                != run_identity["candidate_manifest_sha256"]
+                or report.get("source_sha256") != base.get("output_sha256")
+                or report.get("source_manifest_sha256")
+                != _sha256(args.base_reranker_manifest)
+                or report.get("questions_sha256") != questions_sha256
+                or base.get("fp16") != args.fp16
+                or base.get("batch_size") != args.batch_size
+                or report["inputs"]["folds"] != _sha256(args.folds)
+            ):
+                raise ValueError("checkpoint, fold or inference pool differs from training")
+        elif scope != "all":
+            raise ValueError(f"unsupported training scope: {scope!r}")
+        verify_checkpoint(Path(args.model), report)
+        if scope == "fold":
+            fold = next(
+                row
+                for row in read_json(args.folds)["folds"]
+                if row["fold"] == report["fold"]
+            )
+            validation_ids = set(fold["validation_ids"])
+            if not validation_ids <= questions.keys() or validation_ids & set(
+                fold["training_ids"]
+            ):
+                raise ValueError("invalid held-out question set")
+            questions = {
+                qid: text for qid, text in questions.items() if qid in validation_ids
+            }
+        run_identity.update(
+            {
+                "scope": scope,
+                "fold": report.get("fold"),
+                "device": args.device,
+                "inference_sha256": _sha256(Path(__file__)),
+                "training_report_sha256": _sha256(args.training_report),
+            }
+        )
     if args.output.resolve() == manifest_path.resolve():
         raise ValueError("reranked output and manifest must be different files")
     if args.output.exists() and not args.resume:
         raise FileExistsError(f"output exists; pass --resume to continue: {args.output}")
     if manifest_path.exists() and not args.resume:
         raise FileExistsError(f"manifest exists; use a new output path: {manifest_path}")
-    completed_ids = _load_existing_ids(args.output)
-    if len(completed_ids) > len(questions):
-        raise ValueError("saved output has more rows than the question source")
-    if any(question_id not in questions for question_id in completed_ids):
-        raise ValueError("saved output contains IDs outside the question source")
     previous_manifest: dict[str, object] | None = None
+    digest = hashlib.sha256()
+    checkpoint_bytes = 0
     if args.output.exists():
         if not manifest_path.is_file():
             raise ValueError("cannot resume without the original reranker manifest")
@@ -201,8 +266,29 @@ def run(args: argparse.Namespace) -> int:
             for key, value in run_identity.items()
             if previous_manifest.get(key) != value
         }
-        if mismatches and completed_ids:
+        if mismatches and args.output.stat().st_size:
             raise ValueError(f"reranker inputs changed; refusing to resume: {mismatches}")
+        checkpoint_bytes = previous_manifest.get("checkpoint_bytes", args.output.stat().st_size)
+        if not isinstance(checkpoint_bytes, int) or checkpoint_bytes < 0:
+            raise ValueError("invalid checkpoint size")
+        if args.output.stat().st_size < checkpoint_bytes:
+            raise ValueError("saved output is shorter than the checkpoint")
+        with args.output.open("rb+") as stream:
+            remaining = checkpoint_bytes
+            while remaining:
+                block = stream.read(min(remaining, 1024 * 1024))
+                if not block:
+                    raise ValueError("saved output ended inside the checkpoint")
+                digest.update(block)
+                remaining -= len(block)
+            expected_hash = previous_manifest.get("output_sha256")
+            if expected_hash is not None and digest.hexdigest() != expected_hash:
+                raise ValueError("saved output does not match its checkpoint checksum")
+            if previous_manifest.get("complete") is not True:
+                stream.truncate()
+            elif stream.read(1):
+                raise ValueError("completed output has trailing data")
+        completed_ids = _load_existing_ids(args.output)
         if previous_manifest.get("completed_count") != len(completed_ids):
             raise ValueError("reranked output rows do not match the saved checkpoint")
         if mismatches:
@@ -214,13 +300,21 @@ def run(args: argparse.Namespace) -> int:
         elif previous_manifest.get("complete") is True:
             if (
                 len(completed_ids) != len(questions)
-                or previous_manifest.get("output_sha256") != _sha256(args.output)
+                or previous_manifest.get("output_sha256") != digest.hexdigest()
             ):
                 raise ValueError("completed reranker output does not match its manifest")
             print(f"Reranked candidates are already complete: {args.output}", flush=True)
             return 0
+    else:
+        if args.resume and manifest_path.exists():
+            previous_manifest = read_json(manifest_path)
+            if previous_manifest.get("completed_count") != 0:
+                raise ValueError("checkpoint output is missing")
+        completed_ids = []
+    if any(question_id not in questions for question_id in completed_ids):
+        raise ValueError("saved output contains IDs outside the question source")
 
-    def save_manifest(*, complete: bool, completed_count: int, output_hash: str | None = None) -> None:
+    def save_manifest(*, complete: bool, completed_count: int) -> None:
         write_run_manifest(
             {
                 **run_identity,
@@ -228,7 +322,8 @@ def run(args: argparse.Namespace) -> int:
                 "save_every": args.save_every,
                 "completed_count": completed_count,
                 "complete": complete,
-                "output_sha256": output_hash,
+                "checkpoint_bytes": checkpoint_bytes,
+                "output_sha256": digest.hexdigest(),
             },
             manifest_path,
         )
@@ -247,9 +342,26 @@ def run(args: argparse.Namespace) -> int:
     batch: list[PredictionSample] = []
     args.output.parent.mkdir(parents=True, exist_ok=True)
     save_manifest(complete=False, completed_count=len(completed_ids))
-    mode = "a" if args.resume else "x"
-    with args.output.open(mode, encoding="utf-8", newline="\n") as output:
+    mode = "ab" if args.resume else "xb"
+    with args.output.open(mode) as output:
+        def save_batch() -> None:
+            nonlocal saved, checkpoint_bytes
+            for item in batch:
+                encoded = _serialize(item).encode("utf-8")
+                output.write(encoded)
+                digest.update(encoded)
+            output.flush()
+            os.fsync(output.fileno())
+            saved += len(batch)
+            batch.clear()
+            checkpoint_bytes = output.tell()
+            save_manifest(complete=False, completed_count=saved)
+            if args.commit_modal_volume:
+                commit_mounted_volume_sync(args.modal_volume_name)
+
         for sample in _iter_candidates(args.candidates):
+            if args.training_report and sample.question_id not in questions:
+                continue
             if sample.question_id in seen_ids:
                 raise ValueError(f"duplicate candidate ID: {sample.question_id}")
             seen_ids.add(sample.question_id)
@@ -275,28 +387,15 @@ def run(args: argparse.Namespace) -> int:
             ranked = reranked + tail
             batch.append(sample.model_copy(deep=True, update={"hits": ranked}))
             if len(batch) >= args.save_every:
-                output.writelines(_serialize(item) for item in batch)
-                output.flush()
-                os.fsync(output.fileno())
-                saved += len(batch)
-                batch.clear()
-                save_manifest(complete=False, completed_count=saved)
-                if args.commit_modal_volume:
-                    commit_mounted_volume_sync(args.modal_volume_name)
+                save_batch()
                 print(f"saved={saved}", flush=True)
         if batch:
-            output.writelines(_serialize(item) for item in batch)
-            output.flush()
-            os.fsync(output.fileno())
-            saved += len(batch)
-            save_manifest(complete=False, completed_count=saved)
-            if args.commit_modal_volume:
-                commit_mounted_volume_sync(args.modal_volume_name)
+            save_batch()
     if saved != len(questions) or seen_ids != set(questions):
         raise ValueError(
             f"candidate coverage mismatch: saved={saved}, questions={len(questions)}"
         )
-    save_manifest(complete=True, completed_count=saved, output_hash=_sha256(args.output))
+    save_manifest(complete=True, completed_count=saved)
     if args.commit_modal_volume:
         commit_mounted_volume_sync(args.modal_volume_name)
     print(f"complete_questions={saved}")
