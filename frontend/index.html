@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>UDSC Local Grader</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">U</span><span>UDSC Local Grader</span></div>
+      <nav class="topnav" aria-label="Điều hướng">
+        <a class="active" href="#workspace">Chấm thử</a>
+        <a href="#how-it-works">Cách dùng</a>
+      </nav>
+      <span class="local-badge">LOCAL</span>
+    </header>
+
+    <main id="workspace" class="page-shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Submission workspace</p>
+          <h1>Nộp thử và theo dõi điểm</h1>
+          <p class="hero-copy">Một bảng điều khiển riêng cho các lần chạy LegalIR và LegalQA. File được chấm trên máy này và không gửi ra ngoài.</p>
+        </div>
+        <div class="health" id="health"><span class="dot"></span> Đang kết nối...</div>
+      </section>
+
+      <section class="task-switcher" aria-label="Chọn tác vụ">
+        <button class="task-tab active" data-task="ir"><strong>IR</strong><span>LegalIR · Recall / Precision</span></button>
+        <button class="task-tab" data-task="qa"><strong>QA</strong><span>LegalQA · METEOR / ROUGE-L</span></button>
+      </section>
+
+      <section class="stage-strip">
+        <div class="stage-heading"><span class="section-kicker">PHASE</span><span id="taskTitle">LegalIR</span></div>
+        <div id="stageButtons" class="stage-buttons"></div>
+      </section>
+
+      <div id="referenceNotice" class="notice hidden"></div>
+      <div id="flash" class="flash hidden" role="status"></div>
+
+      <section class="content-grid">
+        <article class="card upload-card">
+          <div class="card-heading">
+            <div>
+              <p class="section-kicker">SUBMISSION</p>
+              <h2>Tải submission</h2>
+            </div>
+            <span class="pill" id="currentStageLabel">Warm-up</span>
+          </div>
+          <p class="muted">Nhận file JSON hoặc ZIP chứa đúng một file <code>submission.json</code>.</p>
+          <form id="uploadForm">
+            <label class="field-label" for="label">Tên lần chạy</label>
+            <input id="label" name="label" type="text" maxlength="120" placeholder="Ví dụ: reranker-v3 · top 200" />
+            <label class="field-label" for="submissionFile">File submission</label>
+            <label class="file-drop" for="submissionFile">
+              <span class="upload-icon">↑</span>
+              <span><strong id="fileName">Chọn file để tải lên</strong><small>JSON hoặc ZIP · tối đa 100 MB</small></span>
+            </label>
+            <input id="submissionFile" name="file" type="file" accept=".json,.zip,application/json,application/zip" required />
+            <button class="primary-button" id="uploadButton" type="submit">Chấm submission</button>
+          </form>
+          <div class="upload-note"><span>i</span><span>Reference được giữ riêng ở backend. Nếu stage chưa có reference, submission vẫn được lưu và sẽ chấm sau khi bạn thêm dữ liệu.</span></div>
+        </article>
+
+        <article class="card summary-card">
+          <p class="section-kicker">CURRENT VIEW</p>
+          <h2 id="summaryTitle">LegalIR · Warm-up</h2>
+          <div class="summary-metrics">
+            <div><span>Lần nộp</span><strong id="submissionCount">0</strong></div>
+            <div><span>Đã chấm</span><strong id="scoredCount">0</strong></div>
+            <div><span>Best score</span><strong id="bestScore">—</strong></div>
+          </div>
+          <p class="muted small" id="summaryHint">Bảng xếp hạng chỉ gồm các lần nộp ở tác vụ và phase đang chọn.</p>
+        </article>
+      </section>
+
+      <section class="card leaderboard-card">
+        <div class="card-heading leaderboard-heading">
+          <div>
+            <p class="section-kicker">LEADERBOARD</p>
+            <h2>Bảng xếp hạng của tôi</h2>
+          </div>
+          <button class="ghost-button" id="refreshButton" type="button">↻ Làm mới</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead id="leaderboardHead"></thead>
+            <tbody id="leaderboardBody"></tbody>
+          </table>
+        </div>
+        <div id="emptyState" class="empty-state">Chưa có submission nào ở phase này.</div>
+      </section>
+
+      <section id="how-it-works" class="how-it-works">
+        <div><span class="section-kicker">DATA SEPARATION</span><h2>Điểm local có ý nghĩa khi reference độc lập</h2></div>
+        <p>Để tránh chấm nhầm trên dữ liệu train, backend chỉ đọc reference trong <code>backend/data/references/&lt;task&gt;/&lt;stage&gt;.json</code>. Hãy đặt vào đó một holdout được giữ ngoài quá trình fit/tune. Các file <code>public-official.json</code> hiện chỉ có câu hỏi, không có đáp án nên không thể dùng để tính điểm.</p>
+      </section>
+    </main>
+
+    <footer class="footer">UDSC Local Grader · chạy trên máy của bạn</footer>
+    <script src="/app.js" defer></script>
+  </body>
+</html>
