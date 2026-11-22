@@ -8,6 +8,9 @@ from udsc2026.evaluation.retrieval_metrics import LegalIRReference, evaluate_leg
 from udsc2026.evaluation.retrieval_candidates import (
     AGGREGATION_METHODS,
     AggregatedDocument,
+    DEFAULT_DENSE_RRF_K,
+    DEFAULT_DENSE_SIGNAL_WEIGHT,
+    ScoreField,
     aggregate_document_candidates,
     aggregate_to_legal_ir_prediction,
 )
