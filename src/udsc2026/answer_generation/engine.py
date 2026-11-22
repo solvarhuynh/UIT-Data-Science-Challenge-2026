@@ -5,7 +5,7 @@ import logging
 import math
 import re
 import uuid
-from typing import Optional, Protocol
+from typing import Optional, Protocol, Sequence
 
 from udsc2026.contracts.answer import QAResponse
 from udsc2026.contracts.retrieval import RetrievalHit
@@ -223,6 +223,110 @@ class QAEngine:
             warnings=all_warnings,
             trace_id=tid,
         )
+
+    async def generate_answers_batch(
+        self,
+        requests: Sequence[tuple[str, list[RetrievalHit], Optional[str]]],
+        prompt_version: str = "answer_system",
+        rag_template: str = "answer_context",
+    ) -> list[QAResponse]:
+        """Generate several answers together when the LLM supports batching."""
+
+        if not requests:
+            return []
+        responses: list[Optional[QAResponse]] = [None] * len(requests)
+        messages_batch: list[list[dict[str, str]]] = []
+        valid_indices: list[int] = []
+        contexts_batch: list[list[RetrievalHit]] = []
+        for index, (question, contexts, trace_id) in enumerate(requests):
+            tid = trace_id or str(uuid.uuid4())
+            refusal = self._check_context_quality(contexts)
+            if refusal is not None:
+                responses[index] = QAResponse(
+                    answer=_NO_CONTEXT_ANSWER,
+                    citations=[],
+                    used_prompt_version=prompt_version,
+                    retrieval_hits=contexts,
+                    confidence=0.0,
+                    warnings=[refusal],
+                    trace_id=tid,
+                )
+                continue
+            prompt_contexts = (
+                self._context_expander.expand(contexts)
+                if self._context_expander is not None
+                else contexts
+            ) or contexts
+            prompt_contexts = _reorder_contexts_lost_in_the_middle(prompt_contexts)
+            messages_batch.append(
+                self._prompt_builder.build_messages(
+                    question=question,
+                    contexts=prompt_contexts,
+                    prompt_version=prompt_version,
+                    rag_template=rag_template,
+                )
+            )
+            contexts_batch.append(contexts)
+            valid_indices.append(index)
+
+        if messages_batch:
+            generate_batch = getattr(self._llm, "generate_messages_batch", None)
+            if callable(generate_batch):
+                raw_answers = await asyncio.to_thread(generate_batch, messages_batch)
+            else:
+                raw_answers = []
+                for index in valid_indices:
+                    fallback_response = await self.generate_answer(
+                            requests[index][0],
+                            requests[index][1],
+                            prompt_version=prompt_version,
+                            rag_template=rag_template,
+                            trace_id=requests[index][2],
+                        )
+                    responses[index] = fallback_response
+                    raw_answers.append(fallback_response.answer)
+            if len(raw_answers) != len(valid_indices):
+                raise RuntimeError("batched LLM returned an unexpected result count")
+            for raw_answer, index, contexts in zip(
+                raw_answers, valid_indices, contexts_batch
+            ):
+                clean_answer = _trim_continuation(raw_answer)
+                clean_answer = _clean_conversational_preamble(clean_answer)
+                clean_answer = _deduplicate_repeated_lines(clean_answer)
+                if _is_refused_answer(clean_answer):
+                    clean_answer = _NO_CONTEXT_ANSWER
+                verified_citations, citation_warnings = (
+                    self._citation_parser.parse_and_validate(clean_answer, contexts)
+                )
+                verified_count = sum(
+                    1 for citation in verified_citations if citation.is_verified
+                )
+                total_count = len(verified_citations)
+                warnings = list(citation_warnings)
+                if clean_answer != raw_answer:
+                    warnings.append(
+                        "Phần thừa do mô hình tự sinh sau câu trả lời đã được cắt bỏ tự động."
+                    )
+                if not verified_citations:
+                    warnings.append(
+                        "Câu trả lời không chứa trích dẫn pháp lý nào được nhận diện."
+                    )
+                responses[index] = QAResponse(
+                    answer=clean_answer,
+                    citations=verified_citations,
+                    used_prompt_version=self._prompt_builder.get_prompt_version_id(
+                        prompt_version
+                    ),
+                    retrieval_hits=contexts,
+                    confidence=(
+                        float(verified_count) / total_count
+                        if total_count > 0
+                        else None
+                    ),
+                    warnings=warnings,
+                    trace_id=requests[index][2] or str(uuid.uuid4()),
+                )
+        return [response for response in responses if response is not None]
 
     # ------------------------------------------------------------------
     # Private helpers

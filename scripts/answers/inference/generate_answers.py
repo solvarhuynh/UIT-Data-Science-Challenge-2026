@@ -41,6 +41,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--top-n", type=int, default=3)
     parser.add_argument("--limit", type=int)
     parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=1,
+        help="Number of questions to submit in one LLM generation call.",
+    )
+    parser.add_argument(
         "--save-every",
         type=int,
         default=100,
@@ -213,6 +219,8 @@ async def _run(args: argparse.Namespace) -> None:
         raise ValueError("limit must be positive")
     if args.save_every <= 0:
         raise ValueError("save-every must be positive")
+    if args.batch_size <= 0:
+        raise ValueError("batch-size must be positive")
     if not args.modal_volume_name.strip():
         raise ValueError("modal-volume-name must not be blank")
     if args.parent_max_tokens <= 0 or args.parent_total_tokens <= 0:
@@ -404,39 +412,53 @@ async def _run(args: argparse.Namespace) -> None:
         save_manifest(complete=False)
 
     pending_checkpoints = 0
-    for index, (question_id, question) in enumerate(questions, 1):
-        if question_id in completed_ids:
-            continue
-        sample = contexts[question_id]
-        selected_hits = sample.hits[: args.top_n]
-        if not selected_hits:
-            raise ValueError(f"question {question_id!r} has no retrieval hits")
+    pending = [
+        (index, question_id, question, contexts[question_id].hits[: args.top_n])
+        for index, (question_id, question) in enumerate(questions, 1)
+        if question_id not in completed_ids
+    ]
+    for offset in range(0, len(pending), args.batch_size):
+        batch = pending[offset : offset + args.batch_size]
+        for _, question_id, _, selected_hits in batch:
+            if not selected_hits:
+                raise ValueError(f"question {question_id!r} has no retrieval hits")
         started = time.perf_counter()
-        response = await engine.generate_answer(
-            question=question,
-            contexts=selected_hits,
+        responses = await engine.generate_answers_batch(
+            [
+                (question, selected_hits, f"legalqa-{question_id}")
+                for _, question_id, question, selected_hits in batch
+            ],
             prompt_version=args.prompt_version,
             rag_template=args.rag_template,
-            trace_id=f"legalqa-{question_id}",
         )
-        latency = time.perf_counter() - started
-        answer = response.answer.strip()
-        if not answer:
-            raise ValueError(f"question {question_id!r} generated an empty answer")
-        predictions.append({"id": question_id, "answer": answer})
-        diagnostics.append(
-            {
-                "id": question_id,
-                "latency_seconds": latency,
-                "answer_characters": len(answer),
-                "citation_count": len(response.citations),
-                "warning_count": len(response.warnings),
-                "warnings": response.warnings,
-                "prompt_version": response.used_prompt_version,
-            }
-        )
-        completed_ids.add(question_id)
-        pending_checkpoints += 1
+        elapsed = time.perf_counter() - started
+        if len(responses) != len(batch):
+            raise RuntimeError("answer engine returned an unexpected batch size")
+        per_record_latency = elapsed / len(batch)
+        for (index, question_id, _, _), response in zip(batch, responses):
+            answer = response.answer.strip()
+            if not answer:
+                raise ValueError(f"question {question_id!r} generated an empty answer")
+            predictions.append({"id": question_id, "answer": answer})
+            diagnostics.append(
+                {
+                    "id": question_id,
+                    "latency_seconds": per_record_latency,
+                    "answer_characters": len(answer),
+                    "citation_count": len(response.citations),
+                    "warning_count": len(response.warnings),
+                    "warnings": response.warnings,
+                    "prompt_version": response.used_prompt_version,
+                }
+            )
+            completed_ids.add(question_id)
+            pending_checkpoints += 1
+            print(
+                f"processed={index}/{len(questions)} id={question_id} "
+                f"latency_seconds={per_record_latency:.3f} "
+                f"answer_characters={len(answer)}",
+                flush=True,
+            )
         if pending_checkpoints >= args.save_every:
             _write_json_atomic(args.output, predictions)
             _write_json_atomic(args.diagnostics, diagnostics)
@@ -446,11 +468,6 @@ async def _run(args: argparse.Namespace) -> None:
                 enabled=args.commit_modal_volume,
             )
             pending_checkpoints = 0
-        print(
-            f"processed={index}/{len(questions)} id={question_id} "
-            f"latency_seconds={latency:.3f} answer_characters={len(answer)}",
-            flush=True,
-        )
 
     if pending_checkpoints:
         _write_json_atomic(args.output, predictions)
