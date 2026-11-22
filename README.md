@@ -176,5 +176,3 @@ docs/comparisons/       # Báo cáo đối chiếu các lời giải tham khảo
 ## Trích dẫn và giấy phép
 
 Khi sử dụng pipeline trong nghiên cứu, vui lòng ghi mã commit, phiên bản dữ liệu, cấu hình mô hình và scorer. Điều khoản mã nguồn nằm trong [`LICENSE`](LICENSE); dữ liệu cuộc thi và model weights có thể có điều khoản riêng.
-
-
