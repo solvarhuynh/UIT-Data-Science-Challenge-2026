@@ -582,7 +582,7 @@ def _validation_count_mismatches(
 def _audit_legal_ir(
     raw_root: Path, document_ids: Set[str], empty_source_ids: Set[str]
 ) -> Dict[str, Any]:
-    path = raw_root / "LegalIR" / "train.json"
+    path = raw_root / "Legall-IR" / "train.json"
     if not path.is_file():
         return {
             "question_count": 0,

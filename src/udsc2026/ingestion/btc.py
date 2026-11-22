@@ -297,7 +297,7 @@ def _relative_path(file_path: Path, source_root: Path) -> str:
 def _task_from_path(file_path: Path) -> str:
     for part in file_path.parts:
         normalized = part.casefold()
-        if normalized == "legalir":
+        if normalized in {"legalir", "legall-ir"}:
             return "LegalIR"
         if normalized == "legalqa":
             return "LegalQA"

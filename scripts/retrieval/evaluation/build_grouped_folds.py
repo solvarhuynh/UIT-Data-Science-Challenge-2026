@@ -260,7 +260,7 @@ def _readme() -> str:
     return """# Strict grouped folds
 
 This directory contains deterministic five-fold out-of-fold partitions of
-`data/raw/btc/LegalIR/train.json`.
+`data/raw/btc/Legall-IR/train.json`.
 
 - Seed: `2026`
 - Normalization: the exact NFKC/case-fold/punctuation-collapse function used by
@@ -284,7 +284,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--input",
         type=Path,
-        default=Path("data/raw/btc/LegalIR/train.json"),
+        default=Path("data/raw/btc/Legall-IR/train.json"),
     )
     parser.add_argument(
         "--output-dir",

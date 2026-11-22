@@ -146,8 +146,8 @@ def build_index(
     checkpoint_chunks: int = 100_000,
     resume: bool = False,
 ) -> None:
-    if batch_size <= 0 or batch_size > 16:
-        raise ValueError("batch-size must be from 1 to 16 on the selected GPU")
+    if batch_size <= 0 or batch_size > 64:
+        raise ValueError("batch-size must be from 1 to 64 on the selected GPU")
     if checkpoint_chunks <= 0:
         raise ValueError("checkpoint-chunks must be positive")
 
@@ -164,7 +164,11 @@ def build_index(
         members = archive.getmembers()
         for member in members:
             name = PurePosixPath(member.name)
-            if name.is_absolute() or ".." in name.parts or not member.isfile():
+            if (
+                name.is_absolute()
+                or ".." in name.parts
+                or not (member.isfile() or member.isdir())
+            ):
                 raise ValueError(f"unsafe chunk archive entry: {member.name}")
         archive.extractall(extraction_root, filter="data")
 
