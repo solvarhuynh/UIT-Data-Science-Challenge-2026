@@ -301,6 +301,36 @@ class LLMClient:
 
         return self.generate(self._render_chat_messages(messages))
 
+    def generate_messages_batch(
+        self,
+        messages_batch: Sequence[Sequence[Mapping[str, str]]],
+    ) -> list[str]:
+        """Generate several chat completions in one model forward loop.
+
+        The transformers backend uses padded inputs so decoder-only models can
+        share the prefill and decode work across the batch.  The vLLM backend
+        already performs continuous batching internally.
+        """
+
+        if not messages_batch:
+            return []
+        prompts = [self._render_chat_messages(messages) for messages in messages_batch]
+        if not self._generation_lock.acquire(blocking=False):
+            raise RuntimeError(
+                "LLM client is still processing an earlier generation request"
+            )
+
+        def operation() -> list[str]:
+            if self._config.backend == "transformers":
+                return self._generate_transformers_batch(prompts)
+            return self._generate_vllm_batch(prompts)
+
+        return _run_with_timeout(
+            operation,
+            self._config.timeout_seconds,
+            on_complete=self._generation_lock.release,
+        )
+
     def generate(self, prompt: str) -> str:
         """Generate a completion for the given prompt string.
 
@@ -400,6 +430,46 @@ class LLMClient:
         logger.debug("Generation took %.2f s.", elapsed)
         return decoded.strip()
 
+    def _generate_transformers_batch(self, prompts: Sequence[str]) -> list[str]:
+        """Run one padded Transformers generation call for several prompts."""
+
+        tokenizer = self._require_tokenizer()
+        model = self._require_model()
+        previous_padding_side = tokenizer.padding_side
+        previous_pad_token = tokenizer.pad_token
+        if tokenizer.pad_token_id is None:
+            tokenizer.pad_token = tokenizer.eos_token
+        tokenizer.padding_side = "left"
+        try:
+            inputs = tokenizer(
+                list(prompts),
+                return_tensors="pt",
+                padding=True,
+            )
+            inputs = {k: v.to(self._config.device) for k, v in inputs.items()}
+            with torch.no_grad():
+                output_ids = model.generate(
+                    **inputs,
+                    max_new_tokens=self._config.max_new_tokens,
+                    temperature=self._config.temperature,
+                    top_p=self._config.top_p,
+                    repetition_penalty=self._config.repetition_penalty,
+                    do_sample=self._config.temperature > 0,
+                    pad_token_id=tokenizer.eos_token_id,
+                    **self._deadline_stopping_criteria(),
+                )
+            input_width = inputs["input_ids"].shape[1]
+            return [
+                tokenizer.decode(
+                    output_ids[index][input_width:],
+                    skip_special_tokens=True,
+                ).strip()
+                for index in range(len(prompts))
+            ]
+        finally:
+            tokenizer.padding_side = previous_padding_side
+            tokenizer.pad_token = previous_pad_token
+
     def _generate_vllm(self, prompt: str) -> str:
         """Run generation via the vLLM engine."""
         from vllm import SamplingParams
@@ -412,6 +482,20 @@ class LLMClient:
         )
         outputs = self._require_vllm_engine().generate([prompt], params)
         return cast(str, outputs[0].outputs[0].text).strip()
+
+    def _generate_vllm_batch(self, prompts: Sequence[str]) -> list[str]:
+        """Run a batch through vLLM's scheduler."""
+
+        from vllm import SamplingParams
+
+        params = SamplingParams(
+            max_tokens=self._config.max_new_tokens,
+            temperature=self._config.temperature,
+            top_p=self._config.top_p,
+            repetition_penalty=self._config.repetition_penalty,
+        )
+        outputs = self._require_vllm_engine().generate(list(prompts), params)
+        return [cast(str, item.outputs[0].text).strip() for item in outputs]
 
     @property
     def config(self) -> LLMConfig:
