@@ -44,7 +44,7 @@ def _positive(value: str) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--train", type=Path, default=Path("data/raw/btc/LegalIR/train.json")
+        "--train", type=Path, default=Path("data/raw/btc/Legall-IR/train.json")
     )
     parser.add_argument("--folds", type=Path, default=DEFAULT_FOLDS)
     parser.add_argument(
