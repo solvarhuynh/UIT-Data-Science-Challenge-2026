@@ -1,0 +1,4 @@
+# Optional parity packages for LegalQA scoring. The backend itself uses only
+# Python's standard library and can still run without these packages.
+nltk>=3.8,<4
+rouge-score>=0.1.2,<1
