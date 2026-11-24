@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import subprocess
@@ -483,6 +484,244 @@ def evaluate_or_package(
 
 @app.function(
     image=cpu_image,
+    cpu=8,
+    memory=32768,
+    timeout=8 * 60 * 60,
+    volumes={VOLUME_PATH: volume},
+)
+def evaluate_bce_oof(loss: str = "bce") -> None:
+    """Build and score complete out-of-fold retrieval predictions."""
+
+    if loss not in {"bce", "softmax"}:
+        raise ValueError("loss must be bce or softmax")
+
+    os.chdir(VOLUME_PATH)
+    question_path = _legal_ir_dir() / "train.json"
+    dense = TRAIN_POOL / "dense.jsonl"
+    contexts = Path("data/processed/documents")
+    root = Path("data/predictions/selected/legalir/folds") / loss
+    all_questions = json.loads(
+        (TRAIN_POOL / "questions.json").read_text(encoding="utf-8")
+    )
+    fold_spec = json.loads(
+        TRAIN_SPLIT.read_text(encoding="utf-8")
+    )
+    from udsc2026.evaluation.models import PredictionSample
+    from udsc2026.evaluation.retrieval_candidates import aggregate_to_legal_ir_prediction
+    for fold in range(5):
+        fold_dir = root / f"fold_{fold}"
+        manifest = json.loads(
+            (fold_dir / "reranked.manifest.json").read_text(encoding="utf-8")
+        )
+        if manifest.get("complete") is not True or manifest.get("completed_count") != 1400:
+            raise ValueError(f"BCE fold {fold} rerank is incomplete")
+        fold_ids = fold_spec["folds"][fold]["validation_ids"]
+        fold_questions = root / f"fold_{fold}" / "questions.json"
+        fold_questions.write_text(
+            json.dumps(
+                {question_id: all_questions[question_id] for question_id in fold_ids},
+                ensure_ascii=False,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        output = fold_dir / "predictions.json"
+        rows = []
+        seen = set()
+        with (fold_dir / "reranked.jsonl").open("r", encoding="utf-8") as source:
+            for line in source:
+                if not line.strip():
+                    continue
+                sample = PredictionSample.model_validate_json(line, strict=True)
+                if sample.question_id in seen:
+                    raise ValueError(f"duplicate BCE fold {fold} question")
+                seen.add(sample.question_id)
+                prediction = aggregate_to_legal_ir_prediction(
+                    sample,
+                    method="rrf_cap2_dense_signal",
+                    max_documents=5,
+                    evidence_limit=3,
+                    rrf_k=60,
+                    dense_signal_weight=0.30,
+                    score_field="rerank_score",
+                )
+                rows.append(prediction.model_dump(mode="json"))
+        if seen != set(fold_ids):
+            raise ValueError(f"BCE fold {fold} question coverage mismatch")
+        output.write_text(
+            json.dumps(rows, ensure_ascii=False, separators=(",", ":")) + "\n",
+            encoding="utf-8",
+        )
+    merged = root / "predictions.json"
+    subprocess.run(
+        [
+            sys.executable,
+            "/workspace/scripts/retrieval/evaluation/merge_fold_predictions.py",
+            "--folds-dir", str(root),
+            "--filename", "predictions.json",
+            "--questions", str(question_path),
+            "--fold-count", "5",
+            "--output", str(merged),
+        ],
+        check=True,
+        cwd=VOLUME_PATH,
+    )
+    report = Path("data/reports/retrieval/selected") / f"{loss}_oof.json"
+    report.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(
+        [
+            sys.executable,
+            "/workspace/scripts/retrieval/evaluation/score_rankings.py",
+            "--references", str(question_path),
+            "--predictions", str(merged),
+            "--output", str(report),
+        ],
+        check=True,
+        cwd=VOLUME_PATH,
+    )
+    volume.commit()
+
+
+@app.function(
+    image=cpu_image,
+    cpu=8,
+    memory=32768,
+    timeout=12 * 60 * 60,
+    volumes={VOLUME_PATH: volume},
+    max_containers=1,
+)
+def prepare_union() -> None:
+    """Build and score a label-free dense/lexical candidate union on CPU."""
+
+    os.chdir(VOLUME_PATH)
+    dense_root = TRAIN_POOL
+    dense = dense_root / "dense.jsonl"
+    dense_manifest = dense_root / "dense.manifest.json"
+    questions = dense_root / "questions.json"
+    chunks_archive = Path("data/processed/chunks_aiteam.tar.gz")
+    gold = _legal_ir_dir() / "train.json"
+    folds = TRAIN_SPLIT
+    required = (dense, dense_manifest, questions, chunks_archive, gold, folds)
+    missing = [str(path) for path in required if not path.is_file()]
+    if missing:
+        raise FileNotFoundError("union preflight missing: " + ", ".join(missing))
+
+    output_root = Path("data/predictions/selected/legalir/union/candidate_k700_rerank_k200")
+    union = output_root / "union.jsonl"
+    union_manifest = output_root / "union.manifest.json"
+    report_root = Path("data/reports/retrieval/selected/union_candidate")
+
+    if union.is_file() or union_manifest.is_file():
+        if not (union.is_file() and union_manifest.is_file()):
+            raise RuntimeError(
+                "union output is partial. Remove the incomplete union artifact before retrying"
+            )
+        manifest = json.loads(union_manifest.read_text(encoding="utf-8"))
+        if manifest.get("complete") is not True:
+            raise RuntimeError("union manifest exists but is incomplete")
+        observed_hash = hashlib.sha256(union.read_bytes()).hexdigest()
+        if observed_hash != manifest.get("output_sha256"):
+            raise RuntimeError("union output hash does not match its manifest")
+        print("Existing complete union artifact matches its manifest. Skipping rebuild.", flush=True)
+    else:
+        output_root.mkdir(parents=True, exist_ok=True)
+        subprocess.run(
+            [
+                sys.executable,
+                "/workspace/scripts/retrieval/inference/build_union_candidates.py",
+                "--questions", str(questions.resolve()),
+                "--dense", str(dense.resolve()),
+                "--dense-manifest", str(dense_manifest.resolve()),
+                "--chunks-archive", str(chunks_archive.resolve()),
+                "--output", str(union.resolve()),
+                "--manifest", str(union_manifest.resolve()),
+                "--dense-k", "500",
+                "--lexical-k", "200",
+                "--candidate-k", "700",
+                "--rrf-k", "60",
+            ],
+            check=True,
+            cwd=VOLUME_PATH,
+        )
+
+    subprocess.run(
+        [
+            sys.executable,
+            "/workspace/scripts/retrieval/evaluation/analyze_candidates.py",
+            "--gold", str(gold.resolve()),
+            "--predictions", str(union.resolve()),
+            "--manifest", str(union_manifest.resolve()),
+            "--strict-folds", str(folds.resolve()),
+            # The union is capped at 700, but a question can legitimately
+            # have fewer unique chunks when the dense and lexical lists
+            # overlap.  analyze_candidates adds the actual cached depth to
+            # this list, so requesting 700 here would reject a valid output
+            # such as a 502-hit union before producing any report.
+            "--k", "5", "10", "20", "50", "100", "200", "500",
+            "--output-dir", str(report_root),
+            "--aggregation", "first_occurrence",
+            "--score-field", "hybrid_score",
+            "--final-documents", "5",
+        ],
+        check=True,
+        cwd=VOLUME_PATH,
+    )
+    volume.commit()
+
+
+@app.function(
+    image=cpu_image,
+    cpu=8,
+    memory=32768,
+    timeout=8 * 60 * 60,
+    volumes={VOLUME_PATH: volume},
+)
+def probe_slot5() -> None:
+    """Run the leakage-safe slot-five rescue on the cached five-fold rerankings."""
+
+    os.chdir(VOLUME_PATH)
+    gold = _legal_ir_dir() / "train.json"
+    folds = Path("data/splits/retrieval/folds.json")
+    reranked_root = Path("data/predictions/selected/legalir/folds/softmax")
+    output_root = Path("data/predictions/selected/legalir/slot5_guard")
+    if not gold.is_file():
+        raise FileNotFoundError(f"LegalIR train references are missing: {gold}")
+    if not folds.is_file():
+        raise FileNotFoundError(f"strict grouped folds are missing: {folds}")
+    for fold in range(5):
+        input_path = reranked_root / f"fold_{fold}" / "reranked.jsonl"
+        manifest_path = reranked_root / f"fold_{fold}" / "reranked.manifest.json"
+        if not input_path.is_file() or not manifest_path.is_file():
+            raise FileNotFoundError(
+                f"completed softmax rerank artifact is missing for fold {fold}"
+            )
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if manifest.get("complete") is not True or manifest.get("completed_count") != 1400:
+            raise ValueError(f"softmax fold {fold} rerank is not complete")
+        if manifest.get("candidate_k") != 500 or manifest.get("rerank_k") != 200:
+            raise ValueError(f"softmax fold {fold} has unexpected candidate/rerank depth")
+    subprocess.run(
+        [
+            sys.executable,
+            "/workspace/scripts/retrieval/evaluation/run_slot5_probe.py",
+            "--gold",
+            str(gold),
+            "--folds",
+            str(folds),
+            "--reranked-root",
+            str(reranked_root),
+            "--output-root",
+            str(output_root),
+            "--overwrite",
+        ],
+        check=True,
+        cwd=VOLUME_PATH,
+    )
+    volume.commit()
+
+
+@app.function(
+    image=cpu_image,
     cpu=4,
     memory=16384,
     timeout=8 * 60 * 60,
@@ -585,19 +824,136 @@ def train_and_rerank_fold(fold: int, loss: str, resume: bool) -> None:
     training = Path("data/training/retrieval") / loss / f"fold_{fold}"
     ranking = Path("data/predictions/selected/legalir/folds") / loss / f"fold_{fold}"
     resume_flag = ["--resume"] if resume else []
-    subprocess.run(
-        [
-            sys.executable, "/workspace/scripts/retrieval/training/train_reranker.py",
-            "--groups-dir", "data/training/retrieval",
+    training_report = training / "training_report.json"
+    report = None
+    if training_report.is_file():
+        report = json.loads(training_report.read_text(encoding="utf-8"))
+    if not (report and report.get("complete") is True):
+        subprocess.run(
+            [
+                sys.executable, "/workspace/scripts/retrieval/training/train_reranker.py",
+                "--groups-dir", "data/training/retrieval",
+                "--folds", str(TRAIN_SPLIT),
+                "--fold", str(fold),
+                "--loss", loss,
+                "--output-dir", str(training),
+                "--modal-volume", VOLUME_NAME,
+                *resume_flag,
+            ],
+            check=True,
+        )
+    if not training_report.is_file():
+        raise FileNotFoundError(f"missing completed training report: {training_report}")
+    ranking.mkdir(parents=True, exist_ok=True)
+    rerank_command = [
+        sys.executable,
+        "/workspace/scripts/retrieval/inference/rerank_candidates.py",
+        "--questions", str(questions.resolve()),
+        "--candidates", str(dense.resolve()),
+        "--candidate-manifest", str(dense_manifest.resolve()),
+        "--training-report", str(training_report.resolve()),
+        "--base-reranker-manifest", str(base_manifest.resolve()),
+        "--folds", str(TRAIN_SPLIT),
+        "--model", str((training / "checkpoint").resolve()),
+        "--candidate-k", "500",
+        "--rerank-k", "200",
+        "--batch-size", "8",
+        "--max-length", "1024",
+        "--save-every", "500",
+        "--commit-modal-volume", "--modal-volume-name", VOLUME_NAME,
+        "--fp16",
+        "--output", str((ranking / "reranked.jsonl").resolve()),
+        "--manifest", str((ranking / "reranked.manifest.json").resolve()),
+        *resume_flag,
+    ]
+    subprocess.run(rerank_command, check=True, cwd=VOLUME_PATH)
+    volume.commit()
+
+
+@app.function(
+    image=gpu_image,
+    gpu=["A10", "L4"],
+    cpu=4,
+    memory=32768,
+    timeout=24 * 60 * 60,
+    volumes={VOLUME_PATH: volume},
+    max_containers=1,
+)
+def train_hard_negative_all(resume: bool = False) -> None:
+    """Mine dense semantic confusers, train five held-out folds, and rerank them."""
+
+    os.chdir(VOLUME_PATH)
+    _preflight_reranker_tokenizer()
+    groups_dir = Path("data/training/retrieval/hard_negative")
+    if not (groups_dir / "groups.jsonl").is_file() or not (
+        groups_dir / "manifest.json"
+    ).is_file():
+        subprocess.run(
+            [
+                sys.executable,
+                "/workspace/scripts/retrieval/training/prepare_hard_negative_training.py",
+                "--train", "data/raw/btc/Legall-IR/train.json",
+                "--folds", str(TRAIN_SPLIT),
+                "--dense", str(TRAIN_POOL / "dense.jsonl"),
+                "--processed-root", "data/processed",
+                "--base-groups", "data/training/retrieval/groups.jsonl",
+                "--base-manifest", "data/training/retrieval/manifest.json",
+                "--output-dir", str(groups_dir),
+                "--max-hard", "2",
+                "--max-semi-hard", "2",
+            ],
+            check=True,
+            cwd=VOLUME_PATH,
+        )
+        volume.commit()
+
+    base_manifest = TRAIN_POOL / "reranked.manifest.json"
+    for fold in range(5):
+        training = groups_dir / f"fold_{fold}"
+        training_report = training / "training_report.json"
+        resume_flag = ["--resume"] if resume else []
+        subprocess.run(
+            [
+                sys.executable,
+                "/workspace/scripts/retrieval/training/train_reranker.py",
+                "--groups-dir", str(groups_dir),
+                "--folds", str(TRAIN_SPLIT),
+                "--fold", str(fold),
+                "--loss", "softmax",
+                "--output-dir", str(training),
+                "--modal-volume", VOLUME_NAME,
+                *resume_flag,
+            ],
+            check=True,
+            cwd=VOLUME_PATH,
+        )
+        output_dir = Path(
+            "data/predictions/selected/legalir/folds"
+        ) / "hard_negative" / f"fold_{fold}"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        rerank_command = [
+            sys.executable,
+            "/workspace/scripts/retrieval/inference/rerank_candidates.py",
+            "--questions", str((TRAIN_POOL / "questions.json").resolve()),
+            "--candidates", str((TRAIN_POOL / "dense.jsonl").resolve()),
+            "--candidate-manifest", str((TRAIN_POOL / "dense.manifest.json").resolve()),
+            "--training-report", str(training_report.resolve()),
+            "--base-reranker-manifest", str(base_manifest.resolve()),
             "--folds", str(TRAIN_SPLIT),
-            "--fold", str(fold),
-            "--loss", loss,
-            "--output-dir", str(training),
-            "--modal-volume", VOLUME_NAME,
+            "--model", str((training / "checkpoint").resolve()),
+            "--candidate-k", "500",
+            "--rerank-k", "200",
+            "--batch-size", "8",
+            "--max-length", "1024",
+            "--save-every", "500",
+            "--commit-modal-volume", "--modal-volume-name", VOLUME_NAME,
+            "--fp16",
+            "--output", str((output_dir / "reranked.jsonl").resolve()),
+            "--manifest", str((output_dir / "reranked.manifest.json").resolve()),
             *resume_flag,
-        ],
-        check=True,
-    )
+        ]
+        subprocess.run(rerank_command, check=True, cwd=VOLUME_PATH)
+        volume.commit()
 
 
 @app.function(
@@ -714,6 +1070,31 @@ def train_fold(fold: int, loss: str, resume: bool = False) -> None:
     if fold not in range(5) or loss not in {"softmax", "bce"}:
         raise ValueError("choose a fold from 0 to 4 and loss softmax or bce")
     train_and_rerank_fold.remote(fold, loss, resume)
+
+
+@app.local_entrypoint()
+def evaluate_bce() -> None:
+    evaluate_bce_oof.remote()
+
+
+@app.local_entrypoint()
+def evaluate_oof(loss: str = "softmax") -> None:
+    evaluate_bce_oof.remote(loss)
+
+
+@app.local_entrypoint()
+def union_prepare() -> None:
+    prepare_union.remote()
+
+
+@app.local_entrypoint()
+def slot5_probe() -> None:
+    probe_slot5.remote()
+
+
+@app.local_entrypoint()
+def train_hard_negative(resume: bool = False) -> None:
+    train_hard_negative_all.remote(resume)
 
 
 @app.local_entrypoint()

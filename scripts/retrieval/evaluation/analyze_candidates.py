@@ -295,6 +295,7 @@ def _aggregation_reports(
     predictions: Sequence[PredictionSample],
     *,
     final_documents: int,
+    score_field: str,
 ) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, list[AggregatedDocument]]]]:
     reports: dict[str, dict[str, Any]] = {}
     documents_by_method: dict[str, dict[str, list[AggregatedDocument]]] = {}
@@ -303,6 +304,7 @@ def _aggregation_reports(
             prediction.question_id: aggregate_document_candidates(
                 prediction,
                 method=method,
+                score_field=score_field,  # type: ignore[arg-type]
             )
             for prediction in predictions
         }
@@ -311,6 +313,7 @@ def _aggregation_reports(
                 prediction,
                 method=method,
                 max_documents=final_documents,
+                score_field=score_field,  # type: ignore[arg-type]
             )
             for prediction in predictions
         ]
@@ -404,6 +407,7 @@ def _strict_fold_metrics(
     strict_folds: dict[str, int],
     aggregation: str,
     final_documents: int,
+    score_field: str,
 ) -> dict[str, Any]:
     predictions_by_id = {
         prediction.question_id: prediction for prediction in predictions
@@ -421,6 +425,7 @@ def _strict_fold_metrics(
                 predictions_by_id[reference.id],
                 method=aggregation,  # type: ignore[arg-type]
                 max_documents=final_documents,
+                score_field=score_field,  # type: ignore[arg-type]
             )
             for reference in fold_references
         ]
@@ -612,6 +617,19 @@ def build_parser() -> argparse.ArgumentParser:
         default="first_occurrence",
         help="Aggregation used for final failure buckets.",
     )
+    parser.add_argument(
+        "--score-field",
+        choices=(
+            "score",
+            "dense_score",
+            "sparse_score",
+            "hybrid_score",
+            "rerank_score",
+            "final_score",
+        ),
+        default="dense_score",
+        help="Hit score used by document aggregation; keep fixed across comparisons.",
+    )
     parser.add_argument("--final-documents", type=_positive_int, default=5)
     parser.add_argument("--max-questions", type=_positive_int)
     return parser
@@ -651,6 +669,7 @@ def run(args: argparse.Namespace) -> list[Path]:
         references,
         predictions,
         final_documents=args.final_documents,
+        score_field=args.score_field,
     )
     selected_aggregation = args.aggregation
     failure_records = _failure_records(
@@ -703,6 +722,7 @@ def run(args: argparse.Namespace) -> list[Path]:
                 "k_values": k_values,
                 "final_documents": args.final_documents,
                 "aggregation": selected_aggregation,
+                "score_field": args.score_field,
                 "max_questions": args.max_questions,
                 "strict_fold": args.strict_fold,
             },
@@ -729,6 +749,7 @@ def run(args: argparse.Namespace) -> list[Path]:
                 strict_folds=selected_folds,
                 aggregation=selected_aggregation,
                 final_documents=args.final_documents,
+                score_field=args.score_field,
             ),
         },
         "sample_count": len(predictions),
