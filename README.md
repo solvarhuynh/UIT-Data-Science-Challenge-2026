@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/banner.svg" alt="UIT Data Science Challenge 2026 — HCMUTE-ShipCODE" width="100%" />
+  <img src="assets/banner.svg" alt="UIT Data Science Challenge 2026 — HCMUTE-ShipCODE" width="80%" />
   <h1>HCMUTE-ShipCODE · UDSC 2026</h1>
   <p><strong>Hệ thống truy hồi và hỏi đáp có căn cứ trên văn bản pháp luật tiếng Việt</strong></p>
   <p>
