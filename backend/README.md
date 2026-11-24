@@ -15,6 +15,15 @@ python backend/server.py
 Mở `http://127.0.0.1:8765`. Có thể đổi cổng bằng `--port 9000` hoặc biến môi
 trường `UDSC_GRADER_PORT`.
 
+Giao diện chỉ hiển thị một stage tại một thời điểm. Mặc định stage là `warmup`;
+đổi bằng biến môi trường nếu bạn đang chấm bộ holdout:
+
+```powershell
+$env:UDSC_GRADER_STAGE = 'holdout'
+$env:UDSC_GRADER_REFERENCE_DIR = 'D:\du-lieu-bi-mat\udsc-references'
+python backend/server.py
+```
+
 Server dùng SQLite trong `backend/data/grader.sqlite3` và giữ file upload trong
 `backend/data/uploads/`. Đây là dữ liệu runtime riêng của grader.
 
@@ -81,6 +90,17 @@ vậy nó đủ để tạo submission nhưng không đủ để chấm điểm.
 ý nghĩa, cần một holdout/reference được giữ ngoài quá trình fit và tune. Nếu
 chỉ tách một phần từ train sau khi model đã học toàn bộ train, hãy gọi đó là
 diagnostic nội bộ, không coi là test độc lập.
+
+IR và QA cần hai loại gold khác nhau:
+
+- IR: người gán nhãn đọc câu hỏi và văn bản pháp luật, sau đó ghi tối đa năm
+  `document-id` đúng vào `answer`.
+- QA: người gán nhãn đọc câu hỏi và nguồn luật, sau đó viết câu trả lời tham
+  chiếu vào `answer` và kiểm tra lại nội dung.
+
+Không dùng câu trả lời do model tự sinh làm gold. Nếu BTC không cung cấp
+reference public/private, bộ chấm độc lập phải được gán nhãn thủ công và giữ
+ngoài repo.
 
 Có thể đặt reference ở thư mục khác bằng:
 

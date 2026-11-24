@@ -44,6 +44,9 @@ STAGE_LABELS = {
     "private": "Private test",
     "holdout": "Local holdout",
 }
+DEFAULT_STAGE = os.environ.get("UDSC_GRADER_STAGE", "warmup").strip().casefold()
+if DEFAULT_STAGE not in STAGES:
+    DEFAULT_STAGE = "warmup"
 TASK_LABELS = {"ir": "LegalIR", "qa": "LegalQA"}
 _DB_LOCK = threading.Lock()
 _WORD_RE = re.compile(r"\w+", flags=re.UNICODE)
@@ -564,6 +567,7 @@ def config_payload() -> dict[str, Any]:
     return {
         "tasks": TASK_LABELS,
         "stages": stages,
+        "default_stage": DEFAULT_STAGE,
         "max_upload_bytes": MAX_UPLOAD_BYTES,
         "reference_root": str(REFERENCE_ROOT),
     }
@@ -631,7 +635,7 @@ class Handler(BaseHTTPRequestHandler):
             if parsed.path == "/api/submissions":
                 query = parse_qs(parsed.query)
                 task = query.get("task", ["ir"])[0]
-                stage = query.get("stage", ["warmup"])[0]
+                stage = query.get("stage", [DEFAULT_STAGE])[0]
                 _validate_task_stage(task, stage)
                 self._send(
                     HTTPStatus.OK,
@@ -668,7 +672,7 @@ class Handler(BaseHTTPRequestHandler):
             body = self.rfile.read(content_length)
             fields = _parse_multipart(self.headers.get("Content-Type", ""), body)
             task = fields.get("task", ("", b""))[1].decode("utf-8").strip()
-            stage = fields.get("stage", ("", b""))[1].decode("utf-8").strip()
+            stage = fields.get("stage", ("", b""))[1].decode("utf-8").strip() or DEFAULT_STAGE
             label = fields.get("label", ("", b""))[1].decode("utf-8", errors="replace")
             filename, payload = fields.get("file", ("", b""))
             if not filename or not payload:

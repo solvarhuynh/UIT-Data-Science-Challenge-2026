@@ -6,6 +6,10 @@ const state = {
 
 const $ = (selector) => document.querySelector(selector);
 
+function taskLabel(task = state.task) {
+  return task === "qa" ? "QA" : "IR";
+}
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -39,47 +43,35 @@ function showFlash(message, kind = "success") {
   node.classList.toggle("error", kind === "error");
   node.classList.remove("hidden");
   window.clearTimeout(showFlash.timer);
-  showFlash.timer = window.setTimeout(() => node.classList.add("hidden"), 6500);
+  showFlash.timer = window.setTimeout(() => node.classList.add("hidden"), 5500);
 }
 
-function renderStageButtons() {
-  const stages = state.config?.stages?.[state.task] || {};
-  $("#stageButtons").innerHTML = Object.entries(stages).map(([stage, item]) => `
-    <button class="stage-button ${stage === state.stage ? "active" : ""}" data-stage="${stage}" type="button">
-      ${escapeHtml(item.label)}
-    </button>
-  `).join("");
-  document.querySelectorAll(".stage-button").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.stage = button.dataset.stage;
-      updateView();
-    });
-  });
+function currentStageConfig() {
+  return state.config?.stages?.[state.task]?.[state.stage];
 }
 
-function renderReferenceNotice() {
-  const item = state.config?.stages?.[state.task]?.[state.stage];
-  const node = $("#referenceNotice");
-  if (!item) {
-    node.classList.add("hidden");
-    return;
-  }
-  if (item.reference_available) {
-    node.textContent = `Reference sẵn sàng: ${item.reference_count.toLocaleString("vi-VN")} câu hỏi. Điểm sẽ dùng scorer ${state.task === "ir" ? "Recall/Precision BTC" : "METEOR/ROUGE-L"}.`;
-    node.classList.remove("hidden");
-    return;
-  }
-  node.textContent = `${item.label}: ${item.reference_error || "chưa có reference độc lập"} Submission vẫn được lưu để chấm sau.`;
-  node.classList.remove("hidden");
-}
-
-function renderHeaders() {
+function renderTask() {
   const qa = state.task === "qa";
+  $("#taskTitle").textContent = taskLabel();
+  $("#tableTask").textContent = taskLabel();
+  $("#uploadHint").innerHTML = qa
+    ? 'QA: mỗi ID cần một câu trả lời trong trường <code>answer</code>.'
+    : 'IR: mỗi ID cần tối đa 5 document trong trường <code>answer</code>.';
   $("#leaderboardHead").innerHTML = `
     <tr>
-      <th>#</th><th>Tên lần chạy</th><th>File</th><th>Ngày</th><th>Trạng thái</th>
-      <th>${qa ? "METEOR" : "Recall"}</th><th>${qa ? "ROUGE-L" : "Precision"}</th><th></th>
+      <th>#</th><th>File submission</th><th>Ngày</th><th>Trạng thái</th>
+      <th>${qa ? "METEOR" : "RECALL"}</th><th>${qa ? "ROUGE-L" : "PRECISION"}</th><th></th>
     </tr>`;
+
+  const reference = currentStageConfig();
+  const status = $("#referenceStatus");
+  if (reference?.reference_available) {
+    status.textContent = `${reference.reference_count.toLocaleString("vi-VN")} câu có gold`;
+    status.classList.remove("missing");
+  } else {
+    status.textContent = "Chưa có gold để chấm";
+    status.classList.add("missing");
+  }
 }
 
 function renderRows(items) {
@@ -89,45 +81,30 @@ function renderRows(items) {
   body.innerHTML = items.map((item) => `
     <tr>
       <td class="rank">${item.rank ?? "—"}</td>
-      <td><strong>${escapeHtml(item.label)}</strong><br><small>${escapeHtml(item.sha256.slice(0, 12))}</small></td>
-      <td>${escapeHtml(item.filename)}<br><small>${formatBytes(item.size_bytes)}</small></td>
+      <td><strong>${escapeHtml(item.filename)}</strong><br><small>${formatBytes(item.size_bytes)} · ${escapeHtml(item.sha256.slice(0, 10))}</small></td>
       <td>${escapeHtml(formatDate(item.uploaded_at))}</td>
-      <td><span class="status ${escapeHtml(item.status)}">${item.status === "scored" ? "Đã chấm" : "Chờ reference"}</span></td>
+      <td><span class="status ${escapeHtml(item.status)}">${item.status === "scored" ? "Đã chấm" : "Chờ gold"}</span></td>
       <td class="score">${formatScore(item.metrics?.primary)}</td>
       <td class="score">${formatScore(item.secondary)}</td>
-      <td><button class="delete-button" title="Xóa lần nộp" data-delete="${escapeHtml(item.id)}">×</button></td>
+      <td><button class="delete-button" title="Xóa submission" data-delete="${escapeHtml(item.id)}">×</button></td>
     </tr>`).join("");
   body.querySelectorAll("[data-delete]").forEach((button) => {
     button.addEventListener("click", () => deleteSubmission(button.dataset.delete));
   });
 }
 
-function updateSummary(items) {
-  const scored = items.filter((item) => item.status === "scored");
-  const best = scored.length ? Math.max(...scored.map((item) => item.metrics.primary)) : null;
-  const stageLabel = state.config?.stages?.[state.task]?.[state.stage]?.label || state.stage;
-  const taskLabel = state.config?.tasks?.[state.task] || state.task;
-  $("#taskTitle").textContent = taskLabel;
-  $("#summaryTitle").textContent = `${taskLabel} · ${stageLabel}`;
-  $("#currentStageLabel").textContent = stageLabel;
-  $("#submissionCount").textContent = items.length;
-  $("#scoredCount").textContent = scored.length;
-  $("#bestScore").textContent = formatScore(best);
-}
-
 async function loadSubmissions() {
   const response = await fetch(`/api/submissions?task=${encodeURIComponent(state.task)}&stage=${encodeURIComponent(state.stage)}`);
   const payload = await response.json();
-  if (!response.ok || !payload.ok) throw new Error(payload.error || "Không tải được bảng xếp hạng");
-  renderHeaders();
+  if (!response.ok || !payload.ok) throw new Error(payload.error || "Không tải được bảng điểm");
   renderRows(payload.submissions);
-  updateSummary(payload.submissions);
 }
 
 async function updateView() {
-  document.querySelectorAll(".task-tab").forEach((button) => button.classList.toggle("active", button.dataset.task === state.task));
-  renderStageButtons();
-  renderReferenceNotice();
+  document.querySelectorAll(".task-tab").forEach((button) => {
+    button.classList.toggle("active", button.dataset.task === state.task);
+  });
+  renderTask();
   try {
     await loadSubmissions();
   } catch (error) {
@@ -136,7 +113,7 @@ async function updateView() {
 }
 
 async function deleteSubmission(id) {
-  if (!window.confirm("Xóa lần submission này khỏi bảng local?")) return;
+  if (!window.confirm("Xóa submission này?")) return;
   const response = await fetch(`/api/submissions/${encodeURIComponent(id)}`, { method: "DELETE" });
   const payload = await response.json();
   if (!response.ok || !payload.ok) {
@@ -157,22 +134,22 @@ async function uploadSubmission(event) {
   const form = new FormData();
   form.append("task", state.task);
   form.append("stage", state.stage);
-  form.append("label", $("#label").value);
+  form.append("label", file.name);
   form.append("file", file, file.name);
   try {
     const response = await fetch("/api/submissions", { method: "POST", body: form });
     const payload = await response.json();
-    if (!response.ok || !payload.ok) throw new Error(payload.error || "Upload thất bại");
+    if (!response.ok || !payload.ok) throw new Error(payload.error || "Tải lên thất bại");
     const result = payload.submission;
-    showFlash(result.status === "scored" ? `Đã chấm ${result.label}: ${formatScore(result.primary)}` : "Đã lưu submission; stage chưa có reference để chấm.");
+    showFlash(result.status === "scored" ? `Đã chấm ${taskLabel()}: ${formatScore(result.primary)}` : "Đã lưu; stage này chưa có gold.");
     $("#uploadForm").reset();
-    $("#fileName").textContent = "Chọn file để tải lên";
+    $("#fileName").textContent = "Chọn file submission";
     await updateView();
   } catch (error) {
     showFlash(error.message, "error");
   } finally {
     button.disabled = false;
-    button.textContent = "Chấm submission";
+    button.textContent = "Tải lên và chấm";
   }
 }
 
@@ -182,6 +159,7 @@ async function boot() {
     const payload = await response.json();
     if (!response.ok || !payload.ok) throw new Error(payload.error || "Không tải được cấu hình");
     state.config = payload;
+    state.stage = payload.default_stage || "warmup";
     $("#health").innerHTML = '<span class="dot"></span> Backend đang chạy';
     await updateView();
   } catch (error) {
@@ -193,13 +171,12 @@ async function boot() {
 document.querySelectorAll(".task-tab").forEach((button) => {
   button.addEventListener("click", () => {
     state.task = button.dataset.task;
-    state.stage = "warmup";
     updateView();
   });
 });
 $("#uploadForm").addEventListener("submit", uploadSubmission);
 $("#submissionFile").addEventListener("change", (event) => {
-  $("#fileName").textContent = event.target.files[0]?.name || "Chọn file để tải lên";
+  $("#fileName").textContent = event.target.files[0]?.name || "Chọn file submission";
 });
 $("#refreshButton").addEventListener("click", updateView);
 boot();
