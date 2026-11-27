@@ -46,6 +46,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--training-report", type=Path)
     parser.add_argument("--base-reranker-manifest", type=Path)
     parser.add_argument("--folds", type=Path)
+    parser.add_argument(
+        "--allow-candidate-pool-change",
+        action="store_true",
+        help=(
+            "Allow a fold checkpoint trained on the dense pool to score a "
+            "label-free derived pool. The manifest records the training pool "
+            "separately from the inference pool."
+        ),
+    )
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--batch-size", type=_positive_int, default=16)
     parser.add_argument("--max-length", type=_positive_int, default=1024)
@@ -195,19 +204,17 @@ def run(args: argparse.Namespace) -> int:
         ):
             raise ValueError("checkpoint or inference configuration differs from training")
         scope = report.get("scope", "fold")
+        candidate_pool_matches = True
         if scope == "fold":
             if args.folds is None or args.base_reranker_manifest is None:
                 raise ValueError(
                     "fold checkpoint evaluation requires folds and base reranker manifest"
                 )
             base = read_json(args.base_reranker_manifest)
-            if (
+            pool_mismatch = (
                 base.get("complete") is not True
                 or base.get("model") != run_identity["model"]
                 or base.get("model_revision") != run_identity["model_revision"]
-                or base.get("candidate_predictions_sha256") != candidate_sha256
-                or base.get("candidate_manifest_sha256")
-                != run_identity["candidate_manifest_sha256"]
                 or report.get("source_sha256") != base.get("output_sha256")
                 or report.get("source_manifest_sha256")
                 != _sha256(args.base_reranker_manifest)
@@ -215,7 +222,13 @@ def run(args: argparse.Namespace) -> int:
                 or base.get("fp16") != args.fp16
                 or base.get("batch_size") != args.batch_size
                 or report["inputs"]["folds"] != _sha256(args.folds)
-            ):
+            )
+            candidate_pool_matches = (
+                base.get("candidate_predictions_sha256") == candidate_sha256
+                and base.get("candidate_manifest_sha256")
+                == run_identity["candidate_manifest_sha256"]
+            )
+            if pool_mismatch or (not candidate_pool_matches and not args.allow_candidate_pool_change):
                 raise ValueError("checkpoint, fold or inference pool differs from training")
         elif scope != "all":
             raise ValueError(f"unsupported training scope: {scope!r}")
@@ -241,6 +254,21 @@ def run(args: argparse.Namespace) -> int:
                 "device": args.device,
                 "inference_sha256": _sha256(Path(__file__)),
                 "training_report_sha256": _sha256(args.training_report),
+                "training_candidate_predictions_sha256": (
+                    read_json(args.base_reranker_manifest).get("output_sha256")
+                    if args.base_reranker_manifest is not None
+                    else None
+                ),
+                "training_candidate_manifest_sha256": (
+                    _sha256(args.base_reranker_manifest)
+                    if args.base_reranker_manifest is not None
+                    else None
+                ),
+                "candidate_pool_changed_from_training": (
+                    not candidate_pool_matches
+                    if scope == "fold"
+                    else False
+                ),
             }
         )
     if args.output.resolve() == manifest_path.resolve():

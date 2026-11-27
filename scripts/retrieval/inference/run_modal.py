@@ -95,6 +95,10 @@ FINAL_TRAINING = Path("data/training/retrieval/production")
 PRODUCTION_ROOT = Path(
     "data/predictions/selected/legalir/production/candidate_k500_rerank_k200"
 )
+PRODUCTION_INDEX_MANIFEST = Path(
+    "data/vector/faiss/legal_chunks_aiteam_vietnamese_embedding_v2_1024/"
+    "manifest.archive_repaired.json"
+)
 
 
 def _legal_ir_dir() -> Path:
@@ -973,7 +977,7 @@ def train_and_rerank_final(
 ) -> None:
     """Train on every usable grouped train query, then rank the output mapping."""
 
-    from udsc2026.training.provenance import read_json
+    from udsc2026.training.provenance import read_json, verify_checkpoint
 
     if dataset not in {"train", "public"}:
         raise ValueError("dataset must be 'train' or 'public'")
@@ -985,20 +989,69 @@ def train_and_rerank_final(
     FINAL_TRAINING.mkdir(parents=True, exist_ok=True)
     training_report = FINAL_TRAINING / "training_report.json"
     resume_flag = ["--resume"] if resume else []
-    subprocess.run(
-        [
-            sys.executable,
-            "/workspace/scripts/retrieval/training/train_reranker.py",
-            "--groups-dir", "data/training/retrieval",
-            "--folds", str(TRAIN_SPLIT),
-            "--all-queries",
-            "--loss", "softmax",
-            "--output-dir", str(FINAL_TRAINING),
-            "--modal-volume", VOLUME_NAME,
-            *resume_flag,
-        ],
-        check=True,
-    )
+    existing_report = read_json(training_report) if training_report.is_file() else None
+    if (
+        existing_report
+        and existing_report.get("scope") == "all"
+        and existing_report.get("loss") == "softmax"
+        and existing_report.get("complete") is True
+    ):
+        preflight = subprocess.run(
+            [
+                sys.executable,
+                "/workspace/scripts/retrieval/training/train_reranker.py",
+                "--groups-dir", "data/training/retrieval",
+                "--folds", str(TRAIN_SPLIT),
+                "--all-queries",
+                "--loss", "softmax",
+                "--output-dir", str(FINAL_TRAINING),
+                "--preflight",
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        expected_identity = json.loads(preflight.stdout)
+        invariant_keys = (
+            "inputs", "source_sha256", "source_manifest_sha256", "questions_sha256",
+            "base_model", "base_model_revision", "scope", "fold", "loss",
+            "max_length", "rerank_k", "train_queries", "held_out_queries",
+            "configuration",
+        )
+        mismatches = [
+            key for key in invariant_keys
+            if existing_report.get(key) != expected_identity.get(key)
+        ]
+        if mismatches:
+            raise ValueError(
+                "completed checkpoint provenance differs for: "
+                + ", ".join(mismatches)
+            )
+        # A completed all-query checkpoint is immutable input for production.  Do
+        # not invoke the trainer again: its runtime identity includes code and
+        # dependency details that may legitimately differ after a repair while
+        # the already verified checkpoint remains valid.
+        verify_checkpoint(FINAL_TRAINING / "checkpoint", existing_report)
+        print(
+            "Reusing verified completed scope=all softmax checkpoint "
+            f"from {training_report}",
+            flush=True,
+        )
+    else:
+        subprocess.run(
+            [
+                sys.executable,
+                "/workspace/scripts/retrieval/training/train_reranker.py",
+                "--groups-dir", "data/training/retrieval",
+                "--folds", str(TRAIN_SPLIT),
+                "--all-queries",
+                "--loss", "softmax",
+                "--output-dir", str(FINAL_TRAINING),
+                "--modal-volume", VOLUME_NAME,
+                *resume_flag,
+            ],
+            check=True,
+        )
     report = read_json(training_report)
     if report.get("scope") != "all" or report.get("complete") is not True:
         raise ValueError("final reranker training did not produce a complete all-query report")
@@ -1037,6 +1090,7 @@ def train_and_rerank_final(
         "--save-every", "500",
         "--commit-modal-volume", "--modal-volume-name", VOLUME_NAME,
         "--question-mapping", str(questions.resolve()),
+        "--index-manifest", str(PRODUCTION_INDEX_MANIFEST.resolve()),
         "--output", str(dense),
         "--manifest", str(dense_manifest),
         *resume_flag,
@@ -1062,6 +1116,172 @@ def train_and_rerank_final(
         *resume_flag,
     ]
     subprocess.run(rerank_command, check=True, cwd=VOLUME_PATH)
+    volume.commit()
+
+
+@app.function(
+    image=gpu_image,
+    gpu=["A10", "L4"],
+    cpu=4,
+    memory=32768,
+    timeout=24 * 60 * 60,
+    volumes={VOLUME_PATH: volume},
+    max_containers=1,
+)
+def rerank_union(resume: bool = False) -> None:
+    """Rerank the verified K700 dense/lexical union without rebuilding it."""
+
+    from udsc2026.training.provenance import read_json, sha256
+
+    os.chdir(VOLUME_PATH)
+    _preflight_reranker_tokenizer()
+    union_root = Path("data/predictions/selected/legalir/union/candidate_k700_rerank_k200")
+    candidates = union_root / "union.jsonl"
+    candidate_manifest = union_root / "union.manifest.json"
+    questions = TRAIN_POOL / "questions.json"
+    training_report = FINAL_TRAINING / "training_report.json"
+    model = FINAL_TRAINING / "checkpoint"
+    output = union_root / "reranked.jsonl"
+    manifest = union_root / "reranked.manifest.json"
+    required = (candidates, candidate_manifest, questions, training_report, model)
+    missing = [str(path) for path in required if not path.exists()]
+    if missing:
+        raise FileNotFoundError("union rerank preflight missing: " + ", ".join(missing))
+
+    union_metadata = read_json(candidate_manifest)
+    if union_metadata.get("complete") is not True:
+        raise ValueError("union candidate manifest is incomplete")
+    if union_metadata.get("output_sha256") != sha256(candidates):
+        raise ValueError("union candidate file does not match its manifest")
+    if union_metadata.get("question_source_sha256") != sha256(questions):
+        raise ValueError("union candidate questions do not match train questions")
+    if union_metadata.get("candidate_k") != 700:
+        raise ValueError("union candidate depth is not K700")
+
+    report = read_json(training_report)
+    if report.get("complete") is not True or report.get("scope") != "all":
+        raise ValueError("scope=all production checkpoint is incomplete")
+    if report.get("loss") != "softmax" or report.get("rerank_k") != 200:
+        raise ValueError("production checkpoint is not the locked softmax K200 recipe")
+
+    resume_flag = ["--resume"] if resume else []
+    subprocess.run(
+        [
+            sys.executable,
+            "/workspace/scripts/retrieval/inference/rerank_candidates.py",
+            "--questions", str(questions.resolve()),
+            "--candidates", str(candidates.resolve()),
+            "--candidate-manifest", str(candidate_manifest.resolve()),
+            "--training-report", str(training_report.resolve()),
+            "--model", str(model.resolve()),
+            "--candidate-k", "700",
+            "--rerank-k", "200",
+            "--batch-size", "8",
+            "--max-length", str(report["max_length"]),
+            "--save-every", "500",
+            "--commit-modal-volume", "--modal-volume-name", VOLUME_NAME,
+            "--fp16",
+            "--output", str(output.resolve()),
+            "--manifest", str(manifest.resolve()),
+            *resume_flag,
+        ],
+        check=True,
+        cwd=VOLUME_PATH,
+    )
+    volume.commit()
+
+
+@app.function(
+    image=gpu_image,
+    gpu=["A10", "L4"],
+    cpu=4,
+    memory=32768,
+    timeout=24 * 60 * 60,
+    volumes={VOLUME_PATH: volume},
+    max_containers=1,
+)
+def rerank_union_fold(fold: int, resume: bool = False) -> None:
+    """Score one held-out fold on the verified K700 union candidate pool."""
+
+    from udsc2026.training.provenance import read_json, sha256
+
+    if fold not in range(5):
+        raise ValueError("fold must be between 0 and 4")
+    os.chdir(VOLUME_PATH)
+    _preflight_reranker_tokenizer()
+
+    union_root = Path("data/predictions/selected/legalir/union/candidate_k700_rerank_k200")
+    candidates = union_root / "union.jsonl"
+    candidate_manifest = union_root / "union.manifest.json"
+    questions = TRAIN_POOL / "questions.json"
+    base_manifest = TRAIN_POOL / "reranked.manifest.json"
+    fold_root = Path("data/predictions/selected/legalir/union/folds") / f"fold_{fold}"
+    output = fold_root / "reranked.jsonl"
+    manifest = fold_root / "reranked.manifest.json"
+    training_root = Path("data/training/retrieval/softmax") / f"fold_{fold}"
+    training_report = training_root / "training_report.json"
+    model = training_root / "checkpoint"
+    required = (
+        candidates,
+        candidate_manifest,
+        questions,
+        base_manifest,
+        training_report,
+        model,
+        TRAIN_SPLIT,
+    )
+    missing = [str(path) for path in required if not path.exists()]
+    if missing:
+        raise FileNotFoundError("union fold preflight missing: " + ", ".join(missing))
+
+    union_metadata = read_json(candidate_manifest)
+    if union_metadata.get("complete") is not True:
+        raise ValueError("union candidate manifest is incomplete")
+    if union_metadata.get("output_sha256") != sha256(candidates):
+        raise ValueError("union candidate file does not match its manifest")
+    if union_metadata.get("question_source_sha256") != sha256(questions):
+        raise ValueError("union candidate questions do not match train questions")
+    if union_metadata.get("candidate_k") != 700:
+        raise ValueError("union candidate depth is not K700")
+
+    report = read_json(training_report)
+    if report.get("complete") is not True or report.get("fold") != fold:
+        raise ValueError(f"softmax fold {fold} checkpoint is incomplete or mismatched")
+    if report.get("loss") != "softmax" or report.get("rerank_k") != 200:
+        raise ValueError("fold checkpoint is not the locked softmax K200 recipe")
+
+    # The fold checkpoint was trained on the dense K500 pool.  This experiment
+    # intentionally changes only acquisition to the label-free union; the
+    # reranker, fold membership, scorer and rerank budget stay fixed.  The
+    # inference manifest records both pool hashes so the result cannot be
+    # mistaken for a same-pool baseline.
+    resume_flag = ["--resume"] if resume else []
+    subprocess.run(
+        [
+            sys.executable,
+            "/workspace/scripts/retrieval/inference/rerank_candidates.py",
+            "--questions", str(questions.resolve()),
+            "--candidates", str(candidates.resolve()),
+            "--candidate-manifest", str(candidate_manifest.resolve()),
+            "--training-report", str(training_report.resolve()),
+            "--base-reranker-manifest", str(base_manifest.resolve()),
+            "--folds", str(TRAIN_SPLIT.resolve()),
+            "--allow-candidate-pool-change",
+            "--model", str(model.resolve()),
+            "--candidate-k", "700",
+            "--rerank-k", "200",
+            "--batch-size", "8",
+            "--max-length", str(report["max_length"]),
+            "--save-every", "500",
+            "--commit-modal-volume", "--modal-volume-name", VOLUME_NAME,
+            "--fp16",
+            "--output", str(output.resolve()),
+            "--manifest", str(manifest.resolve()),
+            *resume_flag,
+        ],
+        check=True,
+        cwd=VOLUME_PATH,
+    )
     volume.commit()
 
 
@@ -1105,6 +1325,18 @@ def train_final(
     resume: bool = False,
 ) -> None:
     train_and_rerank_final.remote(dataset, candidate_k, rerank_k, resume)
+
+
+@app.local_entrypoint()
+def rerank_union_run(resume: bool = False) -> None:
+    rerank_union.remote(resume)
+
+
+@app.local_entrypoint()
+def rerank_union_fold_run(fold: int, resume: bool = False) -> None:
+    if fold not in range(5):
+        raise ValueError("fold must be between 0 and 4")
+    rerank_union_fold.remote(fold, resume)
 
 
 @app.local_entrypoint()

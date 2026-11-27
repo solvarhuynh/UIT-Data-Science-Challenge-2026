@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 import sys
+import tarfile
 import time
 from collections.abc import Sequence
 from datetime import datetime, timezone
@@ -79,6 +80,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--config-env", default="gpu")
     parser.add_argument(
+        "--index-manifest",
+        type=Path,
+        help=(
+            "Optional provenance-verified FAISS manifest. Use this only for a "
+            "derived manifest that records an archive-content equivalence audit."
+        ),
+    )
+    parser.add_argument(
         "--resume",
         action="store_true",
         help="Resume only when the existing output manifest matches this run.",
@@ -138,6 +147,58 @@ def _combined_file_sha256(paths: Sequence[Path]) -> str:
     return digest.hexdigest()
 
 
+def _archive_corpus_identity(path: Path) -> tuple[str, int]:
+    """Hash chunk content independent of tar metadata and return its count."""
+
+    accumulator = bytearray(32)
+    count = 0
+    try:
+        archive = tarfile.open(path, "r:gz")
+    except (OSError, tarfile.TarError) as exc:
+        raise ValueError(f"cannot open chunk archive for provenance audit: {path}") from exc
+    with archive:
+        for member in archive:
+            if not member.isfile() or not member.name.startswith("chunks/"):
+                continue
+            if not member.name.endswith(".jsonl"):
+                raise ValueError(f"unexpected non-JSONL chunk member: {member.name}")
+            stream = archive.extractfile(member)
+            if stream is None:
+                raise ValueError(f"cannot read chunk archive member: {member.name}")
+            for line_number, raw_line in enumerate(stream, start=1):
+                if not raw_line.strip():
+                    continue
+                try:
+                    record = json.loads(raw_line)
+                except (UnicodeError, json.JSONDecodeError) as exc:
+                    raise ValueError(
+                        f"invalid JSON in chunk archive member {member.name}:{line_number}"
+                    ) from exc
+                if not isinstance(record, dict):
+                    raise ValueError(
+                        f"chunk archive record is not an object at "
+                        f"{member.name}:{line_number}"
+                    )
+                chunk_id = record.get("chunk_id")
+                text = record.get("text")
+                if not isinstance(chunk_id, str) or not isinstance(text, str):
+                    raise ValueError(
+                        f"chunk archive record lacks chunk_id/text at "
+                        f"{member.name}:{line_number}"
+                    )
+                encoded = json.dumps(
+                    {"chunk_id": chunk_id, "text": text},
+                    ensure_ascii=False,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                ).encode("utf-8")
+                digest = hashlib.sha256(encoded).digest()
+                for index, value in enumerate(digest):
+                    accumulator[index] ^= value
+                count += 1
+    return bytes(accumulator).hex(), count
+
+
 def _read_completed_question_ids(path: Path) -> set[str]:
     """Read completed JSONL IDs without retaining prediction objects in RAM."""
 
@@ -170,18 +231,26 @@ def _read_completed_question_ids(path: Path) -> set[str]:
 
 
 def _load_index_identity(
-    config: dict[str, Any], embedding: dict[str, Any], config_env: str
+    config: dict[str, Any],
+    embedding: dict[str, Any],
+    config_env: str,
+    manifest_override: Path | None = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Require a complete FAISS index built from the selected embedding/corpus."""
 
     vector_settings = resolve_vector_db_config(config)
     if vector_settings.get("type") != "faiss":
         raise ValueError("the production retrieval path requires a FAISS index")
-    manifest_path = (
+    index_directory = (
         Path(str(vector_settings["faiss_index_path"]))
         / str(vector_settings["collection_name"])
-        / "manifest.json"
     )
+    manifest_path = manifest_override or (index_directory / "manifest.json")
+    if (
+        manifest_override is not None
+        and manifest_path.resolve().parent != index_directory.resolve()
+    ):
+        raise ValueError("index manifest override must be beside the FAISS index")
     if not manifest_path.is_file():
         raise FileNotFoundError(f"verified FAISS index manifest is missing: {manifest_path}")
     try:
@@ -190,7 +259,6 @@ def _load_index_identity(
         raise ValueError(f"invalid FAISS index manifest: {manifest_path}") from exc
     if not isinstance(index_manifest, dict):
         raise ValueError("FAISS index manifest must contain a JSON object")
-    index_directory = manifest_path.parent
     index_path = index_directory / "index.faiss"
     payload_path = index_directory / "payloads.json"
     if index_manifest.get("complete") is not True:
@@ -253,11 +321,24 @@ def _load_index_identity(
     if processing_manifest.get("integrity_gate_passed") is not True:
         raise ValueError("processed corpus did not pass its integrity gate")
     archive_path = Path("data/processed/chunks_aiteam.tar.gz")
-    if (
-        index_manifest.get("source_archive") != archive_path.as_posix()
-        or index_manifest.get("source_archive_sha256") != _sha256(archive_path)
-    ):
-        raise ValueError("FAISS index does not match the uploaded chunk archive")
+    archive_hash = _sha256(archive_path)
+    archive_matches = (
+        index_manifest.get("source_archive") == archive_path.as_posix()
+        and index_manifest.get("source_archive_sha256") == archive_hash
+    )
+    if not archive_matches:
+        repair = index_manifest.get("provenance_repair")
+        if manifest_override is None or not isinstance(repair, dict):
+            raise ValueError("FAISS index does not match the uploaded chunk archive")
+        if repair.get("original_manifest_sha256") is None:
+            raise ValueError("provenance repair is missing the original manifest hash")
+        if repair.get("archive_sha256") != archive_hash:
+            raise ValueError("provenance repair does not match the uploaded archive")
+        actual_corpus_hash, actual_chunk_count = _archive_corpus_identity(archive_path)
+        if actual_corpus_hash != index_manifest.get("corpus_hash"):
+            raise ValueError("provenance repair corpus hash does not match the FAISS index")
+        if actual_chunk_count != index_manifest.get("chunk_count"):
+            raise ValueError("provenance repair chunk count does not match the FAISS index")
     return vector_settings, index_manifest
 
 
@@ -330,7 +411,7 @@ def run(args: argparse.Namespace) -> list[Path]:
     config = load_config(args.config_env)
     embedding = dict(config.get("embedding", {}))
     vector_settings, index_metadata = _load_index_identity(
-        config, embedding, args.config_env
+        config, embedding, args.config_env, args.index_manifest
     )
     model_path = str(
         embedding.get("model_path", "./models/aiteam-vietnamese-embedding-v2")
